@@ -4,6 +4,17 @@ import { Sidebar } from "./sidebar";
 import { div } from "./utils";
 
 /**
+ * Gets the base path for the application.
+ * This is injected by the build process for GitHub Pages deployments.
+ *
+ * @returns The base path (e.g., "/blog/" or "/")
+ */
+function getBasePath(): string {
+  // @ts-expect-error - Injected by build process
+  return window.__BASE_PATH__ || "/";
+}
+
+/**
  * BlogReader handles blog loading, rendering, and sidebar navigation
  */
 class BlogReader {
@@ -13,8 +24,10 @@ class BlogReader {
   private currentPostId: string | null = null;
   private topicsBar: TopicsBar;
   private sidebar: Sidebar;
+  private basePath: string;
 
   constructor() {
+    this.basePath = getBasePath();
     new ThemeManager("theme-toggle");
 
     // Initialize blog content
@@ -47,14 +60,28 @@ class BlogReader {
   /**
    * Gets the post ID from the current URL pathname.
    *
-   * Extracts the post ID from the pathname (e.g., "/welcome" -> "welcome").
+   * Extracts the post ID from the pathname, accounting for the base path.
+   * For example, "/blog/welcome" -> "welcome" (when base path is "/blog/").
    *
    * @returns The post ID if found, or null if on the index page
    */
   private getPostIdFromPath(): string | null {
     const pathname = window.location.pathname;
+    // Remove the base path from the beginning
+    let path = pathname;
+    if (this.basePath !== "/" && pathname.startsWith(this.basePath)) {
+      // Remove the base path, keeping one leading slash
+      path = pathname.slice(this.basePath.length - 1);
+    } else if (this.basePath === "/") {
+      // For root base path, use pathname as-is
+      path = pathname;
+    } else {
+      // Pathname doesn't start with base path, likely an error case
+      // Return null to indicate we're on the index page
+      return null;
+    }
     // Remove leading slash and any trailing slashes
-    const postId = pathname.replace(/^\/|\/$/g, "");
+    const postId = path.replace(/^\/|\/$/g, "");
     return postId || null;
   }
 
@@ -95,7 +122,7 @@ class BlogReader {
    */
   private async loadBlogList(): Promise<void> {
     try {
-      const response = await fetch("/src/blogs/index.json");
+      const response = await fetch(`${this.basePath}src/blogs/index.json`);
       if (!response.ok) {
         throw new Error("Failed to load blog list");
       }
@@ -106,7 +133,7 @@ class BlogReader {
       const postsWithTopics = await Promise.all(
         data.posts.map(async (post) => {
           try {
-            const markdownResponse = await fetch(`/src/blogs/${post.file}`);
+            const markdownResponse = await fetch(`${this.basePath}src/blogs/${post.file}`);
             if (!markdownResponse.ok) {
               return { ...post, topics: [] };
             }
@@ -214,7 +241,7 @@ class BlogReader {
       await this.loadBlogPost(postId);
       
       // Update URL without page reload
-      window.history.pushState({ postId }, "", `/${postId}`);
+      window.history.pushState({ postId }, "", `${this.basePath}${postId}`);
       
       // Restore the topic filter if it was set
       if (currentTopic !== null) {
@@ -426,7 +453,7 @@ class BlogReader {
         }),
       );
 
-      const response = await fetch(`/src/blogs/${post.file}`);
+      const response = await fetch(`${this.basePath}src/blogs/${post.file}`);
       if (!response.ok) {
         throw new Error("Failed to load blog post");
       }

@@ -64,6 +64,15 @@ export default defineConfig({
       },
     },
     {
+      name: "inject-base-path",
+      transformIndexHtml(html) {
+        // Inject base path as a global variable so client code can access it
+        const basePathScript = `<script>window.__BASE_PATH__ = ${JSON.stringify(basePath)};</script>`;
+        // Insert before the closing </head> tag
+        return html.replace("</head>", `${basePathScript}</head>`);
+      },
+    },
+    {
       name: "copy-blog-files",
       closeBundle() {
         // Copy blog post files to dist directory so they're available at runtime
@@ -105,6 +114,10 @@ export default defineConfig({
         const dist404 = join(process.cwd(), "dist", "404.html");
         try {
           let html = readFileSync(src404, "utf-8");
+
+          // Inject base path as a global variable
+          const basePathScript = `<script>window.__BASE_PATH__ = ${JSON.stringify(basePath)};</script>`;
+          html = html.replace("</head>", `${basePathScript}</head>`);
 
           // Only replace paths if base path is not root
           // Ensures assets load correctly with the base path
