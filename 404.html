@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Blog Reader</title>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css"
+    />
+    <script>
+      // Configure MathJax before it loads
+      window.MathJax = {
+        tex: {
+          inlineMath: [
+            ["$", "$"],
+            ["\\(", "\\)"],
+          ],
+          displayMath: [
+            ["$$", "$$"],
+            ["\\[", "\\]"],
+          ],
+          processEscapes: true,
+          processEnvironments: true,
+        },
+        options: {
+          skipHtmlTags: [
+            "script",
+            "noscript",
+            "style",
+            "textarea",
+            "pre",
+            "code",
+          ],
+        },
+      };
+    </script>
+    <script
+      src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"
+      id="MathJax-script"
+      async
+    ></script>
+    <link rel="stylesheet" href="/styling/blog.css" />
+  </head>
+  <body>
+    <div class="header">
+      <div>
+        <h1>My Blog</h1>
+      </div>
+      <div class="header-actions">
+        <button class="theme-button" id="theme-toggle" title="Toggle theme">
+          🌙
+        </button>
+      </div>
+    </div>
+    <div class="topics-container">
+      <div class="topics-bar" id="topics-bar"></div>
+    </div>
+
+    <div class="main-container">
+      <aside class="sidebar">
+        <div class="sidebar-card">
+          <h2>Recent Posts</h2>
+          <ul class="blog-list" id="blog-list">
+            <li class="loading">Loading posts...</li>
+          </ul>
+        </div>
+      </aside>
+
+      <main class="content">
+        <div class="blog-card">
+          <div id="blog-content" class="loading">
+            Loading...
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <script type="module" src="/src/blog.ts"></script>
+  </body>
+</html>
+

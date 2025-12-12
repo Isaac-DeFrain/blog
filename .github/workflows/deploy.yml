@@ -21,7 +21,9 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # Build job
+  #
+  # Build
+  #
   build:
     runs-on: ubuntu-latest
     steps:
@@ -51,8 +53,6 @@ jobs:
           cache: ${{ steps.detect-package-manager.outputs.manager }}
       - name: Setup Pages
         uses: actions/configure-pages@v5
-        with:
-          static_site_generator: vite
       - name: Restore cache
         uses: actions/cache@v4
         with:
@@ -72,7 +72,9 @@ jobs:
         with:
           path: ./dist
 
-  # Deployment job
+  #
+  # Deployment
+  #
   deploy:
     environment:
       name: github-pages

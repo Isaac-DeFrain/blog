@@ -27,7 +27,7 @@ Start the dev server
 npm run dev
 ```
 
-The site will open at `http://localhost:5173`.
+The site will open at `http://localhost:5173`
 
 ## Build
 
