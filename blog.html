@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Blog Reader</title>
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['$', '$'], ['\\(', '\\)']],
+        displayMath: [['$$', '$$'], ['\\[', '\\]']],
+        processEscapes: true,
+        processEnvironments: true
+      },
+      options: {
+        skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre']
+      },
+      startup: {
+        pageReady: () => {
+          return MathJax.startup.defaultPageReady();
+        }
+      }
+    };
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" id="MathJax-script" async></script>
+  <style>
+    :root {
+      --bg-gradient-1: #667eea;
+      --bg-gradient-2: #764ba2;
+      --bg-card: #ffffff;
+      --text-primary: #1a202c;
+      --text-secondary: #4a5568;
+      --text-muted: #718096;
+      --shadow: rgba(0, 0, 0, 0.1);
+      --border: #e2e8f0;
+      --link-color: #667eea;
+      --code-bg: #f7fafc;
+    }
+
+    html.dark-mode {
+      --bg-gradient-1: #2d3748;
+      --bg-gradient-2: #1a202c;
+      --bg-card: #2d3748;
+      --text-primary: #f7fafc;
+      --text-secondary: #e2e8f0;
+      --text-muted: #a0aec0;
+      --shadow: rgba(0, 0, 0, 0.3);
+      --border: #4a5568;
+      --link-color: #90cdf4;
+      --code-bg: #1a202c;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: linear-gradient(135deg, var(--bg-gradient-1), var(--bg-gradient-2));
+      min-height: 100vh;
+      color: var(--text-primary);
+      transition: background 0.3s ease;
+    }
+
+    .header {
+      padding: 1.5rem 2rem;
+      background: var(--bg-card);
+      box-shadow: 0 2px 8px var(--shadow);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header h1 {
+      font-size: 1.5rem;
+      color: var(--text-primary);
+    }
+
+    .header a {
+      color: var(--link-color);
+      text-decoration: none;
+      font-weight: 500;
+      margin-right: 1rem;
+    }
+
+    .header a:hover {
+      text-decoration: underline;
+    }
+
+    .theme-button {
+      background: transparent;
+      border: 2px solid var(--border);
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      font-size: 1.25rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .theme-button:hover {
+      transform: scale(1.1);
+    }
+
+    .main-container {
+      display: flex;
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 2rem;
+      gap: 2rem;
+    }
+
+    .sidebar {
+      width: 300px;
+      flex-shrink: 0;
+    }
+
+    .sidebar-card {
+      background: var(--bg-card);
+      border-radius: 12px;
+      padding: 1.5rem;
+      box-shadow: 0 4px 12px var(--shadow);
+      position: sticky;
+      top: 100px;
+      max-height: calc(100vh - 120px);
+      overflow-y: auto;
+    }
+
+    .sidebar-card h2 {
+      font-size: 1.25rem;
+      margin-bottom: 1rem;
+      color: var(--text-primary);
+    }
+
+    .blog-list {
+      list-style: none;
+    }
+
+    .blog-list-item {
+      padding: 0.75rem;
+      margin-bottom: 0.5rem;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border-left: 3px solid transparent;
+    }
+
+    .blog-list-item:hover {
+      background: var(--code-bg);
+      border-left-color: var(--link-color);
+    }
+
+    .blog-list-item.active {
+      background: var(--code-bg);
+      border-left-color: var(--link-color);
+    }
+
+    .blog-list-item h3 {
+      font-size: 0.95rem;
+      color: var(--text-primary);
+      margin-bottom: 0.25rem;
+    }
+
+    .blog-list-item .date {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .content {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .blog-card {
+      background: var(--bg-card);
+      border-radius: 12px;
+      padding: 3rem;
+      box-shadow: 0 4px 12px var(--shadow);
+    }
+
+    .loading {
+      text-align: center;
+      padding: 3rem;
+      color: var(--text-secondary);
+      font-size: 1.125rem;
+    }
+
+    .error {
+      text-align: center;
+      padding: 3rem;
+      color: #e53e3e;
+      font-size: 1.125rem;
+    }
+
+    /* Markdown styles */
+    .blog-content h1 {
+      font-size: 2.5rem;
+      margin-bottom: 0.5rem;
+      color: var(--text-primary);
+    }
+
+    .blog-content h2 {
+      font-size: 2rem;
+      margin-top: 2rem;
+      margin-bottom: 1rem;
+      color: var(--text-primary);
+    }
+
+    .blog-content h3 {
+      font-size: 1.5rem;
+      margin-top: 1.5rem;
+      margin-bottom: 0.75rem;
+      color: var(--text-primary);
+    }
+
+    .blog-content p {
+      margin-bottom: 1.25rem;
+      line-height: 1.8;
+      color: var(--text-secondary);
+      font-size: 1.0625rem;
+    }
+
+    .blog-content a {
+      color: var(--link-color);
+      text-decoration: none;
+      border-bottom: 1px solid var(--link-color);
+    }
+
+    .blog-content a:hover {
+      opacity: 0.8;
+    }
+
+    .blog-content code {
+      background: var(--code-bg);
+      padding: 0.2rem 0.4rem;
+      border-radius: 4px;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 0.9em;
+      color: var(--text-primary);
+    }
+
+    .blog-content pre {
+      background: var(--code-bg);
+      padding: 1.5rem;
+      border-radius: 8px;
+      overflow-x: auto;
+      margin-bottom: 1.5rem;
+      border: 1px solid var(--border);
+    }
+
+    .blog-content pre code {
+      background: none;
+      padding: 0;
+    }
+
+    .blog-content blockquote {
+      border-left: 4px solid var(--link-color);
+      padding-left: 1.5rem;
+      margin: 1.5rem 0;
+      color: var(--text-muted);
+      font-style: italic;
+    }
+
+    .blog-content ul, .blog-content ol {
+      margin-bottom: 1.25rem;
+      padding-left: 2rem;
+      color: var(--text-secondary);
+    }
+
+    .blog-content li {
+      margin-bottom: 0.5rem;
+      line-height: 1.6;
+    }
+
+    .blog-content img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 8px;
+      margin: 1.5rem 0;
+    }
+
+    .blog-content hr {
+      border: none;
+      border-top: 2px solid var(--border);
+      margin: 2rem 0;
+    }
+
+    .blog-meta {
+      margin-bottom: 2rem;
+      padding-bottom: 1.5rem;
+      border-bottom: 2px solid var(--border);
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+
+    @media (max-width: 768px) {
+      .main-container {
+        flex-direction: column;
+      }
+
+      .sidebar {
+        width: 100%;
+      }
+
+      .sidebar-card {
+        position: static;
+        max-height: none;
+      }
+
+      .blog-card {
+        padding: 2rem 1.5rem;
+      }
+    }
+
+    /* Scrollbar styling */
+    .sidebar-card::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .sidebar-card::-webkit-scrollbar-track {
+      background: var(--code-bg);
+      border-radius: 4px;
+    }
+
+    .sidebar-card::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 4px;
+    }
+
+    .sidebar-card::-webkit-scrollbar-thumb:hover {
+      background: var(--text-muted);
+    }
+
+    /* Add link button */
+    .add-link-button {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      margin-bottom: 1rem;
+      background: linear-gradient(135deg, var(--bg-gradient-1), var(--bg-gradient-2));
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      box-shadow: 0 2px 8px var(--shadow);
+    }
+
+    .add-link-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px var(--shadow);
+    }
+
+    .add-link-button:active {
+      transform: translateY(0);
+    }
+
+    /* Modal styles */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .modal-overlay.active {
+      display: flex;
+    }
+
+    .modal {
+      background: var(--bg-card);
+      border-radius: 12px;
+      padding: 2rem;
+      max-width: 500px;
+      width: 90%;
+      box-shadow: 0 8px 32px var(--shadow);
+    }
+
+    .modal h3 {
+      margin-bottom: 1rem;
+      color: var(--text-primary);
+    }
+
+    .modal-input {
+      width: 100%;
+      padding: 0.75rem;
+      margin-bottom: 1rem;
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      background: var(--code-bg);
+      color: var(--text-primary);
+      font-size: 1rem;
+      font-family: inherit;
+    }
+
+    .modal-input:focus {
+      outline: none;
+      border-color: var(--link-color);
+    }
+
+    .modal-buttons {
+      display: flex;
+      gap: 0.75rem;
+      justify-content: flex-end;
+    }
+
+    .modal-button {
+      padding: 0.75rem 1.5rem;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .modal-button.primary {
+      background: linear-gradient(135deg, var(--bg-gradient-1), var(--bg-gradient-2));
+      color: white;
+    }
+
+    .modal-button.primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px var(--shadow);
+    }
+
+    .modal-button.secondary {
+      background: var(--code-bg);
+      color: var(--text-primary);
+      border: 2px solid var(--border);
+    }
+
+    .modal-button.secondary:hover {
+      background: var(--border);
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <h1>My Blog</h1>
+    </div>
+    <div style="display: flex; align-items: center; gap: 1rem;">
+      <a href="index.html">← Home</a>
+      <button class="theme-button" id="theme-toggle" title="Toggle theme">🌙</button>
+    </div>
+  </div>
+
+  <div class="main-container">
+    <aside class="sidebar">
+      <div class="sidebar-card">
+        <button class="add-link-button" id="add-link-button" title="Add external markdown link">
+          📎 Add Link
+        </button>
+        <h2>Recent Posts</h2>
+        <ul class="blog-list" id="blog-list">
+          <li class="loading">Loading posts...</li>
+        </ul>
+      </div>
+    </aside>
+
+    <main class="content">
+      <div class="blog-card">
+        <div id="blog-content" class="loading">
+          Select a blog post to read
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Modal for adding external link -->
+  <div class="modal-overlay" id="add-link-modal">
+    <div class="modal">
+      <h3>Add Local Markdown File</h3>
+      <input 
+        type="file" 
+        class="modal-input" 
+        id="markdown-url-input" 
+        accept=".md,.markdown"
+      />
+      <div class="modal-buttons">
+        <button class="modal-button secondary" id="modal-cancel">Cancel</button>
+        <button class="modal-button primary" id="modal-submit">Add Post</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/src/blog.ts"></script>
+</body>
+</html>
+
