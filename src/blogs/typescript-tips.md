@@ -1,6 +1,14 @@
+---
+topics:
+  - TypeScript
+  - Programming
+---
+
 # TypeScript Best Practices
 
-TypeScript has become the de facto standard for building large-scale JavaScript applications. Here are some best practices I've learned along the way.
+TypeScript has become the de facto standard for building large-scale
+JavaScript applications. Here are some best practices I've learned along
+the way.
 
 ## 1. Use Strict Mode
 
@@ -50,7 +58,7 @@ Type guards help narrow down union types:
 
 ```typescript
 function isString(value: unknown): value is string {
-  return typeof value === 'string';
+  return typeof value === "string";
 }
 
 function processValue(value: string | number) {
@@ -77,10 +85,10 @@ interface User {
 type PartialUser = Partial<User>;
 
 // Pick - select specific properties
-type UserPreview = Pick<User, 'id' | 'name'>;
+type UserPreview = Pick<User, "id" | "name">;
 
 // Omit - exclude specific properties
-type UserWithoutEmail = Omit<User, 'email'>;
+type UserWithoutEmail = Omit<User, "email">;
 
 // Readonly - make all properties readonly
 type ImmutableUser = Readonly<User>;
@@ -92,10 +100,11 @@ For literal types and immutable data:
 
 ```typescript
 // Without const assertion
-const colors = ['red', 'green', 'blue']; // Type: string[]
+const colors = ["red", "green", "blue"]; // Type: string[]
 
 // With const assertion
-const colors = ['red', 'green', 'blue'] as const; // Type: readonly ["red", "green", "blue"]
+const colors = ["red", "green", "blue"] as const;
+// Type: readonly ["red", "green", "blue"]
 ```
 
 ## 6. Discriminated Unions
@@ -104,16 +113,16 @@ Great for handling different states:
 
 ```typescript
 interface LoadingState {
-  status: 'loading';
+  status: "loading";
 }
 
 interface SuccessState {
-  status: 'success';
+  status: "success";
   data: string;
 }
 
 interface ErrorState {
-  status: 'error';
+  status: "error";
   error: string;
 }
 
@@ -121,14 +130,14 @@ type State = LoadingState | SuccessState | ErrorState;
 
 function handleState(state: State) {
   switch (state.status) {
-    case 'loading':
-      console.log('Loading...');
+    case "loading":
+      console.log("Loading...");
       break;
-    case 'success':
-      console.log('Data:', state.data); // TypeScript knows data exists
+    case "success":
+      console.log("Data:", state.data); // TypeScript knows data exists
       break;
-    case 'error':
-      console.log('Error:', state.error); // TypeScript knows error exists
+    case "error":
+      console.log("Error:", state.error); // TypeScript knows error exists
       break;
   }
 }
@@ -144,13 +153,14 @@ interface HasId {
 }
 
 function findById<T extends HasId>(items: T[], id: number): T | undefined {
-  return items.find(item => item.id === id);
+  return items.find((item) => item.id === id);
 }
 ```
 
 ## Mathematical Interlude
 
-The time complexity of TypeScript's type checker for deeply nested types can be approximated as:
+The time complexity of TypeScript's type checker for deeply nested types
+can be approximated as:
 
 $$T(n) = O(2^n)$$
 
@@ -158,7 +168,9 @@ where $n$ is the depth of type nesting. Keep your types simple!
 
 ## Conclusion
 
-TypeScript's type system is incredibly powerful. By following these practices, you'll write safer, more maintainable code. Remember: **the compiler is your friend, not your enemy!**
+TypeScript's type system is incredibly powerful. By following these
+practices, you'll write safer, more maintainable code. Remember: **the
+compiler is your friend, not your enemy!**
 
 ---
 

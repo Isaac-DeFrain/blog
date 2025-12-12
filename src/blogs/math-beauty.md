@@ -1,6 +1,13 @@
+---
+topics:
+  - Mathematics
+  - Education
+---
+
 # The Beauty of Mathematics
 
-Mathematics is often called the language of the universe, and for good reason. Its elegance and power never cease to amaze me.
+Mathematics is often called the language of the universe, and for good
+reason. Its elegance and power never cease to amaze me.
 
 ## Euler's Identity
 
@@ -28,11 +35,13 @@ $$\phi^2 = \phi + 1$$
 
 ## Calculus: The Mathematics of Change
 
-Calculus gives us powerful tools to understand change. The derivative of a function $f(x)$ is defined as:
+Calculus gives us powerful tools to understand change. The derivative of a
+function $f(x)$ is defined as:
 
 $$f'(x) = \lim_{h \to 0} \frac{f(x + h) - f(x)}{h}$$
 
-And the fundamental theorem of calculus beautifully connects differentiation and integration:
+And the fundamental theorem of calculus beautifully connects
+differentiation and integration:
 
 $$\int_a^b f'(x)\,dx = f(b) - f(a)$$
 
@@ -42,7 +51,8 @@ Here's a classic infinite series:
 
 $$\sum_{n=1}^{\infty} \frac{1}{n^2} = \frac{\pi^2}{6}$$
 
-This result, discovered by Euler, connects the seemingly unrelated concepts of infinite sums and $\pi$.
+This result, discovered by Euler, connects the seemingly unrelated
+concepts of infinite sums and $\pi$.
 
 ## Linear Algebra
 
@@ -54,6 +64,9 @@ This represents a rotation by angle $\theta$ in 2D space.
 
 ## Conclusion
 
-Mathematics is beautiful not just for its theoretical elegance, but for its incredible utility in describing and predicting the world around us. Every equation tells a story, and every proof is a journey of logical discovery.
+Mathematics is beautiful not just for its theoretical elegance, but for
+its incredible utility in describing and predicting the world around us.
+Every equation tells a story, and every proof is a journey of logical
+discovery.
 
 > "Mathematics is the poetry of logical ideas." — Albert Einstein
