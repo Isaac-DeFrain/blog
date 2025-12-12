@@ -1,3 +1,5 @@
+import { li } from "./utils";
+
 export interface BlogPost {
   id: string;
   title: string;
@@ -64,7 +66,7 @@ export class Sidebar {
     if (!this.blogList) return;
 
     if (this.posts.length === 0) {
-      this.blogList.innerHTML = '<li class="loading">No posts available</li>';
+      this.blogList.innerHTML = li("loading", "No posts available");
       return;
     }
 

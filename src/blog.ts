@@ -1,6 +1,7 @@
 import { ThemeManager } from "./theme";
 import { TopicsBar, type BlogPost } from "./topics-bar";
 import { Sidebar } from "./sidebar";
+import { div } from "./utils";
 
 /**
  * BlogReader handles blog loading, rendering, and sidebar navigation
@@ -98,6 +99,7 @@ class BlogReader {
       if (!response.ok) {
         throw new Error("Failed to load blog list");
       }
+
       const data = (await response.json()) as { posts: BlogPost[] };
 
       // Load topics from each markdown file
@@ -244,12 +246,14 @@ class BlogReader {
     try {
       const cacheKey = this.getCacheKey(postId);
       const cached = localStorage.getItem(cacheKey);
+
       if (cached) {
         return JSON.parse(cached);
       }
     } catch (error) {
       console.warn("Error reading from cache:", error);
     }
+
     return null;
   }
 
@@ -287,7 +291,7 @@ class BlogReader {
       const keys = Object.keys(localStorage);
       const blogPostKeys = keys.filter((key) => key.startsWith("blog-post-"));
 
-      // Remove half of the oldest entries (simple strategy)
+      // Remove half of the oldest entries
       const keysToRemove = blogPostKeys.slice(
         0,
         Math.floor(blogPostKeys.length / 2),
@@ -314,12 +318,8 @@ class BlogReader {
     }
 
     this.blogContent.innerHTML = `
-      <div class="blog-meta">
-        ${this.escapeHtml(this.formatDate(date))}
-      </div>
-      <div class="blog-content">
-        ${html}
-      </div>
+      ${div("blog-meta", this.escapeHtml(this.formatDate(date)))}
+      ${div("blog-content", html)}
     `;
 
     // Dynamically import and render MathJax for the new content
@@ -361,9 +361,11 @@ class BlogReader {
       // Preserve the current topic filter when setting posts
       const currentTopic = this.topicsBar.getSelectedTopic();
       this.topicsBar.setPosts(this.allPosts);
+
       if (currentTopic !== null) {
         this.topicsBar.setSelectedTopic(currentTopic);
       }
+
       this.sidebar.setPosts(this.posts);
     }
 
@@ -401,7 +403,7 @@ class BlogReader {
     console.debug("Fetching post content for:", postId);
 
     // If not cached, fetch and parse
-    this.blogContent.innerHTML = '<div class="loading">Loading post...</div>';
+    this.blogContent.innerHTML = div("loading", "Loading post...");
 
     try {
       const [{ marked }, { markedHighlight }, hljsModule] = await Promise.all([
@@ -458,7 +460,7 @@ class BlogReader {
    */
   private showError(message: string): void {
     if (this.blogContent) {
-      this.blogContent.innerHTML = `<div class="error">${this.escapeHtml(message)}</div>`;
+      this.blogContent.innerHTML = div("error", this.escapeHtml(message));
     }
   }
 
@@ -496,5 +498,4 @@ class BlogReader {
   }
 }
 
-// Initialize the blog reader
 new BlogReader();
