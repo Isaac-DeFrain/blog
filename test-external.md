@@ -32,4 +32,3 @@ Even external posts support MathJax! Here's the quadratic formula:
 $$x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}$$
 
 Enjoy your new external post feature!
-
