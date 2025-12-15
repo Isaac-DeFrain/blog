@@ -84,11 +84,11 @@ This ensured that whether the app was running locally (at `/`) or on GitHub Page
 
 A subtle but critical bug emerged where blog posts failed to load properly. The issue was with the timing of when `window.__BASE_PATH__` was made available to the application code.
 
-### The Problem
+**The Problem**:
 
 The base path injection plugin was inserting the script tag just before the closing `</head>` tag. However, Vite's build process was adding module script tags earlier in the head, which meant the module scripts could execute before `window.__BASE_PATH__` was defined. When the blog application code ran, it would try to access `window.__BASE_PATH__` to construct fetch paths for blog posts, but the variable was `undefined`, causing all fetch requests to fail.
 
-### The Solution
+**The Solution**:
 
 The fix involved two key changes:
 
@@ -234,6 +234,8 @@ Developers can also run the test locally:
 - `npm run test:posts` - Runs the test (requires a build first)
 - `npm run test` - Builds the project and then runs the test
 
+**Summary of `npm run test:posts`**: This command executes `test-blog-posts.ts`, which validates all blog posts by checking manifest integrity (ensuring all markdown files are listed and no non-existent files are referenced), verifying file availability in both `/src/blogs` and `/dist` directories, validating frontmatter (name, date format, topics), and ensuring each post has content. The test uses the same frontmatter parsing logic as the blog reader, ensuring consistency between test and runtime behavior. If any validation fails, the command exits with an error code, preventing broken posts from being deployed.
+
 This allows catching issues before pushing to the repository, maintaining code quality and preventing broken deployments.
 
 ### Benefits
@@ -246,6 +248,52 @@ This validation provides several key benefits:
 - **Developer Confidence**: Developers can add new posts knowing they'll be validated automatically
 
 The test uses the same frontmatter parsing logic as the blog reader itself, ensuring that if a post passes the test, it will load correctly in the deployed application. This alignment between test and runtime behavior is crucial for reliability.
+
+## The Missing Manifest in Development
+
+Despite all the careful architecture and validation, a subtle issue emerged: **blog posts weren't loading during local development**. The application would start, but no posts would appear in the sidebar, and attempting to load a post would fail _silently_.
+
+**The Problem**:
+
+The blog reader loads posts by first fetching a `manifest.json` file that lists all available markdown files. This manifest was being generated during the build process (in the `closeBundle` hook of the Vite plugin), which worked perfectly for production deployments. However, during local development with `vite dev`, the manifest file didn't exist in the source directory, causing all fetch requests to fail.
+
+The `loadBlogList()` method in `blog.ts` would attempt to fetch `${this.basePath}src/blogs/manifest.json`, but since the file only existed in the `dist` directory after a build, development mode couldn't find it.
+
+**The Solution**:
+
+The fix involved extending the manifest generation to run during development as well. The Vite plugin was updated to:
+
+1. **Extract manifest generation logic** into a reusable `generateBlogManifest()` function that could be called from multiple hooks
+2. **Add a `buildStart` hook** that generates the manifest in the source directory (`src/blogs/manifest.json`) when the dev server starts
+3. **Keep the `closeBundle` hook** to generate the manifest in the dist directory during builds
+
+This ensures the manifest is always available, whether running in development mode or production. The same function generates the manifest in both contexts, maintaining consistency and reducing code duplication.
+
+### The Implementation
+
+The solution refactored the plugin to use a shared function:
+
+```typescript
+function generateBlogManifest(blogsDir: string): { files: string[] } | null {
+  // Scans the directory for .md files and generates manifest.json
+}
+
+// In the plugin:
+{
+  name: "generate-blog-manifest",
+  buildStart() {
+    // Generate for development
+    generateBlogManifest(join(process.cwd(), "src", "blogs"));
+  },
+  closeBundle() {
+    // Generate for production
+    const manifest = generateBlogManifest(srcBlogsDir);
+    // Also copy to dist directory
+  }
+}
+```
+
+This fix highlights an important principle: **build-time and runtime environments need different considerations**. What works in production (where files are pre-generated) may not work in development (where files are served dynamically). The solution ensures both environments have the resources they need.
 
 ## Cursor's Self-Configuration
 
