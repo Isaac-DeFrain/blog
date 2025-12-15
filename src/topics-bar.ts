@@ -1,3 +1,5 @@
+import { parseDateAsPacificTime } from "./utils";
+
 export interface BlogPost {
   id: string;
   name: string;
@@ -129,7 +131,10 @@ export class TopicsBar {
         const filteredPosts = this.allPosts
           .filter((post) => post.topics.some((t) => t === topic))
           .sort((a, b) => {
-            return new Date(b.date).getTime() - new Date(a.date).getTime();
+            return (
+              parseDateAsPacificTime(b.date).getTime() -
+              parseDateAsPacificTime(a.date).getTime()
+            );
           });
 
         this.render();

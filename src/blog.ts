@@ -1,7 +1,7 @@
 import { ThemeManager } from "./theme";
 import { TopicsBar, type BlogPost } from "./topics-bar";
 import { Sidebar } from "./sidebar";
-import { div } from "./utils";
+import { div, parseDateAsPacificTime } from "./utils";
 
 /**
  * Gets the base path for the application.
@@ -226,7 +226,10 @@ class BlogReader {
       this.allPosts = posts
         .filter((post): post is BlogPost => post !== null)
         .sort((a, b) => {
-          return new Date(b.date).getTime() - new Date(a.date).getTime();
+          return (
+            parseDateAsPacificTime(b.date).getTime() -
+            parseDateAsPacificTime(a.date).getTime()
+          );
         });
       this.posts = [...this.allPosts];
     } catch (error) {
@@ -528,17 +531,19 @@ class BlogReader {
    * Formats a date string into a human-readable format.
    *
    * Converts ISO date strings (e.g., "2024-01-15") into a localized format
-   * like "January 15, 2024" using US English locale.
+   * like "January 15, 2024" using US English locale. The date is interpreted
+   * as Pacific Time.
    *
    * @param dateString - ISO format date string (YYYY-MM-DD)
    * @returns Formatted date string in "Month Day, Year" format
    */
   private formatDate(dateString: string): string {
-    const date = new Date(dateString);
+    const date = parseDateAsPacificTime(dateString);
     return date.toLocaleDateString("en-US", {
       year: "numeric",
       month: "long",
       day: "numeric",
+      timeZone: "America/Los_Angeles",
     });
   }
 

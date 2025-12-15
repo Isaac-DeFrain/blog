@@ -1,4 +1,4 @@
-import { li } from "./utils";
+import { li, parseDateAsPacificTime } from "./utils";
 
 export interface BlogPost {
   id: string;
@@ -107,17 +107,19 @@ export class Sidebar {
    * Formats a date string into a human-readable format.
    *
    * Converts ISO date strings (e.g., "2024-01-15") into a localized format
-   * like "January 15, 2024" using US English locale.
+   * like "January 15, 2024" using US English locale. The date is interpreted
+   * as Pacific Time.
    *
    * @param dateString - ISO format date string (YYYY-MM-DD)
    * @returns Formatted date string in "Month Day, Year" format
    */
   private formatDate(dateString: string): string {
-    const date = new Date(dateString);
+    const date = parseDateAsPacificTime(dateString);
     return date.toLocaleDateString("en-US", {
       year: "numeric",
       month: "long",
       day: "numeric",
+      timeZone: "America/Los_Angeles",
     });
   }
 
