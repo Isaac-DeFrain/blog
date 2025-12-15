@@ -6,12 +6,15 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "lint": "tsc --noEmit && markdownlint . --fix && prettier --write ."
+    "lint": "tsc --noEmit && markdownlint . --fix && prettier --write .",
+    "test:posts": "tsx test-blog-posts.ts",
+    "test": "npm run build && npm run test:posts"
   },
   "devDependencies": {
     "@types/node": "^25.0.1",
     "marked": "^16.2.1",
     "prettier": "^3.5.3",
+    "tsx": "^4.19.2",
     "typescript": "^5.3.3",
     "vite": "^6.1.6"
   },
