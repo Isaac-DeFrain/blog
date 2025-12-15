@@ -10,26 +10,26 @@
   --link-color: #667eea;
   --code-bg: #f7fafc;
 
-  /* Spacing */
-  --spacing-xs: 0.25rem;
-  --spacing-sm: 0.5rem;
-  --spacing-md: 0.75rem;
-  --spacing-base: 1rem;
-  --spacing-lg: 1.5rem;
-  --spacing-xl: 2rem;
-  --spacing-2xl: 3rem;
+  /* Spacing - responsive with viewport scaling */
+  --spacing-xs: clamp(0.2rem, 0.3vw, 0.25rem);
+  --spacing-sm: clamp(0.4rem, 0.6vw, 0.5rem);
+  --spacing-md: clamp(0.6rem, 0.9vw, 0.75rem);
+  --spacing-base: clamp(0.8rem, 1.2vw, 1rem);
+  --spacing-lg: clamp(1.2rem, 1.8vw, 1.5rem);
+  --spacing-xl: clamp(1.6rem, 2.4vw, 2rem);
+  --spacing-2xl: clamp(2.4rem, 3.6vw, 3rem);
 
-  /* Font sizes */
-  --font-size-xs: 0.8rem;
-  --font-size-sm: 0.875rem;
-  --font-size-base: 0.95rem;
-  --font-size-md: 1rem;
-  --font-size-lg: 1.0625rem;
-  --font-size-xl: 1.125rem;
-  --font-size-2xl: 1.25rem;
-  --font-size-3xl: 1.5rem;
-  --font-size-4xl: 2rem;
-  --font-size-5xl: 2.5rem;
+  /* Font sizes - responsive with viewport scaling */
+  --font-size-xs: clamp(0.7rem, 0.8vw, 0.8rem);
+  --font-size-sm: clamp(0.8rem, 0.9vw, 0.875rem);
+  --font-size-base: clamp(0.85rem, 1vw, 0.95rem);
+  --font-size-md: clamp(0.9rem, 1.05vw, 1rem);
+  --font-size-lg: clamp(0.95rem, 1.1vw, 1.0625rem);
+  --font-size-xl: clamp(1rem, 1.2vw, 1.125rem);
+  --font-size-2xl: clamp(1.1rem, 1.4vw, 1.25rem);
+  --font-size-3xl: clamp(1.3rem, 1.7vw, 1.5rem);
+  --font-size-4xl: clamp(1.6rem, 2.2vw, 2rem);
+  --font-size-5xl: clamp(2rem, 2.8vw, 2.5rem);
 
   /* Border radius */
   --radius-sm: 4px;
@@ -38,17 +38,17 @@
   --radius-xl: 20px;
   --radius-full: 50%;
 
-  /* Dimensions */
-  --header-height: 3.8rem;
-  --sidebar-width: 300px;
-  --container-max-width: 1400px;
-  --theme-button-size: 40px;
-  --sidebar-top-offset: 100px;
-  --sidebar-max-height-offset: 120px;
-  --scrollbar-width: 8px;
-  --border-width-thin: 2px;
-  --border-width-medium: 3px;
-  --border-width-thick: 4px;
+  /* Dimensions - responsive with viewport scaling */
+  --header-height: clamp(3rem, 4vw, 3.8rem);
+  --sidebar-width: clamp(250px, 20vw, 300px);
+  --container-max-width: min(1400px, 95vw);
+  --theme-button-size: clamp(35px, 3vw, 40px);
+  --sidebar-top-offset: clamp(80px, 8vw, 100px);
+  --sidebar-max-height-offset: clamp(100px, 10vw, 120px);
+  --scrollbar-width: clamp(6px, 0.6vw, 8px);
+  --border-width-thin: clamp(1.5px, 0.2vw, 2px);
+  --border-width-medium: clamp(2.5px, 0.3vw, 3px);
+  --border-width-thick: clamp(3.5px, 0.4vw, 4px);
   --border-width-base: 1px;
 
   /* Code element padding */
@@ -75,10 +75,10 @@
   --line-height-tight: 1.6;
   --line-height-base: 1.8;
 
-  /* Gaps */
-  --gap-xs: 0.5rem;
-  --gap-sm: 1rem;
-  --gap-md: 2rem;
+  /* Gaps - responsive with viewport scaling */
+  --gap-xs: clamp(0.4rem, 0.6vw, 0.5rem);
+  --gap-sm: clamp(0.8rem, 1.2vw, 1rem);
+  --gap-md: clamp(1.6rem, 2.4vw, 2rem);
 
   /* Box shadows */
   --shadow-sm: 0 2px 8px var(--shadow);
@@ -122,7 +122,7 @@ body {
 }
 
 .header {
-  padding: var(--spacing-base) var(--spacing-lg);
+  padding: var(--spacing-base) clamp(var(--spacing-base), 2vw, var(--spacing-lg));
   background: var(--bg-card);
   box-shadow: var(--shadow-sm);
   display: flex;
@@ -172,7 +172,7 @@ body {
 .topics-container {
   background: var(--bg-card);
   box-shadow: var(--shadow-sm);
-  padding: var(--spacing-md) var(--spacing-lg);
+  padding: var(--spacing-md) clamp(var(--spacing-base), 2vw, var(--spacing-lg));
   position: sticky;
   top: var(--header-height);
   z-index: var(--z-index-topics);
@@ -227,7 +227,7 @@ body {
   display: flex;
   max-width: var(--container-max-width);
   margin: 0 auto;
-  padding: var(--spacing-xl) var(--spacing-base);
+  padding: var(--spacing-xl) clamp(0.8rem, 2vw, var(--spacing-base));
   gap: var(--gap-sm);
 }
 
@@ -239,7 +239,7 @@ body {
 .sidebar-card {
   background: var(--bg-card);
   border-radius: var(--radius-lg);
-  padding: var(--spacing-lg);
+  padding: clamp(var(--spacing-base), 1.5vw, var(--spacing-lg));
   box-shadow: var(--shadow-md);
   position: sticky;
   top: var(--sidebar-top-offset);
@@ -294,7 +294,7 @@ body {
 .blog-card {
   background: var(--bg-card);
   border-radius: var(--radius-lg);
-  padding: var(--spacing-2xl) var(--spacing-lg);
+  padding: var(--spacing-2xl) clamp(var(--spacing-base), 2vw, var(--spacing-lg));
   box-shadow: var(--shadow-md);
 }
 
@@ -363,7 +363,7 @@ body {
   padding: var(--code-padding-block) var(--code-padding-inline);
   border-radius: var(--radius-sm);
   font-family: "Courier New", Courier, monospace;
-  font-size: 0.9em;
+  font-size: clamp(0.85em, 0.95vw, 0.9em);
   color: var(--text-primary);
 }
 
@@ -440,6 +440,7 @@ body {
 @media (max-width: var(--breakpoint-md)) {
   .main-container {
     flex-direction: column;
+    padding: var(--spacing-lg) clamp(0.5rem, 1.5vw, var(--spacing-base));
   }
 
   .sidebar {
@@ -452,7 +453,7 @@ body {
   }
 
   .blog-card {
-    padding: var(--spacing-xl) var(--spacing-lg);
+    padding: var(--spacing-xl) clamp(var(--spacing-base), 2vw, var(--spacing-lg));
   }
 }
 
