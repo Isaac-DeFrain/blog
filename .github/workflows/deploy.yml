@@ -48,6 +48,8 @@ jobs:
         run: nix develop --command npm ci
       - name: Build with Vite
         run: nix develop --command npm run build
+      - name: Test blog posts
+        run: nix develop --command npm run test:posts
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
