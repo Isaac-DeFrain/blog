@@ -50,17 +50,23 @@ npm run preview
 ## Adding New Blog Posts
 
 1. Create a new markdown file in `src/blogs/` (e.g., `my-post.md`)
-2. Add an entry to `src/blogs/index.json`:
+2. Add frontmatter to the markdown file with metadata:
 
-```json
-{
-  "id": "my-post",
-  "title": "My Awesome Post",
-  "date": "2024-01-20",
-  "file": "my-post.md"
-}
+```markdown
+---
+name: My Awesome Post
+date: 2024-01-20
+topics:
+  - Technology
+  - Programming
+---
+
+# My Awesome Post
+
+Your content here...
 ```
 
+The post ID is automatically generated from the filename (e.g., `my-post.md` becomes `my-post`).
 Posts are automatically sorted by date in reverse chronological order.
 
 ## Markdown Features
