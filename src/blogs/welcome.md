@@ -1,4 +1,6 @@
 ---
+name: Welcome to My Blog
+date: 2024-01-15
 topics:
   - example
   - mathematics

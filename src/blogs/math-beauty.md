@@ -1,4 +1,6 @@
 ---
+name: The Beauty of Mathematics
+date: 2024-01-10
 topics:
   - Mathematics
   - Education

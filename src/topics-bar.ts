@@ -1,6 +1,6 @@
 export interface BlogPost {
   id: string;
-  title: string;
+  name: string;
   date: string;
   file: string;
   topics: string[];

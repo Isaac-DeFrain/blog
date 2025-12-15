@@ -2,7 +2,7 @@ import { li } from "./utils";
 
 export interface BlogPost {
   id: string;
-  title: string;
+  name: string;
   date: string;
   file: string;
   topics: string[];
@@ -25,10 +25,7 @@ export class Sidebar {
    * @param blogListId - The ID of the blog list element in the DOM
    * @param onPostClick - Callback function called when a post is clicked
    */
-  constructor(
-    blogListId: string,
-    onPostClick: PostClickCallback,
-  ) {
+  constructor(blogListId: string, onPostClick: PostClickCallback) {
     this.blogList = document.getElementById(blogListId);
     this.onPostClick = onPostClick;
   }
@@ -56,11 +53,11 @@ export class Sidebar {
   /**
    * Renders the blog post list in the sidebar navigation.
    *
-   * Creates list items for each blog post with title, formatted date, and click handlers.
+   * Creates list items for each blog post with name, formatted date, and click handlers.
    * Marks the currently active post with the 'active' class for visual feedback.
    *
    * If no posts are available, displays a "No posts available" message.
-   * Escapes HTML in titles to prevent XSS attacks.
+   * Escapes HTML in names to prevent XSS attacks.
    */
   public render(): void {
     if (!this.blogList) return;
@@ -81,7 +78,7 @@ export class Sidebar {
       }
 
       const h3 = document.createElement("h3");
-      h3.textContent = this.escapeHtml(post.title);
+      h3.textContent = this.escapeHtml(post.name);
 
       const date = document.createElement("div");
       date.className = "date";

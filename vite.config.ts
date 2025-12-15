@@ -27,6 +27,34 @@ function getBasePath(): string {
 
 const basePath = getBasePath();
 
+/**
+ * Generates a manifest file listing all markdown files in the blogs directory
+ *
+ * @param blogsDir - The directory containing blog markdown files
+ * @returns The manifest object with files array
+ */
+function generateBlogManifest(blogsDir: string): { files: string[] } | null {
+  const manifestPath = join(blogsDir, "manifest.json");
+
+  try {
+    const entries = readdirSync(blogsDir, { withFileTypes: true });
+    const markdownFiles = entries
+      .filter((entry) => entry.isFile() && entry.name.endsWith(".md"))
+      .map((entry) => entry.name)
+      .sort();
+
+    const manifest = {
+      files: markdownFiles,
+    };
+
+    writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
+    return manifest;
+  } catch (error) {
+    console.warn("Failed to generate blog manifest:", error);
+    return null;
+  }
+}
+
 export default defineConfig({
   base: basePath,
   build: {
@@ -65,11 +93,14 @@ export default defineConfig({
     },
     {
       name: "inject-base-path",
-      transformIndexHtml(html) {
-        // Inject base path as a global variable so client code can access it
-        const basePathScript = `<script>window.__BASE_PATH__ = ${JSON.stringify(basePath)};</script>`;
-        // Insert before the closing </head> tag
-        return html.replace("</head>", `${basePathScript}</head>`);
+      transformIndexHtml: {
+        order: "pre",
+        handler(html) {
+          // Inject base path as a global variable so client code can access it
+          // Insert right after the opening <head> tag to ensure it's available before any module scripts
+          const basePathScript = `<script>window.__BASE_PATH__ = ${JSON.stringify(basePath)};</script>`;
+          return html.replace("<head>", `<head>${basePathScript}`);
+        },
       },
     },
     {
@@ -105,6 +136,28 @@ export default defineConfig({
       },
     },
     {
+      name: "generate-blog-manifest",
+      buildStart() {
+        // Generate manifest in source directory for development
+        generateBlogManifest(join(process.cwd(), "src", "blogs"));
+      },
+      closeBundle() {
+        // Generate a manifest file listing all markdown files in the blogs directory
+        const srcBlogsDir = join(process.cwd(), "src", "blogs");
+        const distBlogsDir = join(process.cwd(), "dist", "src", "blogs");
+
+        // Generate manifest from source directory
+        const manifest = generateBlogManifest(srcBlogsDir);
+        if (manifest) {
+          // Write manifest to dist directory
+          mkdirSync(distBlogsDir, { recursive: true });
+          const manifestPath = join(distBlogsDir, "manifest.json");
+          writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
+          console.log("Blog manifest generated");
+        }
+      },
+    },
+    {
       name: "process-404",
       closeBundle() {
         // Process 404.html to inject base path for GitHub Pages SPA routing
@@ -115,9 +168,9 @@ export default defineConfig({
         try {
           let html = readFileSync(src404, "utf-8");
 
-          // Inject base path as a global variable
+          // Inject base path as a global variable right after opening <head> tag
           const basePathScript = `<script>window.__BASE_PATH__ = ${JSON.stringify(basePath)};</script>`;
-          html = html.replace("</head>", `${basePathScript}</head>`);
+          html = html.replace("<head>", `<head>${basePathScript}`);
 
           // Only replace paths if base path is not root
           // Ensures assets load correctly with the base path

@@ -15,6 +15,67 @@ function getBasePath(): string {
 }
 
 /**
+ * Parses YAML frontmatter from markdown files.
+ *
+ * Extracts metadata from a frontmatter block at the beginning of the markdown file.
+ * The frontmatter should be in the format:
+ * ---
+ * name: Post Name
+ * date: 2024-01-15
+ * topics:
+ *   - Topic 1
+ *   - Topic 2
+ * ---
+ *
+ * @param markdown - The markdown content with optional frontmatter
+ * @returns Object with parsed frontmatter fields (name, date, topics)
+ */
+export function parseFrontmatter(markdown: string): {
+  name?: string;
+  date?: string;
+  topics?: string[];
+} {
+  const frontmatterRegex = /^---\s*\n([\s\S]*?)\n---\s*\n/;
+  const match = markdown.match(frontmatterRegex);
+
+  if (!match) {
+    return {};
+  }
+
+  const frontmatter = match[1];
+  const result: { name?: string; date?: string; topics?: string[] } = {};
+
+  // Parse name
+  const nameMatch = frontmatter.match(/^name:\s*(.+)$/m);
+  if (nameMatch) {
+    result.name = nameMatch[1].trim();
+  }
+
+  // Parse date
+  const dateMatch = frontmatter.match(/^date:\s*(.+)$/m);
+  if (dateMatch) {
+    result.date = dateMatch[1].trim();
+  }
+
+  // Parse topics
+  const topicsMatch = frontmatter.match(/^topics:\s*\n((?:\s*-\s*.+\n?)+)/m);
+  if (topicsMatch) {
+    const topicsList = topicsMatch[1];
+    result.topics = topicsList
+      .split("\n")
+      .map((line) =>
+        line
+          .replace(/^\s*-\s*/, "")
+          .trim()
+          .toLowerCase()
+      )
+      .filter((topic) => topic.length > 0);
+  }
+
+  return result;
+}
+
+/**
  * BlogReader handles blog loading, rendering, and sidebar navigation
  */
 class BlogReader {
@@ -36,12 +97,9 @@ class BlogReader {
     // Initialize topics bar and sidebar with callbacks
     this.topicsBar = new TopicsBar(
       "topics-bar",
-      this.handleTopicFilterChange.bind(this),
+      this.handleTopicFilterChange.bind(this)
     );
-    this.sidebar = new Sidebar(
-      "blog-list",
-      this.handlePostClick.bind(this),
-    );
+    this.sidebar = new Sidebar("blog-list", this.handlePostClick.bind(this));
 
     this.init();
 
@@ -110,11 +168,11 @@ class BlogReader {
   }
 
   /**
-   * Loads the blog post list from the server's index.json.
+   * Loads the blog post list by discovering all markdown files and parsing their frontmatter.
    *
-   * Fetches the blog posts from `/src/blogs/index.json`, loads topics from each
-   * markdown file's frontmatter, and sorts them by date in reverse chronological
-   * order (newest first).
+   * Fetches the manifest.json to get a list of all markdown files, then loads each file
+   * to extract metadata (name, date, topics) from frontmatter. Sorts posts by date in
+   * reverse chronological order (newest first).
    *
    * If loading fails, display an error message to the user and log the error.
    *
@@ -122,84 +180,59 @@ class BlogReader {
    */
   private async loadBlogList(): Promise<void> {
     try {
-      const response = await fetch(`${this.basePath}src/blogs/index.json`);
-      if (!response.ok) {
-        throw new Error("Failed to load blog list");
+      // Fetch manifest to get list of markdown files
+      const manifestResponse = await fetch(
+        `${this.basePath}src/blogs/manifest.json`
+      );
+      if (!manifestResponse.ok) {
+        throw new Error("Failed to load blog manifest");
       }
 
-      const data = (await response.json()) as { posts: BlogPost[] };
+      const manifest = (await manifestResponse.json()) as { files: string[] };
 
-      // Load topics from each markdown file
-      const postsWithTopics = await Promise.all(
-        data.posts.map(async (post) => {
+      // Load and parse each markdown file
+      const posts = await Promise.all(
+        manifest.files.map(async (filename) => {
           try {
-            const markdownResponse = await fetch(`${this.basePath}src/blogs/${post.file}`);
+            const markdownResponse = await fetch(
+              `${this.basePath}src/blogs/${filename}`
+            );
             if (!markdownResponse.ok) {
-              return { ...post, topics: [] };
+              console.warn(`Failed to load ${filename}`);
+              return null;
             }
 
             const markdown = await markdownResponse.text();
-            const topics = this.parseTopicsFromFrontmatter(markdown);
-            return { ...post, topics };
+            const frontmatter = parseFrontmatter(markdown);
+
+            // Generate id from filename (remove .md extension)
+            const id = filename.replace(/\.md$/, "");
+
+            return {
+              id,
+              name: frontmatter.name || "Untitled",
+              date: frontmatter.date || "1970-01-01",
+              file: filename,
+              topics: frontmatter.topics || [],
+            } as BlogPost;
           } catch (error) {
-            console.error(`Error loading topics for ${post.file}:`, error);
-            return { ...post, topics: [] };
+            console.error(`Error loading ${filename}:`, error);
+            return null;
           }
-        }),
+        })
       );
 
-      // Sort by date in reverse chronological order
-      this.allPosts = postsWithTopics.sort((a, b) => {
-        return new Date(b.date).getTime() - new Date(a.date).getTime();
-      });
+      // Filter out null entries and sort by date in reverse chronological order
+      this.allPosts = posts
+        .filter((post): post is BlogPost => post !== null)
+        .sort((a, b) => {
+          return new Date(b.date).getTime() - new Date(a.date).getTime();
+        });
       this.posts = [...this.allPosts];
     } catch (error) {
       this.showError("Failed to load blog posts. Please try again later.");
       console.error("Error loading blog list:", error);
     }
-  }
-
-  /**
-   * Parses topics from YAML frontmatter in markdown files.
-   *
-   * Extracts topics from a frontmatter block at the beginning of the markdown file.
-   * The frontmatter should be in the format:
-   * ---
-   * topics:
-   *   - Topic 1
-   *   - Topic 2
-   * ---
-   *
-   * @param markdown - The markdown content with optional frontmatter
-   * @returns Array of topic strings, or empty array if no topics found
-   */
-  private parseTopicsFromFrontmatter(markdown: string): string[] {
-    const frontmatterRegex = /^---\s*\n([\s\S]*?)\n---\s*\n/;
-    const match = markdown.match(frontmatterRegex);
-
-    if (!match) {
-      return [];
-    }
-
-    const frontmatter = match[1];
-    const topicsMatch = frontmatter.match(/^topics:\s*\n((?:\s*-\s*.+\n?)+)/m);
-
-    if (!topicsMatch) {
-      return [];
-    }
-
-    const topicsList = topicsMatch[1];
-    const topics = topicsList
-      .split("\n")
-      .map((line) =>
-        line
-          .replace(/^\s*-\s*/, "")
-          .trim()
-          .toLowerCase(),
-      )
-      .filter((topic) => topic.length > 0);
-
-    return topics;
   }
 
   /**
@@ -236,13 +269,13 @@ class BlogReader {
   private async handlePostClick(postId: string): Promise<void> {
     // Preserve the current topic filter
     const currentTopic = this.topicsBar.getSelectedTopic();
-    
+
     try {
       await this.loadBlogPost(postId);
-      
+
       // Update URL without page reload
       window.history.pushState({ postId }, "", `${this.basePath}${postId}`);
-      
+
       // Restore the topic filter if it was set
       if (currentTopic !== null) {
         this.topicsBar.setSelectedTopic(currentTopic);
@@ -321,7 +354,7 @@ class BlogReader {
       // Remove half of the oldest entries
       const keysToRemove = blogPostKeys.slice(
         0,
-        Math.floor(blogPostKeys.length / 2),
+        Math.floor(blogPostKeys.length / 2)
       );
       keysToRemove.forEach((key) => localStorage.removeItem(key));
     } catch (error) {
@@ -337,7 +370,7 @@ class BlogReader {
    */
   private async renderBlogPostContent(
     html: string,
-    date: string,
+    date: string
   ): Promise<void> {
     if (!this.blogContent) {
       console.error("Blog post content is is null");
@@ -417,7 +450,7 @@ class BlogReader {
     this.sidebar.setActivePost(postId);
 
     // Update document title
-    document.title = `Isaac's Blog | ${post.title}`;
+    document.title = `Isaac's Blog | ${post.name}`;
 
     // Check cache first
     const cached = this.getCachedPost(postId);
@@ -450,7 +483,7 @@ class BlogReader {
             const language = hljs.getLanguage(lang) ? lang : "plaintext";
             return hljs.highlight(code, { language }).value;
           },
-        }),
+        })
       );
 
       const response = await fetch(`${this.basePath}src/blogs/${post.file}`);
@@ -462,7 +495,7 @@ class BlogReader {
       // Remove frontmatter before parsing markdown
       const markdownWithoutFrontmatter = markdown.replace(
         /^---\s*\n[\s\S]*?\n---\s*\n/,
-        "",
+        ""
       );
       const html = await marked.parse(markdownWithoutFrontmatter);
 
@@ -525,4 +558,7 @@ class BlogReader {
   }
 }
 
-new BlogReader();
+// Only instantiate BlogReader in browser environment
+if (typeof window !== "undefined") {
+  new BlogReader();
+}
