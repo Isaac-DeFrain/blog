@@ -1,5 +1,5 @@
 {
-  description = "Blog reader development environment";
+  description = "Blog development environment";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -15,16 +15,15 @@
         devShells.default = pkgs.mkShell {
           buildInputs = with pkgs; [
             nodejs_24
-            markdownlint-cli
           ];
 
           shellHook = ''
-            echo "Blog reader development environment"
+            echo "Blog development environment"
             echo "Node.js version: $(node --version)"
             echo "npm version: $(npm --version)"
-            echo "markdownlint version: $(markdownlint --version)"
           '';
         };
       }
     );
 }
+
