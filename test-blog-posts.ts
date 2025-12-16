@@ -33,9 +33,7 @@ function testBlogPosts(): void {
 
   // Check if dist directory exists (build must be run first)
   if (!existsSync(distBlogsDir)) {
-    errors.push(
-      `Dist directory not found: ${distBlogsDir}. Please run 'npm run build' first.`
-    );
+    errors.push(`Dist directory not found: ${distBlogsDir}. Please run 'npm run build' first.`);
 
     reportResults(errors, warnings);
     process.exit(1);
@@ -43,9 +41,7 @@ function testBlogPosts(): void {
 
   // Check if manifest exists
   if (!existsSync(manifestPath)) {
-    errors.push(
-      `Manifest file not found: ${manifestPath}. The build may have failed.`
-    );
+    errors.push(`Manifest file not found: ${manifestPath}. The build may have failed.`);
 
     reportResults(errors, warnings);
     process.exit(1);
@@ -58,9 +54,7 @@ function testBlogPosts(): void {
     const manifestContent = readFileSync(manifestPath, "utf-8");
     manifest = JSON.parse(manifestContent) as Manifest;
   } catch (error) {
-    errors.push(
-      `Failed to read or parse manifest.json: ${error instanceof Error ? error.message : String(error)}`
-    );
+    errors.push(`Failed to read or parse manifest.json: ${error instanceof Error ? error.message : String(error)}`);
 
     reportResults(errors, warnings);
     process.exit(1);
@@ -76,9 +70,7 @@ function testBlogPosts(): void {
       .map((entry) => entry.name)
       .sort();
   } catch (error) {
-    errors.push(
-      `Failed to read source blogs directory: ${error instanceof Error ? error.message : String(error)}`
-    );
+    errors.push(`Failed to read source blogs directory: ${error instanceof Error ? error.message : String(error)}`);
 
     reportResults(errors, warnings);
     process.exit(1);
@@ -96,9 +88,7 @@ function testBlogPosts(): void {
   const sourceFilesSet = new Set(sourceFiles);
   for (const manifestFile of manifest.files) {
     if (!sourceFilesSet.has(manifestFile)) {
-      errors.push(
-        `Manifest lists ${manifestFile} but file does not exist in source directory`
-      );
+      errors.push(`Manifest lists ${manifestFile} but file does not exist in source directory`);
     }
   }
 
@@ -132,9 +122,7 @@ function testBlogPosts(): void {
       if (!frontmatter.date) {
         warnings.push(`${filename}: Missing 'date' in frontmatter`);
       } else if (!isValidDate(frontmatter.date)) {
-        errors.push(
-          `${filename}: Invalid date format '${frontmatter.date}'. Expected YYYY-MM-DD format.`
-        );
+        errors.push(`${filename}: Invalid date format '${frontmatter.date}'. Expected YYYY-MM-DD format.`);
       }
 
       if (!frontmatter.topics || frontmatter.topics.length === 0) {
@@ -142,18 +130,13 @@ function testBlogPosts(): void {
       }
 
       // Verify markdown content exists (after frontmatter)
-      const markdownWithoutFrontmatter = markdown.replace(
-        /^---\s*\n[\s\S]*?\n---\s*\n/,
-        ""
-      );
+      const markdownWithoutFrontmatter = markdown.replace(/^---\s*\n[\s\S]*?\n---\s*\n/, "");
 
       if (markdownWithoutFrontmatter.trim().length === 0) {
         warnings.push(`${filename}: No content found after frontmatter`);
       }
     } catch (error) {
-      errors.push(
-        `Failed to read or parse ${filename}: ${error instanceof Error ? error.message : String(error)}`
-      );
+      errors.push(`Failed to read or parse ${filename}: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 

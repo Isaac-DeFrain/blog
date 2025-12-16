@@ -67,7 +67,7 @@ export function parseFrontmatter(markdown: string): {
         line
           .replace(/^\s*-\s*/, "")
           .trim()
-          .toLowerCase()
+          .toLowerCase(),
       )
       .filter((topic) => topic.length > 0);
   }
@@ -95,10 +95,7 @@ class BlogReader {
     this.blogContent = document.getElementById("blog-content");
 
     // Initialize topics bar and sidebar with callbacks
-    this.topicsBar = new TopicsBar(
-      "topics-bar",
-      this.handleTopicFilterChange.bind(this)
-    );
+    this.topicsBar = new TopicsBar("topics-bar", this.handleTopicFilterChange.bind(this));
     this.sidebar = new Sidebar("blog-list", this.handlePostClick.bind(this));
 
     this.init();
@@ -181,9 +178,7 @@ class BlogReader {
   private async loadBlogList(): Promise<void> {
     try {
       // Fetch manifest to get list of markdown files
-      const manifestResponse = await fetch(
-        `${this.basePath}src/blogs/manifest.json`
-      );
+      const manifestResponse = await fetch(`${this.basePath}src/blogs/manifest.json`);
       if (!manifestResponse.ok) {
         throw new Error("Failed to load blog manifest");
       }
@@ -194,9 +189,7 @@ class BlogReader {
       const posts = await Promise.all(
         manifest.files.map(async (filename) => {
           try {
-            const markdownResponse = await fetch(
-              `${this.basePath}src/blogs/${filename}`
-            );
+            const markdownResponse = await fetch(`${this.basePath}src/blogs/${filename}`);
             if (!markdownResponse.ok) {
               console.warn(`Failed to load ${filename}`);
               return null;
@@ -219,17 +212,14 @@ class BlogReader {
             console.error(`Error loading ${filename}:`, error);
             return null;
           }
-        })
+        }),
       );
 
       // Filter out null entries and sort by date in reverse chronological order
       this.allPosts = posts
         .filter((post): post is BlogPost => post !== null)
         .sort((a, b) => {
-          return (
-            parseDateAsPacificTime(b.date).getTime() -
-            parseDateAsPacificTime(a.date).getTime()
-          );
+          return parseDateAsPacificTime(b.date).getTime() - parseDateAsPacificTime(a.date).getTime();
         });
       this.posts = [...this.allPosts];
     } catch (error) {
@@ -252,9 +242,7 @@ class BlogReader {
 
     // Only load a new post if the current post is not in the filtered list
     if (this.posts.length > 0) {
-      const currentPostInList = this.currentPostId
-        ? this.posts.some((post) => post.id === this.currentPostId)
-        : false;
+      const currentPostInList = this.currentPostId ? this.posts.some((post) => post.id === this.currentPostId) : false;
       if (!currentPostInList) {
         this.loadBlogPost(this.posts[0].id);
       }
@@ -336,10 +324,7 @@ class BlogReader {
       console.warn("Error writing to cache:", error);
 
       // If storage is full, try to clear old entries
-      if (
-        error instanceof DOMException &&
-        error.name === "QuotaExceededError"
-      ) {
+      if (error instanceof DOMException && error.name === "QuotaExceededError") {
         this.clearOldCacheEntries();
       }
     }
@@ -355,10 +340,7 @@ class BlogReader {
       const blogPostKeys = keys.filter((key) => key.startsWith("blog-post-"));
 
       // Remove half of the oldest entries
-      const keysToRemove = blogPostKeys.slice(
-        0,
-        Math.floor(blogPostKeys.length / 2)
-      );
+      const keysToRemove = blogPostKeys.slice(0, Math.floor(blogPostKeys.length / 2));
       keysToRemove.forEach((key) => localStorage.removeItem(key));
     } catch (error) {
       console.warn("Error clearing old cache entries:", error);
@@ -371,10 +353,7 @@ class BlogReader {
    * @param html - The parsed HTML content
    * @param date - The post date string
    */
-  private async renderBlogPostContent(
-    html: string,
-    date: string
-  ): Promise<void> {
+  private async renderBlogPostContent(html: string, date: string): Promise<void> {
     if (!this.blogContent) {
       console.error("Blog post content is is null");
       return;
@@ -486,7 +465,7 @@ class BlogReader {
             const language = hljs.getLanguage(lang) ? lang : "plaintext";
             return hljs.highlight(code, { language }).value;
           },
-        })
+        }),
       );
 
       const response = await fetch(`${this.basePath}src/blogs/${post.file}`);
@@ -496,10 +475,7 @@ class BlogReader {
 
       const markdown = await response.text();
       // Remove frontmatter before parsing markdown
-      const markdownWithoutFrontmatter = markdown.replace(
-        /^---\s*\n[\s\S]*?\n---\s*\n/,
-        ""
-      );
+      const markdownWithoutFrontmatter = markdown.replace(/^---\s*\n[\s\S]*?\n---\s*\n/, "");
       const html = await marked.parse(markdownWithoutFrontmatter);
 
       // Cache the parsed HTML

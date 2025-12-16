@@ -52,9 +52,7 @@ export async function waitForMathJax(): Promise<void> {
  * @param elements - The HTML element(s) containing math expressions to typeset
  * @returns Promise that resolves when typesetting is complete
  */
-export async function typesetMath(
-  elements: HTMLElement | HTMLElement[],
-): Promise<void> {
+export async function typesetMath(elements: HTMLElement | HTMLElement[]): Promise<void> {
   await waitForMathJax();
 
   if (!window.MathJax?.typesetPromise) {

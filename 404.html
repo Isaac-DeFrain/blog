@@ -24,22 +24,11 @@
           processEnvironments: true,
         },
         options: {
-          skipHtmlTags: [
-            "script",
-            "noscript",
-            "style",
-            "textarea",
-            "pre",
-            "code",
-          ],
+          skipHtmlTags: ["script", "noscript", "style", "textarea", "pre", "code"],
         },
       };
     </script>
-    <script
-      src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"
-      id="MathJax-script"
-      async
-    ></script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" id="MathJax-script" async></script>
     <link rel="stylesheet" href="/styling/blog.css" />
   </head>
   <body>
@@ -48,9 +37,7 @@
         <h1>My Blog</h1>
       </div>
       <div class="header-actions">
-        <button class="theme-button" id="theme-toggle" title="Toggle theme">
-          🌙
-        </button>
+        <button class="theme-button" id="theme-toggle" title="Toggle theme">🌙</button>
       </div>
     </div>
     <div class="topics-container">
@@ -69,9 +56,7 @@
 
       <main class="content">
         <div class="blog-card">
-          <div id="blog-content" class="loading">
-            Loading...
-          </div>
+          <div id="blog-content" class="loading">Loading...</div>
         </div>
       </main>
     </div>
@@ -79,4 +64,3 @@
     <script type="module" src="/src/blog.ts"></script>
   </body>
 </html>
-

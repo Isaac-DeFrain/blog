@@ -1,11 +1,5 @@
 import { defineConfig } from "vite";
-import {
-  readFileSync,
-  writeFileSync,
-  copyFileSync,
-  mkdirSync,
-  readdirSync,
-} from "fs";
+import { readFileSync, writeFileSync, copyFileSync, mkdirSync, readdirSync } from "fs";
 import { join } from "path";
 
 /** Determine base path for GitHub Pages deployment
@@ -81,10 +75,7 @@ export default defineConfig({
             }
 
             // For all other routes, serve index.html
-            const indexHtml = readFileSync(
-              join(process.cwd(), "index.html"),
-              "utf-8"
-            );
+            const indexHtml = readFileSync(join(process.cwd(), "index.html"), "utf-8");
             res.setHeader("Content-Type", "text/html");
             res.end(indexHtml);
           });
@@ -177,17 +168,14 @@ export default defineConfig({
           if (basePath !== "/") {
             // Replace absolute internal paths (href="/path" or src="/path")
             // but skip external URLs (starting with // or http)
-            html = html.replace(
-              /(href|src)="\/([^"]*)"/g,
-              (match, attr, path) => {
-                // Don't modify external URLs (protocol-relative // or http/https)
-                if (path.startsWith("/") || path.startsWith("http")) {
-                  return match;
-                }
-
-                return `${attr}="${basePath}${path}"`;
+            html = html.replace(/(href|src)="\/([^"]*)"/g, (match, attr, path) => {
+              // Don't modify external URLs (protocol-relative // or http/https)
+              if (path.startsWith("/") || path.startsWith("http")) {
+                return match;
               }
-            );
+
+              return `${attr}="${basePath}${path}"`;
+            });
           }
 
           writeFileSync(dist404, html);

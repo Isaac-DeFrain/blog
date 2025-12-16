@@ -6,9 +6,7 @@ export class ThemeManager {
   private isDarkMode: boolean = false;
 
   constructor(themeButtonId: string = "theme-toggle") {
-    this.themeButton = document.getElementById(
-      themeButtonId,
-    ) as HTMLButtonElement;
+    this.themeButton = document.getElementById(themeButtonId) as HTMLButtonElement;
     this.init();
   }
 
@@ -27,13 +25,11 @@ export class ThemeManager {
     }
 
     // Listen for system theme changes
-    window
-      .matchMedia("(prefers-color-scheme: dark)")
-      .addEventListener("change", (e) => {
-        if (!localStorage.getItem("theme")) {
-          this.setTheme(e.matches);
-        }
-      });
+    window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", (e) => {
+      if (!localStorage.getItem("theme")) {
+        this.setTheme(e.matches);
+      }
+    });
   }
 
   /**
@@ -41,9 +37,7 @@ export class ThemeManager {
    */
   private loadTheme(): void {
     const savedTheme = localStorage.getItem("theme");
-    const prefersDark = window.matchMedia(
-      "(prefers-color-scheme: dark)",
-    ).matches;
+    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
     this.isDarkMode = savedTheme === "dark" || (!savedTheme && prefersDark);
     this.setTheme(this.isDarkMode);
   }
@@ -78,10 +72,7 @@ export class ThemeManager {
   private updateThemeButton(): void {
     if (this.themeButton) {
       this.themeButton.textContent = this.isDarkMode ? "☀️" : "🌙";
-      this.themeButton.setAttribute(
-        "aria-label",
-        this.isDarkMode ? "Switch to light mode" : "Switch to dark mode",
-      );
+      this.themeButton.setAttribute("aria-label", this.isDarkMode ? "Switch to light mode" : "Switch to dark mode");
     }
   }
 

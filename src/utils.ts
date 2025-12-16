@@ -46,7 +46,5 @@ export function parseDateAsPacificTime(dateString: string): Date {
   // We create a UTC date at the time that represents midnight Pacific
   const utcHourForMidnightPacific = -offsetHours; // 8 for PST, 7 for PDT
 
-  return new Date(
-    Date.UTC(year, month - 1, day, utcHourForMidnightPacific, 0, 0)
-  );
+  return new Date(Date.UTC(year, month - 1, day, utcHourForMidnightPacific, 0, 0));
 }

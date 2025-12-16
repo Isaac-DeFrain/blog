@@ -108,14 +108,8 @@ html.dark-mode {
 }
 
 body {
-  font-family:
-    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
-    Arial, sans-serif;
-  background: linear-gradient(
-    135deg,
-    var(--bg-gradient-1),
-    var(--bg-gradient-2)
-  );
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  background: linear-gradient(135deg, var(--bg-gradient-1), var(--bg-gradient-2));
   min-height: 100vh;
   color: var(--text-primary);
   transition: background var(--transition-base) ease;

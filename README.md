@@ -66,8 +66,9 @@ topics:
 Your content here...
 ```
 
-The post ID is automatically generated from the filename (e.g., `my-post.md` becomes `my-post`).
-Posts are automatically sorted by date in reverse chronological order.
+The post ID is automatically generated from the filename (e.g., `my-post.md`
+becomes `my-post`). Posts are automatically sorted by date in reverse
+chronological order.
 
 ## Markdown Features
 
@@ -80,10 +81,10 @@ Posts are automatically sorted by date in reverse chronological order.
 - **Inline math**: `$equation$`
 - **Display math**: `$$equation$$`
 
-## Tech Stack
+## Tools
 
+- **Nix**: Determinate dependencies
 - **TypeScript**: Type-safe JavaScript
 - **Vite**: Fast build tool and dev server
 - **Marked**: Markdown parser
 - **MathJax**: Mathematical equation rendering
-- **CSS Custom Properties**: For theming

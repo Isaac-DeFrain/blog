@@ -118,10 +118,7 @@ export class TopicsBar {
       const button = document.createElement("button");
       button.className = "topic-button";
 
-      if (
-        this.selectedTopic &&
-        this.selectedTopic.toLowerCase() === topic.toLowerCase()
-      ) {
+      if (this.selectedTopic && this.selectedTopic.toLowerCase() === topic.toLowerCase()) {
         button.classList.add("active");
       }
 
@@ -131,10 +128,7 @@ export class TopicsBar {
         const filteredPosts = this.allPosts
           .filter((post) => post.topics.some((t) => t === topic))
           .sort((a, b) => {
-            return (
-              parseDateAsPacificTime(b.date).getTime() -
-              parseDateAsPacificTime(a.date).getTime()
-            );
+            return parseDateAsPacificTime(b.date).getTime() - parseDateAsPacificTime(a.date).getTime();
           });
 
         this.render();
