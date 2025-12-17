@@ -41,12 +41,12 @@ But, of course, that couldn't be the whole goal... I also felt strongly compelle
 
 This post will highlight:
 
-- [tech choices](#the-blogs-tech-choices)
-- [design decisions](#the-blogs-design)
+- [tech choices](#this-blogs-tech-choices)
+- [design decisions](#this-blogs-design)
 - [CI/CD best practices](#cicd-best-practices)
 - [deploying to GitHub Pages](#deploying-to-github-pages)
 
-### The blog's tech choices
+### This blog's tech choices
 
 As mentioned above, we use:
 
@@ -91,7 +91,7 @@ Vite serves as both the development server and build tool for the blog. It deliv
 - **Plugin system**: Extensible architecture allows custom build steps which we use to copy blog files, generate manifests, and process 404.html for GitHub Pages
 - **Modern tooling**: Works seamlessly with modern JavaScript features and ES modules
 
-For the blog, Vite handles the entire _build pipeline_: serving the SPA during development, compiling TypeScript code, copying markdown files to the `/dist` directory, generating the blog manifest, and configuring the base path for GitHub Pages deployment.
+For this blog, Vite handles the entire _build pipeline_: serving the SPA during development, compiling TypeScript code, copying markdown files to the `/dist` directory, generating the blog manifest, and configuring the base path for GitHub Pages deployment.
 
 ### Why Cursor
 
@@ -104,7 +104,7 @@ Cursor is an AI-powered IDE built on VS Code which has become an almost essentia
 - **Code generation and refactoring**: Quickly generate boilerplate code, refactor existing code, and implement features while maintaining consistency with your project's patterns
 - **Error resolution**: Cursor helps mediagnose and fix errors faster by understanding the context of your code and suggesting targeted solutions
 
-For the blog, Cursor has helped me navigate and understand TypeScript syntax, Vite's build system, implementing client-side routing, and solving deployment challenges with GitHub Pages much more easily. It transformed what would have easily been several hard weeks of learning and trial-and-error into a productive 3-day push. It turns out that writing blog posts takes much longer than writing code...
+For this blog, Cursor has helped me navigate and understand TypeScript syntax, Vite's build system, implementing client-side routing, and solving deployment challenges with GitHub Pages much more easily. It transformed what would have easily been several hard weeks of learning and trial-and-error into a productive 3-day push. It turns out that writing blog posts takes much longer than writing code...
 
 ### Why GitHub Actions/Pages
 
@@ -112,13 +112,13 @@ Since the code is already hosted on [GitHub](https://github.com/), it makes sens
 
 Our deployment to GitHub Pages posed several unexpected challenges which will be discussed in detail later.
 
-## The blog's design
+## This blog's design
 
-The blog is a [single-page application (SPA)](https://en.wikipedia.org/wiki/Single-page_application) built with TypeScript and Vite. It renders markdown blog posts with client-side routing, topic filtering, and light/dark theme switching.
+This blog is a [single-page application (SPA)](https://en.wikipedia.org/wiki/Single-page_application) built with TypeScript and Vite. It renders markdown blog posts with client-side routing, topic filtering, working internal post and section links, and light/dark theme toggling.
 
 ### Architecture
 
-The blog's architecture is as simple as possible while supporting deployment to [GitHub Pages](https://docs.github.com/en/pages).
+This blog's architecture is as simple as possible while supporting deployment to [GitHub Pages](https://docs.github.com/en/pages).
 
 - **Framework**: Vanilla TypeScript with Vite
 - **Blog Content**: Markdown files with YAML frontmatter (name, date, topics)
@@ -166,7 +166,7 @@ The layout of the single page is simple:
 
 ## CI/CD best practices
 
-Since I am attempting to use some notion of _best practices_, I should define what I mean. This is a non-exhaustive list of best practices:
+Since I am attempting to use some notion of _best practices_, I should at least attempt define what I mean. This is a _non-exhaustive_ list of best practices:
 
 - reproducible dev environments/builds/deploys (e.g. Nix flakes)
 - automated formatting, linting, testing, and deployment
@@ -191,67 +191,87 @@ I was not familiar with _any_ of the following concepts (except build-time proce
 ### Main challenges
 
 - [SPA routing](#spa-routing)
-- [base path configuration](#base-path-configuration)
-- [script injection timing](#script-injection-timing)
-- [build-time processing](#build-time-processing)
-- [internal post linking](#internal-post-linking)
+- [Base path configuration](#base-path-configuration)
+- [Script injection timing](#script-injection-timing)
+- [Build-time processing](#build-time-processing)
+- [Internal post/section linking](#internal-postsection-linking)
 
 #### SPA routing
 
-_Problem_: The most significant challenge was that **GitHub Pages doesn't natively support SPA routing**. When a user navigated directly to a route like `/welcome` or refreshed the page, GitHub Pages would return a 404 error because it was looking for an actual file at that path, not understanding that this was a client-side route handled by JavaScript.
+_Problem_:
 
-_Solution_: We leveraged GitHub Pages' special behavior of serving `404.html` when a file isn't found. By creating a `404.html` file that mirrors the main `index.html` structure and processes it during build to inject the base path, we ensure that any "missing" route loads the SPA, which then reads the original pathname from the URL and routes accordingly. This solution is detailed in [part 2 of this series](./building-this-blog-02-spa-routing.md).
+The most significant challenge was that **GitHub Pages doesn't natively support SPA routing**. When a user navigated directly to a route like `/welcome` or refreshed the page, GitHub Pages would return a 404 error because it was looking for an actual file at that path, not understanding that this was a client-side route handled by JavaScript.
+
+_Solution_:
+
+We leveraged GitHub Pages' special behavior of serving `404.html` when a file isn't found. By creating a `404.html` file that mirrors the main `index.html` structure and processes it during build to inject the base path, we ensure that any "missing" route loads the SPA, which then reads the original pathname from the URL and routes accordingly. This solution is detailed in [part 2 of this series](./building-this-blog-02-spa-routing.md).
 
 #### Base path configuration
 
-_Problem_: GitHub Pages serves project repositories from `/repo-name/` rather than the root `/`. This means all asset paths, API calls, and routing logic needed to account for this base path. Without proper handling, assets wouldn't load and routing would break.
+_Problem_:
 
-_Solution_: The build process detects the repository name from the `GITHUB_REPOSITORY` environment variable and injects `window.__BASE_PATH__` as a global variable into both `index.html` and `404.html`. The application code then uses this base path when constructing fetch URLs and managing navigation. Vite's `base` configuration is also set to ensure asset paths are correctly prefixed.
+GitHub Pages serves project repositories from `/repo-name/` rather than the root `/`. This means all asset paths, API calls, and routing logic needed to account for this base path. Without proper handling, assets wouldn't load and routing would break.
+
+_Solution_:
+
+The build process detects the repository name from the `GITHUB_REPOSITORY` environment variable and injects `window.__BASE_PATH__` as a global variable into both `index.html` and `404.html`. The application code then uses this base path when constructing fetch URLs and managing navigation. Vite's `base` configuration is also set to ensure asset paths are correctly prefixed.
 
 #### Script injection timing
 
-_Problem_: A subtle yet critical bug emerged where blog posts failed to load because `window.__BASE_PATH__` wasn't available when the application code executed. The base path injection script was initially placed just before the closing `</head>` tag, but Vite's module scripts were loading earlier, causing the application to run before the base path was defined.
+_Problem_:
 
-_Solution_: The script injection point was moved to immediately after the opening `<head>` tag, ensuring the base path variable is defined before any module scripts execute. This fix was applied to both `index.html` and `404.html` processing. The details of this debugging process are covered in [part 3 of this series](./building-this-blog-03-script-injection.md).
+A subtle yet critical bug emerged where blog posts failed to load because `window.__BASE_PATH__` wasn't available when the application code executed. The base path injection script was initially placed just before the closing `</head>` tag, but Vite's module scripts were loading earlier, causing the application to run before the base path was defined.
+
+_Solution_:
+
+The script injection point was moved to immediately after the opening `<head>` tag, ensuring the base path variable is defined before any module scripts execute. This fix was applied to both `index.html` and `404.html` processing. The details of this debugging process are covered in [part 3 of this series](./building-this-blog-03-script-injection.md).
 
 #### Build-time processing
 
-_Problem_: Multiple build-time transformations were needed:
+_Problem_:
+
+Multiple build-time transformations were needed:
 
 - Injecting base path into HTML files
 - Processing `404.html` with path rewriting for assets
 - Copying blog markdown files to the dist directory
 - Generating a manifest file listing all blog posts
 
-_Solution_: [Custom Vite plugins](../../vite.config.ts) handle all necessary transformations during the build process. The plugins run at different stages (`buildStart`, `transformIndexHtml`, `closeBundle`) to ensure proper ordering and availability of files. This approach keeps the source code clean while generating production-ready artifacts. The details of this process are covered in [part 4 of this series](./building-this-blog-04-build-time-processing.md).
+_Solution_:
 
-#### Internal post linking
+[Custom Vite plugins](../../vite.config.ts) handle all necessary transformations during the build process. The plugins run at different stages (`buildStart`, `transformIndexHtml`, `closeBundle`) to ensure proper ordering and availability of files. This approach keeps the source code clean while generating production-ready artifacts. The details of this process are covered in [part 4](./building-this-blog-04-build-time-processing.md) and [part 6](./building-this-blog-06-manifest-validation.md) of this series.
+
+#### Internal post/section linking
 
 _Problem_:
 
-Links to other blog posts (e.g., `./building-this-blog-02-spa-routing.md`) triggered full page navigation instead of SPA routing. This worked in dev (Vite handles SPA routing) but failed on GitHub Pages because it doesn't support client-side routing.
+1. Links to other blog posts (e.g. `./building-this-blog-02-spa-routing.md`) triggered full page navigation instead of SPA routing. This worked in development (Vite handles SPA routing), but failed on GitHub Pages because it doesn't support client-side routing.
+2. Links to sections (same-post or cross-post, hash fragments like `#this-blogs-tech-choices`) within blog posts weren't being indexed or handled in any way, thus didn't work locally or on GitHub Pages.
 
 _Solution_:
 
-Added link interception in `blog.ts` that:
+We added _link interception_ and utilized our existing SPA routing by
 
-1. Detects clicks on internal links within blog content using event delegation.
-2. Extracts the post ID from the link URL (handles base path and .md extensions).
-3. If the link points to a valid blog post, prevents default navigation and uses `handlePostClick()` for SPA routing.
-4. Allows external links to navigate normally.
+1. Detecting clicks on internal links within blog content via event delegation.
+2. Extracting the post ID from the link URL (handling base path and `.md` extensions).
+3. If the link points to a valid blog post, preventing default navigation and always using `handlePostClick()`.
+4. Allowing external links to navigate normally.
 
-Internal blog post links now use SPA routing on both dev and GitHub Pages, avoiding full page reloads.
+Internal blog post/section links use SPA routing on both the dev server and GitHub Pages, avoiding full page reloads. See [Building this Blog (part 7) - Internal Links](./building-this-blog-07-internal-links.md) for the full details.
 
-### Conclusion (part 1)
+### Conclusion
 
 The challenges encountered while building and deploying the blog demonstrate that even when using best practices, local development and production environments can still differ significantly. What works locally on a dev server may require special handling for deployment platforms like GitHub Pages.
 
 The solutions we implemented demonstrate several important principles:
 
-1. **Platform-specific features can be leveraged creatively**: The 404.html fallback is a GitHub Pages quirk that became a feature
-2. **Build-time configuration is powerful**: Injecting environment-specific values at build time allows the same codebase to work in multiple contexts
-3. **Script execution order matters**: When dealing with build-time code injection and module loading, careful attention to execution order is essential
+1. **Platform-specific features can be leveraged creatively**: The 404.html fallback is a GitHub Pages quirk that became a feature.
+2. **Build-time configuration is powerful**: Injecting environment-specific values at build time allows the same codebase to work in multiple contexts.
+3. **Script execution order matters**: When dealing with build-time code injection and module loading, careful attention to execution order is essential.
+4. **Event delegation enables dynamic content handling**: Using event delegation to intercept link clicks allows the application to handle dynamically loaded content without modifying the original markdown.
+5. **Custom build tooling bridges platform gaps**: Custom Vite plugins can transform and process files at build time to adapt code for platform-specific requirements.
+6. **Dev and production environments differ**: What works in development may require special handling in production, making it essential to test in production-like environments early and fully embrace CI/CD best practices.
 
 The transformation from initial design to production-ready deployment shows how iterative development through CI/CD best practices, combined with persistant debugging and creative problem-solving, can create robust applications.
 
-[Go to part 2 - SPA routing](./building-this-blog-02-spa-routing.md)
+[Part 2 - SPA Routing](./building-this-blog-02-spa-routing.md)
