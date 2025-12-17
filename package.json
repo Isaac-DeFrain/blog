@@ -8,7 +8,7 @@
     "clean": "rm -rf dist",
     "preview": "vite preview",
     "lint": "tsc --noEmit && prettier --write .",
-    "test:posts": "tsx tests/test-blog-posts.ts",
+    "test:loading": "tsx tests/test-loading.ts",
     "test:caching": "tsx tests/test-caching.ts"
   },
   "devDependencies": {

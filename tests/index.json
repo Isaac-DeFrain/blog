@@ -1,10 +1,10 @@
 {
   "tests": [
     {
-      "file": "test-blog-posts.ts",
-      "name": "Blog Posts Validation Test",
+      "file": "test-loading.ts",
+      "name": "Blog Post Validation and Loading Test",
       "description": "Validates that all blog posts load correctly, have valid frontmatter (name, date, topics), and are properly included in the manifest",
-      "command": "npm run test:posts"
+      "command": "npm run test:loading"
     },
     {
       "file": "test-caching.ts",
