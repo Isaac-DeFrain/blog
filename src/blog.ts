@@ -1,3 +1,31 @@
+/**
+ * @module blog
+ *
+ * The main blog reader module which handles blog post loading, rendering, and navigation.
+ *
+ * This module provides the core functionality for a single-page application (SPA) blog reader.
+ * It manages the lifecycle of blog posts from discovery through rendering, including:
+ *
+ * - **Blog Discovery**: Loads and parses blog post metadata from markdown files via `manifest.json`
+ * - **Content Rendering**: Converts markdown to HTML with syntax highlighting and MathJax support
+ * - **Caching**: Implements localStorage-based caching for improved performance
+ * - **SPA Routing**: Handles client-side navigation for internal blog links without page reloads
+ * - **Topic Filtering**: Integrates with [[`TopicsBar`]] for filtering posts by topic
+ * - **Sidebar Navigation**: Manages post list display and active post highlighting
+ * - **Browser Navigation**: Supports browser back/forward button navigation via History API
+ *
+ * The module exports the [[`parseFrontmatter`]] utility function and automatically instantiates
+ * a [[`BlogReader`]] instance when loaded in a browser environment.
+ *
+ * @example
+ * ```typescript
+ * // The BlogReader is automatically instantiated on module load
+ * // To parse frontmatter manually:
+ * import { parseFrontmatter } from "./blog";
+ * const metadata = parseFrontmatter(markdownContent);
+ * ```
+ */
+
 import { ThemeManager } from "./theme";
 import { TopicsBar, type BlogPost } from "./topics-bar";
 import { Sidebar } from "./sidebar";
