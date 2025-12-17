@@ -1,5 +1,5 @@
 import { defineConfig } from "vite";
-import { readFileSync, writeFileSync, copyFileSync, mkdirSync, readdirSync } from "fs";
+import { readFileSync, writeFileSync, copyFileSync, mkdirSync, readdirSync, existsSync } from "fs";
 import { join } from "path";
 
 /** Determine base path for GitHub Pages deployment
@@ -23,12 +23,25 @@ const basePath = getBasePath();
 
 /**
  * Generates a manifest file listing all markdown files in the blogs directory
+ * Only generates if the manifest doesn't already exist
  *
  * @param blogsDir - The directory containing blog markdown files
- * @returns The manifest object with files array
+ * @returns The manifest object with files array, or null if generation failed
  */
 function generateBlogManifest(blogsDir: string): { files: string[] } | null {
   const manifestPath = join(blogsDir, "manifest.json");
+
+  // Check if manifest already exists
+  if (existsSync(manifestPath)) {
+    try {
+      // Verify it's valid JSON and return it
+      const existingManifest = JSON.parse(readFileSync(manifestPath, "utf-8"));
+      return existingManifest;
+    } catch (error) {
+      // If existing manifest is invalid, regenerate it
+      console.warn("Existing manifest is invalid, regenerating:", error);
+    }
+  }
 
   try {
     const entries = readdirSync(blogsDir, { withFileTypes: true });
