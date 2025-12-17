@@ -2,13 +2,22 @@
 name: Building this Blog (part 1) - Humble Beginnings
 date: 2025-12-15
 topics:
-  - blog
+  - building this blog
   - ci/cd
+  - nix
 ---
 
 # Building this Blog (part 1) - Humble Beginnings
 
-This is the humble beginning of a [blog](https://isaac-defrain.github.io/blog/) and subsequent series of posts about building said [blog](https://github.com/Isaac-DeFrain/blog).
+This is the humble beginning of a [blog](https://isaac-defrain.github.io/blog/) and subsequent series of posts about building said [blog](https://github.com/Isaac-DeFrain/blog). The series consists of 7 posts:
+
+- [Humble Beginnings](./building-this-blog-01-humble-beginnings.md)
+- [SPA Routing](./building-this-blog-02-spa-routing.md)
+- [Script Injection Timing](./building-this-blog-03-script-injection.md)
+- [Build-Time Processing](./building-this-blog-04-build-time-processing.md)
+- [CI/CD Deployment Pipeline](./building-this-blog-05-cicd-pipeline.md)
+- [Manifest Testing](./building-this-blog-06-manifest-validation.md)
+- [Markdown Links](./building-this-blog-07-md-links.md)
 
 First, a quick introduction.
 
@@ -190,7 +199,7 @@ I was not familiar with _any_ of the following concepts (except build-time proce
 
 _Problem_: The most significant challenge was that **GitHub Pages doesn't natively support SPA routing**. When a user navigated directly to a route like `/welcome` or refreshed the page, GitHub Pages would return a 404 error because it was looking for an actual file at that path, not understanding that this was a client-side route handled by JavaScript.
 
-_Solution_: We leveraged GitHub Pages' special behavior of serving `404.html` when a file isn't found. By creating a `404.html` file that mirrors the main `index.html` structure and processes it during build to inject the base path, we ensure that any "missing" route loads the SPA, which then reads the original pathname from the URL and routes accordingly. This solution is detailed in [part 2 of this series](./building-this-blog-02-spa-routing).
+_Solution_: We leveraged GitHub Pages' special behavior of serving `404.html` when a file isn't found. By creating a `404.html` file that mirrors the main `index.html` structure and processes it during build to inject the base path, we ensure that any "missing" route loads the SPA, which then reads the original pathname from the URL and routes accordingly. This solution is detailed in [part 2 of this series](./building-this-blog-02-spa-routing.md).
 
 #### Base path configuration
 
@@ -202,7 +211,7 @@ _Solution_: The build process detects the repository name from the `GITHUB_REPOS
 
 _Problem_: A subtle yet critical bug emerged where blog posts failed to load because `window.__BASE_PATH__` wasn't available when the application code executed. The base path injection script was initially placed just before the closing `</head>` tag, but Vite's module scripts were loading earlier, causing the application to run before the base path was defined.
 
-_Solution_: The script injection point was moved to immediately after the opening `<head>` tag, ensuring the base path variable is defined before any module scripts execute. This fix was applied to both `index.html` and `404.html` processing. The details of this debugging process are covered in [part 3 of this series](./building-this-blog-03-script-injection).
+_Solution_: The script injection point was moved to immediately after the opening `<head>` tag, ensuring the base path variable is defined before any module scripts execute. This fix was applied to both `index.html` and `404.html` processing. The details of this debugging process are covered in [part 3 of this series](./building-this-blog-03-script-injection.md).
 
 #### Build-time processing
 
@@ -213,7 +222,7 @@ _Problem_: Multiple build-time transformations were needed:
 - Copying blog markdown files to the dist directory
 - Generating a manifest file listing all blog posts
 
-_Solution_: [Custom Vite plugins](../../vite.config.ts) handle all necessary transformations during the build process. The plugins run at different stages (`buildStart`, `transformIndexHtml`, `closeBundle`) to ensure proper ordering and availability of files. This approach keeps the source code clean while generating production-ready artifacts. The details of this process are covered in [part 4 of this series](./building-this-blog-04-build-time-processing).
+_Solution_: [Custom Vite plugins](../../vite.config.ts) handle all necessary transformations during the build process. The plugins run at different stages (`buildStart`, `transformIndexHtml`, `closeBundle`) to ensure proper ordering and availability of files. This approach keeps the source code clean while generating production-ready artifacts. The details of this process are covered in [part 4 of this series](./building-this-blog-04-build-time-processing.md).
 
 ### Conclusion (part 1)
 
@@ -227,4 +236,4 @@ The solutions we implemented demonstrate several important principles:
 
 The transformation from initial design to production-ready deployment shows how iterative development through CI/CD best practices, combined with persistant debugging and creative problem-solving, can create robust applications.
 
-[Go to part 2 - SPA routing](./building-this-blog-02-spa-routing)
+[Go to part 2 - SPA routing](./building-this-blog-02-spa-routing.md)
