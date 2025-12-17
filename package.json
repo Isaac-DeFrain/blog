@@ -9,8 +9,7 @@
     "preview": "vite preview",
     "lint": "tsc --noEmit && prettier --write .",
     "test:loading": "tsx tests/test-loading.ts",
-    "test:caching": "tsx tests/test-caching.ts",
-    "test": "run-s build test:loading test:caching"
+    "test": "run-s build test:loading"
   },
   "devDependencies": {
     "@types/node": "^25.0.1",

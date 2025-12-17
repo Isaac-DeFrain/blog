@@ -8,7 +8,6 @@
  *
  * - **Blog Discovery**: Loads and parses blog post metadata from markdown files via `manifest.json`
  * - **Content Rendering**: Converts markdown to HTML with syntax highlighting and MathJax support
- * - **Caching**: Implements localStorage-based caching for improved performance
  * - **SPA Routing**: Handles client-side navigation for internal blog links without page reloads
  * - **Topic Filtering**: Integrates with [[`TopicsBar`]] for filtering posts by topic
  * - **Sidebar Navigation**: Manages post list display and active post highlighting
@@ -294,8 +293,7 @@ class BlogReader {
     const currentTopic = this.topicsBar.getSelectedTopic();
 
     try {
-      // Cache posts that users explicitly click on
-      await this.loadBlogPost(postId, true);
+      await this.loadBlogPost(postId);
 
       // Update URL without page reload, preserving hash if provided
       const url = `${this.basePath}${postId}${hash || ""}`;
@@ -308,76 +306,6 @@ class BlogReader {
     } catch (error) {
       console.error("Error loading blog post:", error);
       this.showError("Failed to load blog post. Please try again.");
-    }
-  }
-
-  /**
-   * Gets the cache key for a blog post.
-   *
-   * @param postId - The unique identifier of the blog post
-   * @returns The cache key string
-   */
-  private getCacheKey(postId: string): string {
-    return `blog-post-${postId}`;
-  }
-
-  /**
-   * Retrieves cached blog post content from localStorage.
-   *
-   * @param postId - The unique identifier of the blog post
-   * @returns Cached content object with HTML and date, or null if not cached
-   */
-  private getCachedPost(postId: string): { html: string; date: string } | null {
-    try {
-      const cacheKey = this.getCacheKey(postId);
-      const cached = localStorage.getItem(cacheKey);
-
-      if (cached) {
-        return JSON.parse(cached);
-      }
-    } catch (error) {
-      console.warn("Error reading from cache:", error);
-    }
-
-    return null;
-  }
-
-  /**
-   * Stores blog post content in localStorage cache.
-   *
-   * @param postId - The unique identifier of the blog post
-   * @param html - The parsed HTML content
-   * @param date - The post date string
-   */
-  private setCachedPost(postId: string, html: string, date: string): void {
-    try {
-      const cacheKey = this.getCacheKey(postId);
-      const cacheData = { html, date };
-      localStorage.setItem(cacheKey, JSON.stringify(cacheData));
-    } catch (error) {
-      console.warn("Error writing to cache:", error);
-
-      // If storage is full, try to clear old entries
-      if (error instanceof DOMException && error.name === "QuotaExceededError") {
-        this.clearOldCacheEntries();
-      }
-    }
-  }
-
-  /**
-   * Clears old cache entries when storage quota is exceeded.
-   * Removes entries that haven't been accessed recently.
-   */
-  private clearOldCacheEntries(): void {
-    try {
-      const keys = Object.keys(localStorage);
-      const blogPostKeys = keys.filter((key) => key.startsWith("blog-post-"));
-
-      // Remove half of the oldest entries
-      const keysToRemove = blogPostKeys.slice(0, Math.floor(blogPostKeys.length / 2));
-      keysToRemove.forEach((key) => localStorage.removeItem(key));
-    } catch (error) {
-      console.warn("Error clearing old cache entries:", error);
     }
   }
 
@@ -519,20 +447,17 @@ class BlogReader {
   /**
    * Loads and displays a specific blog post by its ID.
    *
-   * First checks localStorage cache for the post. If cached, uses cached.
-   * Otherwise, fetches the markdown file from the server, converts it to HTML using
+   * Fetches the markdown file from the server, converts it to HTML using
    * the marked library, and displays it with metadata.
-   * Only caches the result if shouldCache is true (i.e. when user clicks on a post).
    * Triggers MathJax rendering for any mathematical expressions.
    *
    * Updates the sidebar to highlight the active post and smoothly scrolls to the top
    * of the page after loading.
    *
    * @param postId - The unique identifier of the blog post to load
-   * @param shouldCache - Whether to cache the post after loading (default: false)
    * @returns Promise that resolves when the post has been loaded and rendered
    */
-  private async loadBlogPost(postId: string, shouldCache: boolean = false): Promise<void> {
+  private async loadBlogPost(postId: string): Promise<void> {
     if (!this.blogContent) {
       console.error("blogContent element not found");
       return;
@@ -577,17 +502,6 @@ class BlogReader {
     // Update document title
     document.title = `Isaac's Blog | ${post.name}`;
 
-    // Check cache first
-    const cached = this.getCachedPost(postId);
-    if (cached) {
-      console.debug("Using cached content for post:", postId);
-      await this.renderBlogPostContent(cached.html, cached.date);
-      return;
-    }
-
-    console.debug("Fetching post content for:", postId);
-
-    // If not cached, fetch and parse
     this.blogContent.innerHTML = div("loading", "Loading post...");
 
     try {
@@ -642,12 +556,6 @@ class BlogReader {
       const markdownWithoutFrontmatter = markdown.replace(/^---\s*\n[\s\S]*?\n---\s*\n/, "");
       const html = await marked.parse(markdownWithoutFrontmatter);
 
-      // Cache the parsed HTML only if shouldCache is true
-      if (shouldCache) {
-        this.setCachedPost(postId, html, post.date);
-      }
-
-      // Render the content
       await this.renderBlogPostContent(html, post.date);
     } catch (error) {
       this.showError("Failed to load blog post content. Please try again.");

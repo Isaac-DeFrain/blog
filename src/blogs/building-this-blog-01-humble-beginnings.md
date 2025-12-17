@@ -124,7 +124,6 @@ This blog's architecture is as simple as possible while supporting deployment to
 - **Blog Content**: Markdown files with YAML frontmatter (name, date, topics)
 - **Rendering**: Marked.js for markdown → HTML, Highlight.js for code syntax highlighting, MathJax for math
 - **Routing**: Client-side routing with browser history API
-- **Caching**: LocalStorage for user-viewed blog post HTML
 - **Deployment**: GitHub Pages with base path support
 
 ### Layout
