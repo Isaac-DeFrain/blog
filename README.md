@@ -1,4 +1,4 @@
-# Blog
+# [Blog](https://isaac-defrain.github.io/blog/)
 
 TypeScript blog reader with Markdown support and MathJax rendering.
 
@@ -12,7 +12,13 @@ TypeScript blog reader with Markdown support and MathJax rendering.
 
 ## Setup
 
-Install [Nix](https://nixos.org/) and enable [flakes](https://nixos.wiki/wiki/Flakes), then install Node.js dependencies
+Install [Nix](https://nixos.org/) and enable [flakes](https://nixos.wiki/wiki/Flakes)
+
+```bash
+nix develop
+```
+
+Once in the dev shell, install Node.js dependencies
 
 ```bash
 npm install
@@ -56,7 +62,7 @@ npm test
 
 ## Adding New Blog Posts
 
-1. Create a new markdown file in `src/blogs/` (e.g., `my-post.md`)
+1. Create a new markdown file in `src/blogs/` (e.g. `my-post.md`)
 2. Add frontmatter to the markdown file with metadata:
 
 ```markdown
@@ -73,16 +79,14 @@ topics:
 Your content here...
 ```
 
-The post ID is automatically generated from the filename (e.g., `my-post.md`
-becomes `my-post`). Posts are automatically sorted by date in reverse
-chronological order.
+The post ID is automatically generated from the filename (e.g. `my-post.md` becomes `my-post`). Posts are automatically sorted by date in reverse chronological order.
 
 ## Markdown Features
 
 - **Headers**: `#`, `##`, `###`
 - **Code blocks**: Fenced with triple backticks
 - **Inline code**: Wrapped in single backticks
-- **Links**: `[text](url)`
+- **Links**: `[text](url)` (external/internal)
 - **Lists**: Ordered and unordered
 - **Blockquotes**: `> text`
 - **Inline math**: `$equation$`
