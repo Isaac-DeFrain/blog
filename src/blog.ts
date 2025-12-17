@@ -35,7 +35,7 @@ import { div, parseDateAsPacificTime } from "./utils";
  * Gets the base path for the application.
  * This is injected by the build process for GitHub Pages deployments.
  *
- * @returns The base path (e.g., "/blog/" or "/")
+ * @returns The base path (e.g. "/blog/" or "/")
  */
 function getBasePath(): string {
   // @ts-expect-error - Injected by build process
@@ -287,8 +287,9 @@ class BlogReader {
    * Preserves the current topic filter when loading the post.
    *
    * @param postId - The ID of the post to load
+   * @param hash - Optional hash fragment (section) to scroll to after loading
    */
-  private async handlePostClick(postId: string): Promise<void> {
+  private async handlePostClick(postId: string, hash?: string): Promise<void> {
     // Preserve the current topic filter
     const currentTopic = this.topicsBar.getSelectedTopic();
 
@@ -296,8 +297,9 @@ class BlogReader {
       // Cache posts that users explicitly click on
       await this.loadBlogPost(postId, true);
 
-      // Update URL without page reload
-      window.history.pushState({ postId }, "", `${this.basePath}${postId}`);
+      // Update URL without page reload, preserving hash if provided
+      const url = `${this.basePath}${postId}${hash || ""}`;
+      window.history.pushState({ postId }, "", url);
 
       // Restore the topic filter if it was set
       if (currentTopic !== null) {
@@ -403,13 +405,48 @@ class BlogReader {
       await typesetMath(contentElement as HTMLElement);
     }
 
-    // Scroll to top of content
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    // Check if there's a hash fragment in the URL and scroll to it
+    const hash = window.location.hash;
+    if (hash) {
+      // Wait a bit for MathJax to finish rendering
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      this.scrollToHash(hash);
+    } else {
+      // Scroll to top of content if no hash
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }
+
+  /**
+   * Scrolls to an element with the given hash fragment.
+   *
+   * @param hash - The hash fragment (e.g. `#this-blogs-tech-choices`)
+   */
+  private scrollToHash(hash: string): void {
+    if (!hash) return;
+
+    // Remove the leading # from the hash
+    const id = hash.slice(1);
+    if (!id) return;
+
+    // Find the element by ID
+    const element = document.getElementById(id);
+    if (element) {
+      // Scroll to the element with smooth behavior
+      element.scrollIntoView({ behavior: "smooth", block: "start" });
+    } else {
+      // If element not found, try to find it by name attribute (for anchors)
+      const anchor = document.querySelector(`a[name="${id}"]`);
+      if (anchor) {
+        anchor.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }
   }
 
   /**
    * Sets up click interception for internal links within blog content.
    * Intercepts clicks on internal blog post links and uses SPA routing instead of full page navigation.
+   * Handles both links to other posts and section links (hash fragments) within the current post.
    * Uses event delegation on the blog content container for efficiency.
    */
   private setupLinkInterception(): void {
@@ -428,10 +465,28 @@ class BlogReader {
       // Get the URL from the link
       const url = new URL(link.href, window.location.href);
       const linkPathname = url.pathname;
+      const linkHash = url.hash;
 
       // Check if this is an internal link (same origin)
       if (url.origin !== window.location.origin) {
         // External link, allow normal navigation
+        return;
+      }
+
+      // Handle hash-only links (section links within the current post)
+      // Check if the link pathname matches the current pathname (same post)
+      const currentPathname = window.location.pathname;
+      if (!linkPathname || linkPathname === "/" || linkPathname === this.basePath || linkPathname === currentPathname) {
+        if (linkHash) {
+          // This is a section link within the current post
+          e.preventDefault();
+          e.stopPropagation();
+
+          // Update URL with hash without reloading
+          window.history.pushState({ postId: this.currentPostId }, "", `${currentPathname}${linkHash}`);
+          this.scrollToHash(linkHash);
+        }
+
         return;
       }
 
@@ -456,7 +511,7 @@ class BlogReader {
         // Internal blog post link, use SPA routing
         e.preventDefault();
         e.stopPropagation();
-        await this.handlePostClick(potentialPostId);
+        await this.handlePostClick(potentialPostId, linkHash);
       }
     });
   }
@@ -545,7 +600,7 @@ class BlogReader {
       // Get hljs from the module (handles both default and named exports)
       const hljs = hljsModule.default || hljsModule;
 
-      // Configure marked for syntax highlighting
+      // Configure marked for syntax highlighting and heading IDs
       marked.use(
         markedHighlight({
           langPrefix: "hljs language-",
@@ -555,6 +610,27 @@ class BlogReader {
           },
         }),
       );
+
+      // Add heading IDs for section links
+      marked.use({
+        renderer: {
+          heading({ text, depth }) {
+            // Strip HTML tags from text to get plain text for ID generation
+            const plainText = text.replace(/<[^>]*>/g, "");
+
+            // Generate ID from heading text (similar to GitHub)
+            const id = plainText
+              .toLowerCase()
+              .replace(/[^\w\s-]/g, "") // Remove special characters
+              .replace(/\s+/g, "-") // Replace spaces with hyphens
+              .replace(/-+/g, "-") // Replace multiple hyphens with a single hyphen
+              .trim();
+
+            const tag = `h${depth}`;
+            return `<${tag} id="${id}">${text}</${tag}>\n`;
+          },
+        },
+      });
 
       const response = await fetch(`${this.basePath}src/blogs/${post.file}`);
       if (!response.ok) {
@@ -596,7 +672,7 @@ class BlogReader {
   /**
    * Formats a date string into a human-readable format.
    *
-   * Converts ISO date strings (e.g., "2024-01-15") into a localized format
+   * Converts ISO date strings (e.g. "2024-01-15") into a localized format
    * like "January 15, 2024" using US English locale. The date is interpreted
    * as Pacific Time.
    *

@@ -106,7 +106,7 @@ export class Sidebar {
   /**
    * Formats a date string into a human-readable format.
    *
-   * Converts ISO date strings (e.g., "2024-01-15") into a localized format
+   * Converts ISO date strings (e.g. "2024-01-15") into a localized format
    * like "January 15, 2024" using US English locale. The date is interpreted
    * as Pacific Time.
    *
