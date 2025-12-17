@@ -47,7 +47,7 @@ jobs:
       - name: Build with Vite
         run: nix develop --command npm run build
       - name: Run tests
-        run: nix develop --command npm run test
+        run: nix develop --command npm test
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
