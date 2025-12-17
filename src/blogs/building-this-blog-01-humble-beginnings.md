@@ -1,12 +1,12 @@
 ---
 name: Building this Blog (part 1) - Humble Beginnings
-date: 2025-12-14
+date: 2025-12-15
 topics:
   - blog
   - ci/cd
 ---
 
-# Humble Beginnings
+# Building this Blog (part 1) - Humble Beginnings
 
 This is the humble beginning of a [blog](https://isaac-defrain.github.io/blog/) and subsequent series of posts about building said [blog](https://github.com/Isaac-DeFrain/blog).
 

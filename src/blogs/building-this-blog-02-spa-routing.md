@@ -1,6 +1,6 @@
 ---
 name: Building this Blog (part 2) - SPA Routing
-date: 2025-12-14
+date: 2025-12-16
 topics:
   - blog
   - debugging
