@@ -8,8 +8,8 @@
     "clean": "rm -rf dist",
     "preview": "vite preview",
     "lint": "tsc --noEmit && prettier --write .",
-    "test:posts": "tsx test-blog-posts.ts",
-    "test": "npm run build && npm run test:posts"
+    "test:posts": "tsx tests/test-blog-posts.ts",
+    "test:caching": "tsx tests/test-caching.ts"
   },
   "devDependencies": {
     "@types/node": "^25.0.1",

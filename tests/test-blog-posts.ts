@@ -1,23 +1,7 @@
 import { readFileSync, readdirSync, existsSync } from "fs";
 import { join } from "path";
-import { parseFrontmatter } from "./src/blog";
-
-interface Manifest {
-  files: string[];
-}
-
-/**
- * Validates that a date string is in YYYY-MM-DD format
- */
-function isValidDate(dateString: string): boolean {
-  const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-  if (!dateRegex.test(dateString)) {
-    return false;
-  }
-
-  const date = new Date(dateString);
-  return date instanceof Date && !isNaN(date.getTime());
-}
+import { parseFrontmatter } from "../src/blog";
+import { isValidDate, Manifest, reportResults, exitIfErrors } from "./common";
 
 /**
  * Main test function that verifies all blog posts load correctly
@@ -35,16 +19,18 @@ function testBlogPosts(): void {
   if (!existsSync(distBlogsDir)) {
     errors.push(`Dist directory not found: ${distBlogsDir}. Please run 'npm run build' first.`);
 
-    reportResults(errors, warnings);
-    process.exit(1);
+    reportResults({ errors, warnings }, { title: "Blog Posts Test Results" });
+    exitIfErrors(errors);
+    return;
   }
 
   // Check if manifest exists
   if (!existsSync(manifestPath)) {
     errors.push(`Manifest file not found: ${manifestPath}. The build may have failed.`);
 
-    reportResults(errors, warnings);
-    process.exit(1);
+    reportResults({ errors, warnings }, { title: "Blog Posts Test Results" });
+    exitIfErrors(errors);
+    return;
   }
 
   // Read manifest
@@ -56,8 +42,9 @@ function testBlogPosts(): void {
   } catch (error) {
     errors.push(`Failed to read or parse manifest.json: ${error instanceof Error ? error.message : String(error)}`);
 
-    reportResults(errors, warnings);
-    process.exit(1);
+    reportResults({ errors, warnings }, { title: "Blog Posts Test Results" });
+    exitIfErrors(errors);
+    return;
   }
 
   // Get all markdown files from source directory
@@ -72,8 +59,9 @@ function testBlogPosts(): void {
   } catch (error) {
     errors.push(`Failed to read source blogs directory: ${error instanceof Error ? error.message : String(error)}`);
 
-    reportResults(errors, warnings);
-    process.exit(1);
+    reportResults({ errors, warnings }, { title: "Blog Posts Test Results" });
+    exitIfErrors(errors);
+    return;
   }
 
   // Verify all source files are in manifest
@@ -141,41 +129,16 @@ function testBlogPosts(): void {
   }
 
   // Report results
-  reportResults(errors, warnings);
+  reportResults(
+    { errors, warnings },
+    {
+      title: "Blog Posts Test Results",
+      successMessage: "✅ All blog posts loaded successfully!",
+    },
+  );
 
   // Exit with error code if there are errors
-  if (errors.length > 0) {
-    process.exit(1);
-  }
+  exitIfErrors(errors);
 }
 
-/**
- * Reports test results to console
- */
-function reportResults(errors: string[], warnings: string[]): void {
-  console.log("\n=== Blog Posts Test Results ===\n");
-
-  if (errors.length === 0 && warnings.length === 0) {
-    console.log("✅ All blog posts loaded successfully!\n");
-    return;
-  }
-
-  if (errors.length > 0) {
-    console.error(`❌ Found ${errors.length} error(s):\n`);
-    errors.forEach((error) => {
-      console.error(`  - ${error}`);
-    });
-    console.error("");
-  }
-
-  if (warnings.length > 0) {
-    console.warn(`⚠️  Found ${warnings.length} warning(s):\n`);
-    warnings.forEach((warning) => {
-      console.warn(`  - ${warning}`);
-    });
-    console.warn("");
-  }
-}
-
-// Run the test
 testBlogPosts();

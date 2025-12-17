@@ -1,19 +1,18 @@
-# Blog Reader
+# Blog
 
 TypeScript blog reader with Markdown support and MathJax rendering.
 
 ## Features
 
-- Responsive design
 - Dark mode support
-- TypeScript strict mode
-- Built with Vite for fast development
+- Single Page Application (SPA)
+- Custom routing for GitHub Pages
 - Markdown rendering with syntax highlighting
 - MathJax support for mathematical equations
 
 ## Setup
 
-Install dependencies
+Install [Nix](https://nixos.org/) and enable [flakes](https://nixos.wiki/wiki/Flakes), then install Node.js dependencies
 
 ```bash
 npm install
@@ -27,7 +26,7 @@ Start the dev server
 npm run dev
 ```
 
-The site will open at `http://localhost:5173`
+The site will open at `http://localhost:5173` and reload automatically when files change.
 
 ## Build
 
@@ -45,6 +44,14 @@ Preview the production build locally
 
 ```bash
 npm run preview
+```
+
+## Testing
+
+Run all tests
+
+```bash
+npm test
 ```
 
 ## Adding New Blog Posts
@@ -83,8 +90,12 @@ chronological order.
 
 ## Tools
 
-- **Nix**: Determinate dependencies
+- **Nix flakes**: Reproducible dependencies
 - **TypeScript**: Type-safe JavaScript
 - **Vite**: Fast build tool and dev server
 - **Marked**: Markdown parser
 - **MathJax**: Mathematical equation rendering
+
+## License
+
+[MIT LICENSE](./LICENSE)
