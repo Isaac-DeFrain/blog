@@ -17,7 +17,7 @@ This is the humble beginning of a [blog](https://isaac-defrain.github.io/blog/) 
 - [Build-Time Processing](./building-this-blog-04-build-time-processing.md)
 - [CI/CD Deployment Pipeline](./building-this-blog-05-cicd-pipeline.md)
 - [Manifest Testing](./building-this-blog-06-manifest-validation.md)
-- [Markdown Links](./building-this-blog-07-md-links.md)
+- [Internal Links](./building-this-blog-07-internal-links.md)
 
 First, a quick introduction.
 
@@ -194,6 +194,7 @@ I was not familiar with _any_ of the following concepts (except build-time proce
 - [base path configuration](#base-path-configuration)
 - [script injection timing](#script-injection-timing)
 - [build-time processing](#build-time-processing)
+- [internal post linking](#internal-post-linking)
 
 #### SPA routing
 
@@ -223,6 +224,23 @@ _Problem_: Multiple build-time transformations were needed:
 - Generating a manifest file listing all blog posts
 
 _Solution_: [Custom Vite plugins](../../vite.config.ts) handle all necessary transformations during the build process. The plugins run at different stages (`buildStart`, `transformIndexHtml`, `closeBundle`) to ensure proper ordering and availability of files. This approach keeps the source code clean while generating production-ready artifacts. The details of this process are covered in [part 4 of this series](./building-this-blog-04-build-time-processing.md).
+
+#### Internal post linking
+
+_Problem_:
+
+Links to other blog posts (e.g., `./building-this-blog-02-spa-routing.md`) triggered full page navigation instead of SPA routing. This worked in dev (Vite handles SPA routing) but failed on GitHub Pages because it doesn't support client-side routing.
+
+_Solution_:
+
+Added link interception in `blog.ts` that:
+
+1. Detects clicks on internal links within blog content using event delegation.
+2. Extracts the post ID from the link URL (handles base path and .md extensions).
+3. If the link points to a valid blog post, prevents default navigation and uses `handlePostClick()` for SPA routing.
+4. Allows external links to navigate normally.
+
+Internal blog post links now use SPA routing on both dev and GitHub Pages, avoiding full page reloads.
 
 ### Conclusion (part 1)
 
