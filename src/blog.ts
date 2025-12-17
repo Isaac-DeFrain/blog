@@ -262,7 +262,8 @@ class BlogReader {
     const currentTopic = this.topicsBar.getSelectedTopic();
 
     try {
-      await this.loadBlogPost(postId);
+      // Cache posts that users explicitly click on
+      await this.loadBlogPost(postId, true);
 
       // Update URL without page reload
       window.history.pushState({ postId }, "", `${this.basePath}${postId}`);
@@ -380,16 +381,18 @@ class BlogReader {
    *
    * First checks localStorage cache for the post. If cached, uses cached.
    * Otherwise, fetches the markdown file from the server, converts it to HTML using
-   * the marked library, caches the result, and displays it with metadata.
+   * the marked library, and displays it with metadata.
+   * Only caches the result if shouldCache is true (i.e. when user clicks on a post).
    * Triggers MathJax rendering for any mathematical expressions.
    *
    * Updates the sidebar to highlight the active post and smoothly scrolls to the top
    * of the page after loading.
    *
    * @param postId - The unique identifier of the blog post to load
+   * @param shouldCache - Whether to cache the post after loading (default: false)
    * @returns Promise that resolves when the post has been loaded and rendered
    */
-  private async loadBlogPost(postId: string): Promise<void> {
+  private async loadBlogPost(postId: string, shouldCache: boolean = false): Promise<void> {
     if (!this.blogContent) {
       console.error("blogContent element not found");
       return;
@@ -478,8 +481,10 @@ class BlogReader {
       const markdownWithoutFrontmatter = markdown.replace(/^---\s*\n[\s\S]*?\n---\s*\n/, "");
       const html = await marked.parse(markdownWithoutFrontmatter);
 
-      // Cache the parsed HTML
-      this.setCachedPost(postId, html, post.date);
+      // Cache the parsed HTML only if shouldCache is true
+      if (shouldCache) {
+        this.setCachedPost(postId, html, post.date);
+      }
 
       // Render the content
       await this.renderBlogPostContent(html, post.date);
