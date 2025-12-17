@@ -98,6 +98,9 @@ class BlogReader {
     this.topicsBar = new TopicsBar("topics-bar", this.handleTopicFilterChange.bind(this));
     this.sidebar = new Sidebar("blog-list", this.handlePostClick.bind(this));
 
+    // Set up link interception for internal blog post links
+    this.setupLinkInterception();
+
     this.init();
 
     // Handle browser back/forward navigation
@@ -374,6 +377,60 @@ class BlogReader {
 
     // Scroll to top of content
     window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  /**
+   * Sets up click interception for internal links within blog content.
+   * Intercepts clicks on internal blog post links and uses SPA routing instead of full page navigation.
+   * Uses event delegation on the blog content container for efficiency.
+   */
+  private setupLinkInterception(): void {
+    if (!this.blogContent) return;
+
+    // Use event delegation - attach listener once to the container
+    this.blogContent.addEventListener("click", async (e) => {
+      const target = e.target as HTMLElement;
+      const link = target.closest("a");
+      if (!link || !link.href) return;
+
+      // Only intercept links within the blog content area
+      const contentElement = this.blogContent?.querySelector(".blog-content");
+      if (!contentElement || !contentElement.contains(link)) return;
+
+      // Get the URL from the link
+      const url = new URL(link.href, window.location.href);
+      const linkPathname = url.pathname;
+
+      // Check if this is an internal link (same origin)
+      if (url.origin !== window.location.origin) {
+        // External link, allow normal navigation
+        return;
+      }
+
+      // Extract potential post ID from the pathname
+      let potentialPostId: string | null = null;
+      if (this.basePath !== "/" && linkPathname.startsWith(this.basePath)) {
+        // Remove the base path, keeping one leading slash
+        const path = linkPathname.slice(this.basePath.length - 1);
+        potentialPostId = path.replace(/^\/|\/$/g, "");
+      } else if (this.basePath === "/") {
+        // For root base path, use pathname as-is
+        potentialPostId = linkPathname.replace(/^\/|\/$/g, "");
+      }
+
+      // Remove .md extension if present (links might include it)
+      if (potentialPostId) {
+        potentialPostId = potentialPostId.replace(/\.md$/, "");
+      }
+
+      // Check if this post ID exists in our blog posts
+      if (potentialPostId && this.allPosts.some((post) => post.id === potentialPostId)) {
+        // Internal blog post link, use SPA routing
+        e.preventDefault();
+        e.stopPropagation();
+        await this.handlePostClick(potentialPostId);
+      }
+    });
   }
 
   /**
