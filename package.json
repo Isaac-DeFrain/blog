@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "clean": "rm -rf dist",
+    "clean": "rm -rf dist && rm -rf src/blogs/manifest.json",
     "preview": "vite preview",
     "lint": "tsc --noEmit && prettier --write .",
     "test:loading": "tsx tests/test-loading.ts",
