@@ -11,12 +11,14 @@ export const li = <T>(className: T, content: T): string => {
 /**
  * Parses a date string (YYYY-MM-DD) and interprets it as Pacific Time.
  *
- * Creates a Date object representing midnight Pacific Time for the given date.
+ * Creates a Date object representing noon Pacific Time for the given date.
+ * Using noon ensures that when the date is formatted in Pacific Time, it will
+ * always display the correct day, regardless of timezone conversions.
  * This ensures dates are consistently interpreted in the Pacific timezone,
  * accounting for both PST (UTC-8) and PDT (UTC-7) based on daylight saving time.
  *
  * @param dateString - ISO format date string (YYYY-MM-DD)
- * @returns Date object representing midnight Pacific Time for the given date
+ * @returns Date object representing noon Pacific Time for the given date
  */
 export function parseDateAsPacificTime(dateString: string): Date {
   // Parse the date components
@@ -37,14 +39,15 @@ export function parseDateAsPacificTime(dateString: string): Date {
   // Calculate the offset: Pacific Time is UTC-8 (PST) or UTC-7 (PDT)
   // At noon UTC, Pacific Time is typically 4am (PST) or 5am (PDT)
   // Calculate the offset: if noon UTC = 4am Pacific, then Pacific = UTC - 8
-  // So midnight Pacific = 8am UTC (PST)
+  // So noon Pacific = 8pm UTC (PST)
   // If noon UTC = 5am Pacific, then Pacific = UTC - 7
-  // So midnight Pacific = 7am UTC (PDT)
+  // So noon Pacific = 7pm UTC (PDT)
   const offsetHours = pacificHour <= 4 ? -8 : -7;
 
-  // Midnight Pacific Time corresponds to 8am UTC (PST) or 7am UTC (PDT)
-  // We create a UTC date at the time that represents midnight Pacific
-  const utcHourForMidnightPacific = -offsetHours; // 8 for PST, 7 for PDT
+  // Noon Pacific Time corresponds to 8pm UTC (PST) or 7pm UTC (PDT)
+  // We create a UTC date at the time that represents noon Pacific
+  // Using noon ensures the date will always be on the correct day when formatted
+  const utcHourForNoonPacific = 12 - offsetHours; // 20 for PST, 19 for PDT
 
-  return new Date(Date.UTC(year, month - 1, day, utcHourForMidnightPacific, 0, 0));
+  return new Date(Date.UTC(year, month - 1, day, utcHourForNoonPacific, 0, 0));
 }
