@@ -28,6 +28,22 @@
 import { ThemeManager } from "./theme";
 import { TopicsBar, type BlogPost } from "./topics-bar";
 import { Sidebar } from "./sidebar";
+import type { HLJSApi } from "highlight.js";
+
+/**
+ * Creates highlight.js configuration for marked-highlight.
+ * @param hljs - The highlight.js API instance
+ * @returns Configuration object for markedHighlight
+ */
+export function createHighlightConfig(hljs: HLJSApi) {
+  return {
+    langPrefix: "hljs language-",
+    highlight(code: string, lang: string) {
+      const language = hljs.getLanguage(lang) ? lang : "plaintext";
+      return hljs.highlight(code, { language }).value;
+    },
+  };
+}
 import { div, parseDateAsPacificTime } from "./utils";
 
 /**
@@ -515,15 +531,7 @@ class BlogReader {
       const hljs = hljsModule.default || hljsModule;
 
       // Configure marked for syntax highlighting and heading IDs
-      marked.use(
-        markedHighlight({
-          langPrefix: "hljs language-",
-          highlight(code, lang) {
-            const language = hljs.getLanguage(lang) ? lang : "plaintext";
-            return hljs.highlight(code, { language }).value;
-          },
-        }),
-      );
+      marked.use(markedHighlight(createHighlightConfig(hljs)));
 
       // Add heading IDs for section links
       marked.use({

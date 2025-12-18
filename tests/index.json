@@ -5,6 +5,12 @@
       "name": "Blog Post Validation and Loading Test",
       "description": "Validates that all blog posts load correctly, have valid frontmatter (name, date, topics), and are properly included in the manifest",
       "command": "npm run test:loading"
+    },
+    {
+      "file": "test-code-blocks.ts",
+      "name": "Code Blocks Rendering Test",
+      "description": "Validates that code blocks within blog posts are rendered correctly with syntax highlighting",
+      "command": "npm run test:code-blocks"
     }
   ]
 }
