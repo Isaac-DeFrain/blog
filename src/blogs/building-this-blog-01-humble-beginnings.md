@@ -7,7 +7,7 @@ topics:
   - nix
 ---
 
-# Building this Blog (part 1) - Humble Beginnings
+# Building This Blog (part 1) - Humble Beginnings
 
 This is the humble beginning of a [blog](https://isaac-defrain.github.io/blog/) and subsequent series of posts about building said [blog](https://github.com/Isaac-DeFrain/blog). The series consists of 7 posts:
 
@@ -33,7 +33,7 @@ I'm certainly no frontend or AI expert, and I think, that's _exactly_ why my exp
 
 ## A little about this blog
 
-The was simple:
+The initial idea was simple:
 
 > Build a basic web app for a blog
 
@@ -76,7 +76,7 @@ The flake ensures that anyone can run `nix develop` and immediately have the cor
 
 ### Why TypeScript
 
-TypeScript is widely used across many industries (and has static type checking like the functional programming languages I'm more familiar with).
+TypeScript is widely used across many industries. I chose to restrict myself to vanilla TypeScript in order to force myself to encounter firsthand, all the problems that various frameworks solve.
 
 ### Why Vite
 
@@ -246,6 +246,7 @@ _Problem_:
 
 1. Links to other blog posts (e.g. `./building-this-blog-02-spa-routing.md`) triggered full page navigation instead of SPA routing. This worked in development (Vite handles SPA routing), but failed on GitHub Pages because it doesn't support client-side routing.
 2. Links to sections (same-post or cross-post, hash fragments like `#this-blogs-tech-choices`) within blog posts weren't being indexed or handled in any way, thus didn't work locally or on GitHub Pages.
+3. After initially resolving the section link problem, the scrolling was a little off. Basically the header and topic bar were covering the section title.
 
 _Solution_:
 
@@ -255,6 +256,7 @@ We added _link interception_ and utilized our existing SPA routing by
 2. Extracting the post ID from the link URL (handling base path and `.md` extensions).
 3. If the link points to a valid blog post, preventing default navigation and always using `handlePostClick()`.
 4. Allowing external links to navigate normally.
+5. Fix heights of the header and topic bar. Account for that when we scroll to a section.
 
 Internal blog post/section links use SPA routing on both the dev server and GitHub Pages, avoiding full page reloads. See [Building this Blog (part 7) - Internal Links](./building-this-blog-07-internal-links.md) for the full details.
 
@@ -262,7 +264,7 @@ Internal blog post/section links use SPA routing on both the dev server and GitH
 
 The challenges encountered while building and deploying the blog demonstrate that even when using best practices, local development and production environments can still differ significantly. What works locally on a dev server may require special handling for deployment platforms like GitHub Pages.
 
-The solutions we implemented demonstrate several important principles:
+The cahllenges we encountered and solutions we implemented demonstrate several important principles:
 
 1. **Platform-specific features can be leveraged creatively**: The 404.html fallback is a GitHub Pages quirk that became a feature.
 2. **Build-time configuration is powerful**: Injecting environment-specific values at build time allows the same codebase to work in multiple contexts.
