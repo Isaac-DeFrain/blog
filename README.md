@@ -1,6 +1,8 @@
-# [Blog](https://isaac-defrain.github.io/blog/)
+# [blog](https://isaac-defrain.github.io/blog/)
 
-TypeScript blog reader with Markdown support and MathJax rendering.
+Vanilla TypeScript blog SPA with Markdown support and MathJax rendering.
+
+[![Build and deploy to GitHub Pages](https://github.com/Isaac-DeFrain/blog/actions/workflows/build-deploy.yml/badge.svg)](https://github.com/Isaac-DeFrain/blog/actions/workflows/build-deploy.yml)
 
 ## Features
 
