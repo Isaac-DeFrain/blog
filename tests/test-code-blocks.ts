@@ -51,7 +51,8 @@ function testCodeBlocks(): void {
     const filePath = join(distBlogsDir, filename);
 
     if (!existsSync(filePath)) {
-      continue; // Skip, other tests handle missing files
+      // Skip, other tests handle missing files
+      continue;
     }
 
     try {
@@ -109,8 +110,17 @@ function testCodeBlocks(): void {
         const firstLine = block.code.split("\n").find((line) => line.trim().length > 0);
         if (firstLine) {
           // The snippet might be split across highlight spans, so just check raw text exists
-          const plainHtml = html.replace(/<[^>]*>/g, "");
+          // Decode HTML entities for comparison since marked escapes characters like apostrophes
+          const decodeHtmlEntities = (text: string) =>
+            text
+              .replace(/&#x27;/g, "'")
+              .replace(/&quot;/g, '"')
+              .replace(/&amp;/g, "&")
+              .replace(/&lt;/g, "<")
+              .replace(/&gt;/g, ">");
+          const plainHtml = decodeHtmlEntities(html.replace(/<[^>]*>/g, ""));
           const plainFirstLine = firstLine.trim();
+
           if (!plainHtml.includes(plainFirstLine)) {
             errors.push(`${filename}: Code block ${i + 1} content not found in rendered HTML`);
           }
