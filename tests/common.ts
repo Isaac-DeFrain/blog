@@ -38,7 +38,7 @@ export function reportResults(results: TestResults, options: string | ReportOpti
   const successMessage =
     typeof options === "string" ? defaultSuccessMessage : options.successMessage || defaultSuccessMessage;
 
-  console.log(`\n=== ${title} ===\n`);
+  console.log(`=== ${title} ===\n`);
 
   if (results.errors.length === 0 && (!results.warnings || results.warnings.length === 0)) {
     console.log(`${successMessage}\n`);

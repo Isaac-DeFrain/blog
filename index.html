@@ -76,8 +76,55 @@
             .map(function (s) {
               return s.replace(/~and~/g, "&");
             })
+            .filter((s) => s !== "")
             .join("?");
-          window.history.replaceState(null, null, "/" + decoded + l.hash);
+
+          // Use base path if available, otherwise default to root
+          var basePath = (typeof window !== "undefined" && window.__BASE_PATH__) || "/";
+
+          // Remove leading slash from decoded if present
+          var path = decoded.startsWith("/") ? decoded.slice(1) : decoded;
+
+          // If base path is not root, check if decoded path already starts with base path segments
+          // (This can happen if the path was encoded with the base path included)
+          if (basePath !== "/") {
+            var basePathSegments = basePath.split("/").filter((s) => s.length > 0);
+            var pathSegments = path.split("/").filter((s) => s.length > 0);
+
+            // Check if path already starts with base path segments
+            var startsWithBasePath =
+              basePathSegments.length > 0 &&
+              pathSegments.length >= basePathSegments.length &&
+              basePathSegments.every((segment, i) => segment === pathSegments[i]);
+
+            if (startsWithBasePath) {
+              // Remove base path segments from the beginning
+              path = pathSegments.slice(basePathSegments.length).join("/");
+            }
+          }
+
+          // Construct restored path: basePath + path (with proper slash handling)
+          var restoredPath;
+          if (basePath === "/") {
+            restoredPath = "/" + path;
+          } else {
+            // Ensure basePath doesn't have trailing slash, then add path with leading slash
+            var normalizedBasePath = basePath.replace(/\/$/, "");
+            restoredPath = normalizedBasePath + "/" + path;
+          }
+
+          // Normalize the path (remove double slashes)
+          restoredPath = restoredPath.replace(/\/+/g, "/");
+
+          // If path is empty (just base path), ensure it ends with a single slash
+          // Otherwise, remove trailing slash for consistency
+          if (path === "") {
+            restoredPath = basePath === "/" ? "/" : basePath;
+          } else {
+            restoredPath = restoredPath.replace(/\/$/, "") || "/";
+          }
+
+          window.history.replaceState(null, null, restoredPath + l.hash);
         }
       })(window.location);
     </script>

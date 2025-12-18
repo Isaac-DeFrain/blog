@@ -143,7 +143,6 @@ class BlogReader {
 
     // Set up link interception for internal blog post links
     this.setupLinkInterception();
-
     this.init();
 
     // Handle browser back/forward navigation
@@ -167,20 +166,33 @@ class BlogReader {
    * @returns The post ID if found, or null if on the index page
    */
   private getPostIdFromPath(): string | null {
-    const pathname = window.location.pathname;
     // Remove the base path from the beginning
+    const pathname = window.location.pathname;
     let path = pathname;
-    if (this.basePath !== "/" && pathname.startsWith(this.basePath)) {
-      // Remove the base path, keeping one leading slash
-      path = pathname.slice(this.basePath.length - 1);
-    } else if (this.basePath === "/") {
+
+    if (this.basePath !== "/") {
+      // Normalize both paths for comparison (remove trailing slashes)
+      const normalizedBasePath = this.basePath.replace(/\/$/, "");
+      const normalizedPathname = pathname.replace(/\/$/, "");
+
+      if (normalizedPathname.startsWith(normalizedBasePath)) {
+        // Remove the base path, keeping one leading slash
+        // If pathname is exactly the base path, path will be empty
+        path = pathname.slice(normalizedBasePath.length);
+        // Ensure path starts with / if it's not empty
+        if (path && !path.startsWith("/")) {
+          path = "/" + path;
+        }
+      } else {
+        // Pathname doesn't start with base path, likely an error case
+        // Return null to indicate we're on the index page
+        return null;
+      }
+    } else {
       // For root base path, use pathname as-is
       path = pathname;
-    } else {
-      // Pathname doesn't start with base path, likely an error case
-      // Return null to indicate we're on the index page
-      return null;
     }
+
     // Remove leading slash and any trailing slashes
     const postId = path.replace(/^\/|\/$/g, "");
     return postId || null;
@@ -200,12 +212,11 @@ class BlogReader {
     this.topicsBar.setPosts(this.allPosts);
     this.sidebar.setPosts(this.posts);
 
-    // Check if URL has a post ID in the pathname
+    // Check if URL has a post ID in the pathname otherwise load the first post
     const pathPostId = this.getPostIdFromPath();
     if (pathPostId && this.posts.some((p) => p.id === pathPostId)) {
       await this.loadBlogPost(pathPostId);
-    } else if (this.posts.length > 0) {
-      // Load first post by default
+    } else {
       await this.loadBlogPost(this.posts[0].id);
     }
   }
@@ -225,13 +236,13 @@ class BlogReader {
     try {
       // Fetch manifest to get list of markdown files
       const manifestResponse = await fetch(`${this.basePath}src/blogs/manifest.json`);
+
       if (!manifestResponse.ok) {
         throw new Error("Failed to load blog manifest");
       }
 
-      const manifest = (await manifestResponse.json()) as { files: string[] };
-
       // Load and parse each markdown file
+      const manifest = (await manifestResponse.json()) as { files: string[] };
       const posts = await Promise.all(
         manifest.files.map(async (filename) => {
           try {
@@ -481,7 +492,6 @@ class BlogReader {
 
     // Ensure posts are loaded
     if (this.allPosts.length === 0) {
-      console.log("Posts not loaded, loading blog list...");
       await this.loadBlogList();
 
       // Preserve the current topic filter when setting posts
@@ -517,7 +527,6 @@ class BlogReader {
 
     // Update document title
     document.title = `Isaac's Blog | ${post.name}`;
-
     this.blogContent.innerHTML = div("loading", "Loading post...");
 
     try {
@@ -559,11 +568,11 @@ class BlogReader {
         throw new Error("Failed to load blog post");
       }
 
-      const markdown = await response.text();
       // Remove frontmatter before parsing markdown
+      const markdown = await response.text();
       const markdownWithoutFrontmatter = markdown.replace(/^---\s*\n[\s\S]*?\n---\s*\n/, "");
-      const html = await marked.parse(markdownWithoutFrontmatter);
 
+      const html = await marked.parse(markdownWithoutFrontmatter);
       await this.renderBlogPostContent(html, post.date);
     } catch (error) {
       this.showError("Failed to load blog post content. Please try again.");

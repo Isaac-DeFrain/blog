@@ -102,7 +102,7 @@ export default defineConfig({
         handler(html) {
           // Inject base path as a global variable so client code can access it
           // Insert right after the opening <head> tag to ensure it's available before any module scripts
-          const basePathScript = `<script>window.__BASE_PATH__ = ${JSON.stringify(basePath)};</script>`;
+          const basePathScript = `<script>window.__BASE_PATH__ = "${basePath}";</script>`;
           return html.replace("<head>", `<head>${basePathScript}`);
         },
       },
@@ -175,6 +175,12 @@ export default defineConfig({
           // Inject base path as a global variable right after opening <head> tag
           const basePathScript = `<script>window.__BASE_PATH__ = ${JSON.stringify(basePath)};</script>`;
           html = html.replace("<head>", `<head>${basePathScript}`);
+
+          // Count non-empty segments in the base path (e.g. "/blog/" = 1 segment)
+          const pathSegmentsToKeep = basePath.split("/").filter((segment) => segment.length > 0).length;
+
+          // Update pathSegmentsToKeep in the redirect script
+          html = html.replace(/var pathSegmentsToKeep = \d+;/, `var pathSegmentsToKeep = ${pathSegmentsToKeep};`);
 
           // Only replace paths if base path is not root
           // Ensures assets load correctly with the base path
