@@ -1,0 +1,51 @@
+.header {
+  padding: var(--spacing-base) clamp(var(--spacing-base), 2vw, var(--spacing-lg));
+  background: var(--bg-card);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--header-height);
+  z-index: var(--z-index-header);
+}
+
+.header h1 {
+  font-size: var(--font-size-3xl);
+  color: var(--text-primary);
+}
+
+.header a {
+  color: var(--link-color);
+  text-decoration: none;
+  font-weight: 500;
+  margin-right: var(--spacing-base);
+}
+
+.header a:hover {
+  text-decoration: underline;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--gap-sm);
+}
+
+.theme-button {
+  background: transparent;
+  border: var(--border-width-thin) solid var(--border);
+  border-radius: var(--radius-full);
+  width: var(--theme-button-size);
+  height: var(--theme-button-size);
+  font-size: var(--font-size-2xl);
+  transition: all var(--transition-base) ease;
+}
+
+.theme-button:hover {
+  transform: scale(var(--scale-hover));
+}
+

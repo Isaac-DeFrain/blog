@@ -1,0 +1,192 @@
+.main-container {
+  display: flex;
+  margin: 0;
+  padding: var(--spacing-base) var(--spacing-base);
+  padding-left: calc(var(--sidebar-width) + var(--spacing-xl));
+  gap: var(--gap-sm);
+}
+
+.content {
+  flex: 1;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.blog-card {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-2xl) clamp(var(--spacing-base), 2vw, var(--spacing-lg));
+  box-shadow: var(--shadow-md);
+}
+
+.loading {
+  text-align: center;
+  padding: var(--spacing-2xl);
+  color: var(--text-secondary);
+  font-size: var(--font-size-xl);
+}
+
+.error {
+  text-align: center;
+  padding: var(--spacing-2xl);
+  color: #e53e3e;
+  font-size: var(--font-size-xl);
+}
+
+/* Markdown styles */
+.blog-content {
+  text-align: left;
+}
+
+.blog-content h1,
+.blog-content h2,
+.blog-content h3,
+.blog-content h4,
+.blog-content h5,
+.blog-content h6 {
+  scroll-margin-top: calc(var(--sidebar-top-offset) + var(--topics-bar-height));
+}
+
+.blog-content h1 {
+  font-size: var(--font-size-5xl);
+  margin-bottom: var(--spacing-sm);
+  color: var(--text-primary);
+  text-align: left;
+}
+
+.blog-content h2 {
+  font-size: var(--font-size-4xl);
+  margin-top: var(--spacing-xl);
+  margin-bottom: var(--spacing-base);
+  color: var(--text-primary);
+  text-align: left;
+}
+
+.blog-content h3 {
+  font-size: var(--font-size-3xl);
+  margin-top: var(--spacing-lg);
+  margin-bottom: var(--spacing-md);
+  color: var(--text-primary);
+  text-align: left;
+}
+
+.blog-content p {
+  margin-bottom: var(--spacing-lg);
+  line-height: var(--line-height-base);
+  color: var(--text-secondary);
+  font-size: var(--font-size-lg);
+  text-align: left;
+}
+
+.blog-content a {
+  color: var(--link-color);
+  text-decoration: none;
+  border-bottom: var(--border-width-base) solid var(--link-color);
+}
+
+.blog-content a:hover {
+  opacity: var(--opacity-hover);
+}
+
+.blog-content code {
+  background: var(--code-bg);
+  padding: var(--code-padding-block) var(--code-padding-inline);
+  border-radius: var(--radius-sm);
+  font-family: "Courier New", Courier, monospace;
+  font-size: clamp(0.85em, 0.95vw, 0.9em);
+  color: var(--text-primary);
+}
+
+.blog-content pre {
+  background: var(--code-bg);
+  padding: var(--spacing-lg);
+  border-radius: var(--radius-md);
+  overflow-x: auto;
+  margin-bottom: var(--spacing-lg);
+  border: var(--border-width-base) solid var(--border);
+  text-align: left;
+  direction: ltr;
+}
+
+.blog-content pre code {
+  background: none;
+  padding: 0;
+  text-align: left;
+  display: block;
+  white-space: pre;
+}
+
+.blog-content pre code.hljs {
+  text-align: left;
+  direction: ltr;
+}
+
+.blog-content pre .hljs {
+  text-align: left;
+  direction: ltr;
+}
+
+.blog-content blockquote {
+  border-left: var(--border-width-thick) solid var(--link-color);
+  padding-left: var(--spacing-lg);
+  margin: var(--spacing-lg) 0;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.blog-content ul,
+.blog-content ol {
+  margin-bottom: var(--spacing-lg);
+  padding-left: var(--spacing-xl);
+  color: var(--text-secondary);
+}
+
+.blog-content li {
+  margin-bottom: var(--spacing-sm);
+  line-height: var(--line-height-tight);
+}
+
+.blog-content img {
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--radius-md);
+  margin: var(--spacing-lg) 0;
+}
+
+.blog-content hr {
+  border: none;
+  border-top: var(--border-width-thin) solid var(--border);
+  margin: var(--spacing-xl) 0;
+}
+
+.blog-meta {
+  margin-bottom: var(--spacing-xl);
+  padding-bottom: var(--spacing-lg);
+  border-bottom: var(--border-width-thin) solid var(--border);
+  color: var(--text-muted);
+  font-size: var(--font-size-base);
+}
+
+@media (max-width: 768px) {
+  .main-container {
+    flex-direction: column;
+    padding: var(--spacing-lg) var(--spacing-base);
+    padding-left: var(--spacing-base);
+  }
+
+  .sidebar {
+    position: static;
+    width: 100%;
+    left: auto;
+    top: auto;
+  }
+
+  .sidebar-card {
+    max-height: none;
+  }
+
+  .blog-card {
+    padding: var(--spacing-xl) clamp(var(--spacing-base), 2vw, var(--spacing-lg));
+  }
+}
+

@@ -1,0 +1,91 @@
+.topics-container {
+  background: var(--bg-card);
+  box-shadow: var(--shadow-sm);
+  padding: var(--spacing-md) clamp(var(--spacing-base), 2vw, var(--spacing-lg));
+  position: fixed;
+  top: var(--header-height);
+  left: 0;
+  right: 0;
+  height: var(--topics-bar-height);
+  z-index: var(--z-index-topics);
+  overflow-x: auto;
+  overflow-y: hidden;
+  display: flex;
+  align-items: center;
+}
+
+.topics-bar {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: var(--gap-xs);
+  align-items: center;
+  justify-content: center;
+  max-width: var(--container-max-width);
+  margin: 0 auto;
+  min-width: max-content;
+}
+
+.topic-button {
+  background: var(--code-bg);
+  border: var(--border-width-thin) solid var(--border);
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-sm) var(--spacing-base);
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  transition: all var(--transition-fast) ease;
+  font-weight: 500;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.topic-button:hover {
+  background: var(--border);
+  color: var(--text-primary);
+  transform: translateY(var(--translate-hover));
+}
+
+.topic-button.active {
+  background: var(--link-color);
+  border-color: var(--link-color);
+  color: #ffffff;
+}
+
+.topic-button.active:hover {
+  background: var(--link-color);
+  opacity: var(--opacity-active);
+}
+
+/* Hide scrollbar by default */
+.topics-container {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+.topics-container::-webkit-scrollbar {
+  height: 0;
+  background: transparent;
+}
+
+/* Show scrollbar on hover */
+.topics-container:hover {
+  scrollbar-width: thin; /* Firefox */
+}
+
+.topics-container:hover::-webkit-scrollbar {
+  height: var(--scrollbar-width);
+}
+
+.topics-container:hover::-webkit-scrollbar-track {
+  background: var(--code-bg);
+  border-radius: var(--radius-sm);
+}
+
+.topics-container:hover::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.topics-container:hover::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
