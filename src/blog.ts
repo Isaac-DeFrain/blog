@@ -28,6 +28,7 @@
 import { ThemeManager } from "./theme";
 import { TopicsBar, type BlogPost } from "./topics-bar";
 import { Sidebar } from "./sidebar";
+import { div, escapeHtml, formatDateAsPacificTime, parseDateAsPacificTime } from "./utils";
 import type { HLJSApi } from "highlight.js";
 
 /**
@@ -44,7 +45,6 @@ export function createHighlightConfig(hljs: HLJSApi) {
     },
   };
 }
-import { div, parseDateAsPacificTime } from "./utils";
 
 /**
  * Gets the base path for the application.
@@ -338,7 +338,7 @@ class BlogReader {
     }
 
     this.blogContent.innerHTML = `
-      ${div("blog-meta", this.escapeHtml(this.formatDate(date)))}
+      ${div("blog-meta", escapeHtml(formatDateAsPacificTime(date)))}
       ${div("blog-content", html)}
     `;
 
@@ -581,43 +581,8 @@ class BlogReader {
    */
   private showError(message: string): void {
     if (this.blogContent) {
-      this.blogContent.innerHTML = div("error", this.escapeHtml(message));
+      this.blogContent.innerHTML = div("error", escapeHtml(message));
     }
-  }
-
-  /**
-   * Formats a date string into a human-readable format.
-   *
-   * Converts ISO date strings (e.g. "2024-01-15") into a localized format
-   * like "January 15, 2024" using US English locale. The date is interpreted
-   * as Pacific Time.
-   *
-   * @param dateString - ISO format date string (YYYY-MM-DD)
-   * @returns Formatted date string in "Month Day, Year" format
-   */
-  private formatDate(dateString: string): string {
-    const date = parseDateAsPacificTime(dateString);
-    return date.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      timeZone: "America/Los_Angeles",
-    });
-  }
-
-  /**
-   * Escapes HTML special characters in text to prevent XSS attacks.
-   *
-   * Uses the browser's built-in DOM API to safely escape characters like
-   * <, >, &, ", and ' by setting textContent and reading back innerHTML.
-   *
-   * @param text - The raw text string that may contain HTML characters
-   * @returns HTML-escaped string safe for insertion into the DOM
-   */
-  private escapeHtml(text: string): string {
-    const div = document.createElement("div");
-    div.textContent = text;
-    return div.innerHTML;
   }
 }
 

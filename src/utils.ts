@@ -51,3 +51,38 @@ export function parseDateAsPacificTime(dateString: string): Date {
 
   return new Date(Date.UTC(year, month - 1, day, utcHourForNoonPacific, 0, 0));
 }
+
+/**
+ * Formats a date string into a human-readable format.
+ *
+ * Converts ISO date strings (e.g. "2024-01-15") into a localized format
+ * like "January 15, 2024" using US English locale. The date is interpreted
+ * as Pacific Time.
+ *
+ * @param dateString - ISO format date string (YYYY-MM-DD)
+ * @returns Formatted date string in "Month Day, Year" format
+ */
+export function formatDateAsPacificTime(dateString: string): string {
+  const date = parseDateAsPacificTime(dateString);
+  return date.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    timeZone: "America/Los_Angeles",
+  });
+}
+
+/**
+ * Escapes HTML special characters in text to prevent XSS attacks.
+ *
+ * Uses the browser's built-in DOM API to safely escape characters like
+ * <, >, &, ", and ' by setting textContent and reading back innerHTML.
+ *
+ * @param text - The raw text string that may contain HTML characters
+ * @returns HTML-escaped string safe for insertion into the DOM
+ */
+export function escapeHtml(text: string): string {
+  const div = document.createElement("div");
+  div.textContent = text;
+  return div.innerHTML;
+}
