@@ -40,7 +40,7 @@
 
   /* Dimensions - responsive with viewport scaling */
   --header-height: clamp(2.7rem, 3.6vw, 3.42rem);
-  --topics-bar-height: clamp(2.5rem, 3vw, 3rem);
+  --topics-bar-height: var(--header-height);
   --sidebar-width: clamp(250px, 20vw, 300px);
   --container-max-width: min(1400px, 95vw);
   --theme-button-size: clamp(35px, 3vw, 40px);
