@@ -44,6 +44,8 @@ jobs:
             ${{ runner.os }}-vite-${{ hashFiles('**/package-lock.json') }}-
       - name: Install dependencies
         run: nix develop --command npm ci
+      - name: Run lint
+        run: nix develop --command npm run lint
       - name: Run audit
         run: nix develop --command npm run audit
       - name: Build and run tests
