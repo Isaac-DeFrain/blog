@@ -9,19 +9,28 @@
     "clean": "rm -rf dist && rm -rf src/blogs/manifest.json",
     "preview": "vite preview",
     "lint": "tsc --noEmit && prettier --write .",
-    "test:loading": "tsx tests/test-loading.ts",
-    "test:code-blocks": "tsx tests/test-code-blocks.ts",
-    "test": "run-s build test:loading test:code-blocks"
+    "test:unit": "vitest run tests/unit",
+    "test:component": "vitest run tests/component",
+    "test:integration": "vitest run tests/integration",
+    "test:build": "vitest run tests/build",
+    "test:edge-cases": "vitest run tests/edge-cases",
+    "test:all": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:watch": "vitest",
+    "test": "run-s build test:all"
   },
   "devDependencies": {
     "@types/node": "^25.0.1",
+    "@vitest/ui": "^4.0.16",
     "depcheck": "^1.4.7",
+    "happy-dom": "^20.0.11",
     "marked": "^16.2.1",
     "npm-run-all": "^4.1.5",
     "prettier": "^3.5.3",
     "tsx": "^4.19.2",
     "typescript": "^5.3.3",
-    "vite": "^6.1.6"
+    "vite": "^6.1.6",
+    "vitest": "^4.0.16"
   },
   "dependencies": {
     "highlight.js": "^11.11.1",
