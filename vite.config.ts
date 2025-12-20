@@ -1,6 +1,8 @@
+/// <reference types="vitest/config" />
 import { defineConfig } from "vite";
 import { readFileSync, writeFileSync, copyFileSync, mkdirSync, readdirSync, existsSync } from "fs";
 import { join } from "path";
+import { basePathScript } from "./src/utils";
 
 /** Determine base path for GitHub Pages deployment
  *
@@ -9,7 +11,7 @@ import { join } from "path";
  *
  * @returns The base path for GitHub Pages deployment or root for local development
  */
-function getBasePath(): string {
+export function getBasePath(): string {
   const repo = process.env.GITHUB_REPOSITORY;
   if (repo) {
     const repoName = repo.split("/")[1];
@@ -22,13 +24,73 @@ function getBasePath(): string {
 const basePath = getBasePath();
 
 /**
+ * Recursively copies a directory and its contents
+ *
+ * @param src - Source directory path
+ * @param dest - Destination directory path
+ */
+export function copyDir(src: string, dest: string): void {
+  mkdirSync(dest, { recursive: true });
+  const entries = readdirSync(src, { withFileTypes: true });
+
+  for (const entry of entries) {
+    const srcPath = join(src, entry.name);
+    const destPath = join(dest, entry.name);
+
+    if (entry.isDirectory()) {
+      copyDir(srcPath, destPath);
+    } else {
+      copyFileSync(srcPath, destPath);
+    }
+  }
+}
+
+/**
+ * Processes 404.html to inject base path for GitHub Pages SPA routing
+ *
+ * @param src404 - Path to source 404.html file
+ * @param dist404 - Path to destination 404.html file
+ * @param basePath - Base path for the application
+ */
+export function process404Html(src404: string, dist404: string, basePath: string): void {
+  let html = readFileSync(src404, "utf-8");
+
+  // Inject base path as a global variable right after opening <head> tag
+  const basePathScript = `<script>window.__BASE_PATH__ = ${JSON.stringify(basePath)};</script>`;
+  html = html.replace("<head>", `<head>${basePathScript}`);
+
+  // Count non-empty segments in the base path (e.g. "/blog/" = 1 segment)
+  const pathSegmentsToKeep = basePath.split("/").filter((segment) => segment.length > 0).length;
+
+  // Update pathSegmentsToKeep in the redirect script
+  html = html.replace(/var pathSegmentsToKeep = \d+;/, `var pathSegmentsToKeep = ${pathSegmentsToKeep};`);
+
+  // Only replace paths if base path is not root
+  // Ensures assets load correctly with the base path
+  if (basePath !== "/") {
+    // Replace absolute internal paths (href="/path" or src="/path")
+    // but skip external URLs (starting with // or http)
+    html = html.replace(/(href|src)="\/([^"]*)"/g, (match, attr, path) => {
+      // Don't modify external URLs (protocol-relative // or http/https)
+      if (path.startsWith("/") || path.startsWith("http")) {
+        return match;
+      }
+
+      return `${attr}="${basePath}${path}"`;
+    });
+  }
+
+  writeFileSync(dist404, html);
+}
+
+/**
  * Generates a manifest file listing all markdown files in the blogs directory
  * Only generates if the manifest doesn't already exist
  *
  * @param blogsDir - The directory containing blog markdown files
  * @returns The manifest object with files array, or null if generation failed
  */
-function generateBlogManifest(blogsDir: string): { files: string[] } | null {
+export function generateBlogManifest(blogsDir: string): { files: string[] } | null {
   const manifestPath = join(blogsDir, "manifest.json");
 
   // Check if manifest already exists
@@ -67,6 +129,22 @@ export default defineConfig({
   build: {
     chunkSizeWarningLimit: 1000, // 1 MB
   },
+  test: {
+    globals: true,
+    environment: "happy-dom",
+    include: ["tests/**/*.test.ts"],
+    coverage: {
+      provider: "v8",
+      reporter: ["text", "json", "html"],
+      exclude: ["node_modules/", "dist/", "tests/", "**/*.config.ts", "**/*.d.ts", "src/blogs/**"],
+      thresholds: {
+        lines: 80,
+        functions: 80,
+        branches: 80,
+        statements: 80,
+      },
+    },
+  },
   plugins: [
     {
       name: "spa-fallback",
@@ -102,8 +180,7 @@ export default defineConfig({
         handler(html) {
           // Inject base path as a global variable so client code can access it
           // Insert right after the opening <head> tag to ensure it's available before any module scripts
-          const basePathScript = `<script>window.__BASE_PATH__ = "${basePath}";</script>`;
-          return html.replace("<head>", `<head>${basePathScript}`);
+          return html.replace("<head>", `<head>${basePathScript(basePath)}`);
         },
       },
     },
@@ -115,25 +192,8 @@ export default defineConfig({
         const distBlogsDir = join(process.cwd(), "dist", "src", "blogs");
 
         try {
-          // Recursively copy directory
-          function copyDir(src: string, dest: string) {
-            mkdirSync(dest, { recursive: true });
-            const entries = readdirSync(src, { withFileTypes: true });
-
-            for (const entry of entries) {
-              const srcPath = join(src, entry.name);
-              const destPath = join(dest, entry.name);
-
-              if (entry.isDirectory()) {
-                copyDir(srcPath, destPath);
-              } else {
-                copyFileSync(srcPath, destPath);
-              }
-            }
-          }
-
           copyDir(srcBlogsDir, distBlogsDir);
-          console.log("Blog files copied to dist directory");
+          console.debug("Blog files copied to dist directory");
         } catch (error) {
           console.warn("Failed to copy blog files:", error);
         }
@@ -157,7 +217,7 @@ export default defineConfig({
           mkdirSync(distBlogsDir, { recursive: true });
           const manifestPath = join(distBlogsDir, "manifest.json");
           writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
-          console.log("Blog manifest generated");
+          console.debug("Blog manifest generated");
         }
       },
     },
@@ -170,34 +230,7 @@ export default defineConfig({
         const src404 = join(process.cwd(), "404.html");
         const dist404 = join(process.cwd(), "dist", "404.html");
         try {
-          let html = readFileSync(src404, "utf-8");
-
-          // Inject base path as a global variable right after opening <head> tag
-          const basePathScript = `<script>window.__BASE_PATH__ = ${JSON.stringify(basePath)};</script>`;
-          html = html.replace("<head>", `<head>${basePathScript}`);
-
-          // Count non-empty segments in the base path (e.g. "/blog/" = 1 segment)
-          const pathSegmentsToKeep = basePath.split("/").filter((segment) => segment.length > 0).length;
-
-          // Update pathSegmentsToKeep in the redirect script
-          html = html.replace(/var pathSegmentsToKeep = \d+;/, `var pathSegmentsToKeep = ${pathSegmentsToKeep};`);
-
-          // Only replace paths if base path is not root
-          // Ensures assets load correctly with the base path
-          if (basePath !== "/") {
-            // Replace absolute internal paths (href="/path" or src="/path")
-            // but skip external URLs (starting with // or http)
-            html = html.replace(/(href|src)="\/([^"]*)"/g, (match, attr, path) => {
-              // Don't modify external URLs (protocol-relative // or http/https)
-              if (path.startsWith("/") || path.startsWith("http")) {
-                return match;
-              }
-
-              return `${attr}="${basePath}${path}"`;
-            });
-          }
-
-          writeFileSync(dist404, html);
+          process404Html(src404, dist404, basePath);
         } catch (error) {
           console.warn("Failed to process 404.html:", error);
         }

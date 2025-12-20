@@ -22,10 +22,26 @@ export const li = <T>(className: T, content: T): string => {
  */
 export function parseDateAsPacificTime(dateString: string): Date {
   // Parse the date components
-  const [year, month, day] = dateString.split("-").map(Number);
+  const parts = dateString.split("-");
+  if (parts.length !== 3) {
+    // Invalid format, return invalid date
+    return new Date(NaN);
+  }
+
+  const [year, month, day] = parts.map(Number);
+
+  // Validate that we got valid numbers
+  if (isNaN(year) || isNaN(month) || isNaN(day)) {
+    return new Date(NaN);
+  }
 
   // Create a date at noon UTC on the target date to determine DST
   const noonUtc = new Date(Date.UTC(year, month - 1, day, 12, 0, 0));
+
+  // Check if the date is invalid
+  if (isNaN(noonUtc.getTime())) {
+    return noonUtc;
+  }
 
   // Format this UTC time in Pacific Time to determine the offset
   const pacificFormatter = new Intl.DateTimeFormat("en-US", {
@@ -34,22 +50,27 @@ export function parseDateAsPacificTime(dateString: string): Date {
     hour12: false,
   });
 
-  const pacificHour = parseInt(pacificFormatter.format(noonUtc));
+  try {
+    const pacificHour = parseInt(pacificFormatter.format(noonUtc));
 
-  // Calculate the offset: Pacific Time is UTC-8 (PST) or UTC-7 (PDT)
-  // At noon UTC, Pacific Time is typically 4am (PST) or 5am (PDT)
-  // Calculate the offset: if noon UTC = 4am Pacific, then Pacific = UTC - 8
-  // So noon Pacific = 8pm UTC (PST)
-  // If noon UTC = 5am Pacific, then Pacific = UTC - 7
-  // So noon Pacific = 7pm UTC (PDT)
-  const offsetHours = pacificHour <= 4 ? -8 : -7;
+    // Calculate the offset: Pacific Time is UTC-8 (PST) or UTC-7 (PDT)
+    // At noon UTC, Pacific Time is typically 4am (PST) or 5am (PDT)
+    // Calculate the offset: if noon UTC = 4am Pacific, then Pacific = UTC - 8
+    // So noon Pacific = 8pm UTC (PST)
+    // If noon UTC = 5am Pacific, then Pacific = UTC - 7
+    // So noon Pacific = 7pm UTC (PDT)
+    const offsetHours = pacificHour <= 4 ? -8 : -7;
 
-  // Noon Pacific Time corresponds to 8pm UTC (PST) or 7pm UTC (PDT)
-  // We create a UTC date at the time that represents noon Pacific
-  // Using noon ensures the date will always be on the correct day when formatted
-  const utcHourForNoonPacific = 12 - offsetHours; // 20 for PST, 19 for PDT
+    // Noon Pacific Time corresponds to 8pm UTC (PST) or 7pm UTC (PDT)
+    // We create a UTC date at the time that represents noon Pacific
+    // Using noon ensures the date will always be on the correct day when formatted
+    const utcHourForNoonPacific = 12 - offsetHours; // 20 for PST, 19 for PDT
 
-  return new Date(Date.UTC(year, month - 1, day, utcHourForNoonPacific, 0, 0));
+    return new Date(Date.UTC(year, month - 1, day, utcHourForNoonPacific, 0, 0));
+  } catch {
+    // If formatting fails, return invalid date
+    return new Date(NaN);
+  }
 }
 
 /**
@@ -76,7 +97,8 @@ export function formatDateAsPacificTime(dateString: string): string {
  * Escapes HTML special characters in text to prevent XSS attacks.
  *
  * Uses the browser's built-in DOM API to safely escape characters like
- * <, >, &, ", and ' by setting textContent and reading back innerHTML.
+ * <, >, &, ", and ' by setting textContent and reading back innerHTML,
+ * then manually escaping quotes which are not escaped by textContent.
  *
  * @param text - The raw text string that may contain HTML characters
  * @returns HTML-escaped string safe for insertion into the DOM
@@ -84,5 +106,85 @@ export function formatDateAsPacificTime(dateString: string): string {
 export function escapeHtml(text: string): string {
   const div = document.createElement("div");
   div.textContent = text;
-  return div.innerHTML;
+  // textContent escapes <, >, and &, but not quotes
+  // We need to manually escape quotes for attribute safety
+  return div.innerHTML.replace(/"/g, "&quot;").replace(/'/g, "&#x27;");
+}
+
+/**
+ * Parses YAML frontmatter from markdown files.
+ *
+ * Extracts metadata from a frontmatter block at the beginning of the markdown file.
+ * The frontmatter should be in the format:
+ *
+ * ```markdown
+ * ---
+ * name: Post Name
+ * date: 2024-01-15
+ * topics:
+ *   - Topic 1
+ *   - Topic 2
+ * ---
+ * ```
+ *
+ * @param markdown - The markdown content with optional frontmatter
+ * @returns Object with parsed frontmatter fields (name, date, topics)
+ */
+export function parseFrontmatter(markdown: string): {
+  name?: string;
+  date?: string;
+  topics?: string[];
+} {
+  const frontmatterRegex = /^---\s*\n([\s\S]*?)\n---\s*\n/;
+  const match = markdown.match(frontmatterRegex);
+
+  if (!match) {
+    return {};
+  }
+
+  const frontmatter = match[1];
+  const result: { name?: string; date?: string; topics?: string[] } = {};
+
+  // Parse name
+  const nameMatch = frontmatter.match(/^name:\s*(.+)$/m);
+  if (nameMatch) {
+    result.name = nameMatch[1].trim();
+  }
+
+  // Parse date
+  const dateMatch = frontmatter.match(/^date:\s*(.+)$/m);
+  if (dateMatch) {
+    result.date = dateMatch[1].trim();
+  }
+
+  // Parse topics
+  const topicsHeaderMatch = frontmatter.match(/^topics:\s*(?:\n|$)/m);
+  if (topicsHeaderMatch) {
+    // topics: exists, extract everything after it until next field or end
+    const afterTopics = frontmatter.substring(topicsHeaderMatch.index! + topicsHeaderMatch[0].length);
+    // Extract lines until next field (starts with word:) or end of frontmatter
+    const topicsLines = afterTopics.split(/\n(?=\w+:)/)[0];
+    const topicsList = topicsLines || "";
+    result.topics = topicsList
+      .split("\n")
+      .map((line) =>
+        line
+          .replace(/^\s*-\s*/, "")
+          .trim()
+          .toLowerCase(),
+      )
+      .filter((topic) => topic.length > 0);
+  }
+
+  return result;
+}
+
+/**
+ * Creates a script tag to inject the base path as a global variable.
+ *
+ * @param basePath - The base path to inject
+ * @returns Script tag string
+ */
+export function basePathScript(basePath: string): string {
+  return `<script>window.__BASE_PATH__ = "${basePath}";</script>`;
 }

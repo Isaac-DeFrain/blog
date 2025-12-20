@@ -70,11 +70,12 @@ export class TopicsBar {
     const topicsBar = this.topicsBar;
     if (!topicsBar) return;
 
-    // Count how many posts reference each topic
+    // Count how many posts reference each topic (normalize to lowercase)
     const topicCounts = new Map<string, number>();
     this.allPosts.forEach((post) => {
       post.topics.forEach((topic) => {
-        topicCounts.set(topic, (topicCounts.get(topic) || 0) + 1);
+        const normalizedTopic = topic.toLowerCase();
+        topicCounts.set(normalizedTopic, (topicCounts.get(normalizedTopic) || 0) + 1);
       });
     });
 
@@ -118,7 +119,7 @@ export class TopicsBar {
       const button = document.createElement("button");
       button.className = "topic-button";
 
-      if (this.selectedTopic && this.selectedTopic.toLowerCase() === topic.toLowerCase()) {
+      if (this.selectedTopic && this.selectedTopic.toLowerCase() === topic) {
         button.classList.add("active");
       }
 
@@ -126,7 +127,7 @@ export class TopicsBar {
       button.addEventListener("click", () => {
         this.selectedTopic = topic;
         const filteredPosts = this.allPosts
-          .filter((post) => post.topics.some((t) => t === topic))
+          .filter((post) => post.topics.some((t) => t.toLowerCase() === topic.toLowerCase()))
           .sort((a, b) => {
             return parseDateAsPacificTime(b.date).getTime() - parseDateAsPacificTime(a.date).getTime();
           });

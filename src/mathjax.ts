@@ -21,23 +21,30 @@ declare global {
 /**
  * Waits for MathJax to be fully loaded and ready.
  *
- * @returns Promise that resolves when MathJax is ready to use
+ * @param timeout - Maximum time to wait in milliseconds (default: 5000ms)
+ * @returns Promise that resolves when MathJax is ready to use, or rejects on timeout
  */
-export async function waitForMathJax(): Promise<void> {
+export async function waitForMathJax(timeout: number = 5000): Promise<void> {
   // If MathJax is already loaded and has typesetPromise, it's ready
   if (window.MathJax?.typesetPromise) {
     return Promise.resolve();
   }
 
-  // Wait for MathJax to load
-  return new Promise<void>((resolve) => {
+  // Wait for MathJax to load with timeout
+  return new Promise<void>((resolve, reject) => {
+    const startTime = Date.now();
     const checkMathJax = () => {
       if (window.MathJax?.typesetPromise) {
         resolve();
       } else if (window.MathJax?.startup?.promise) {
         window.MathJax.startup.promise.then(() => resolve());
       } else {
-        setTimeout(checkMathJax, 50);
+        const elapsed = Date.now() - startTime;
+        if (elapsed >= timeout) {
+          reject(new Error("MathJax timeout"));
+        } else {
+          setTimeout(checkMathJax, 50);
+        }
       }
     };
     checkMathJax();
@@ -53,7 +60,13 @@ export async function waitForMathJax(): Promise<void> {
  * @returns Promise that resolves when typesetting is complete
  */
 export async function typesetMath(elements: HTMLElement | HTMLElement[]): Promise<void> {
-  await waitForMathJax();
+  try {
+    await waitForMathJax();
+  } catch {
+    // MathJax didn't load within timeout
+    console.warn("MathJax is not available");
+    return;
+  }
 
   if (!window.MathJax?.typesetPromise) {
     console.warn("MathJax is not available");

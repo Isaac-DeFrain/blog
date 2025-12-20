@@ -1,4 +1,4 @@
-import { li, parseDateAsPacificTime } from "./utils";
+import { li, parseDateAsPacificTime, escapeHtml } from "./utils";
 
 export interface BlogPost {
   id: string;
@@ -78,7 +78,7 @@ export class Sidebar {
       }
 
       const h3 = document.createElement("h3");
-      h3.textContent = this.escapeHtml(post.name);
+      h3.innerHTML = escapeHtml(post.name);
 
       const date = document.createElement("div");
       date.className = "date";
@@ -121,20 +121,5 @@ export class Sidebar {
       day: "numeric",
       timeZone: "America/Los_Angeles",
     });
-  }
-
-  /**
-   * Escapes HTML special characters in text to prevent XSS attacks.
-   *
-   * Uses the browser's built-in DOM API to safely escape characters like
-   * <, >, &, ", and ' by setting textContent and reading back innerHTML.
-   *
-   * @param text - The raw text string that may contain HTML characters
-   * @returns HTML-escaped string safe for insertion into the DOM
-   */
-  private escapeHtml(text: string): string {
-    const div = document.createElement("div");
-    div.textContent = text;
-    return div.innerHTML;
   }
 }

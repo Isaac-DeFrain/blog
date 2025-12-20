@@ -12,23 +12,12 @@
  * - **Topic Filtering**: Integrates with [[`TopicsBar`]] for filtering posts by topic
  * - **Sidebar Navigation**: Manages post list display and active post highlighting
  * - **Browser Navigation**: Supports browser back/forward button navigation via History API
- *
- * The module exports the [[`parseFrontmatter`]] utility function and automatically instantiates
- * a [[`BlogReader`]] instance when loaded in a browser environment.
- *
- * @example
- * ```typescript
- * // The BlogReader is automatically instantiated on module load
- * // To parse frontmatter manually:
- * import { parseFrontmatter } from "./blog";
- * const metadata = parseFrontmatter(markdownContent);
- * ```
  */
 
 import { ThemeManager } from "./theme";
 import { TopicsBar, type BlogPost } from "./topics-bar";
 import { Sidebar } from "./sidebar";
-import { div, escapeHtml, formatDateAsPacificTime, parseDateAsPacificTime } from "./utils";
+import { div, escapeHtml, formatDateAsPacificTime, parseDateAsPacificTime, parseFrontmatter } from "./utils";
 import type { HLJSApi } from "highlight.js";
 
 /**
@@ -58,70 +47,9 @@ function getBasePath(): string {
 }
 
 /**
- * Parses YAML frontmatter from markdown files.
- *
- * Extracts metadata from a frontmatter block at the beginning of the markdown file.
- * The frontmatter should be in the format:
- * ---
- * name: Post Name
- * date: 2024-01-15
- * topics:
- *   - Topic 1
- *   - Topic 2
- * ---
- *
- * @param markdown - The markdown content with optional frontmatter
- * @returns Object with parsed frontmatter fields (name, date, topics)
- */
-export function parseFrontmatter(markdown: string): {
-  name?: string;
-  date?: string;
-  topics?: string[];
-} {
-  const frontmatterRegex = /^---\s*\n([\s\S]*?)\n---\s*\n/;
-  const match = markdown.match(frontmatterRegex);
-
-  if (!match) {
-    return {};
-  }
-
-  const frontmatter = match[1];
-  const result: { name?: string; date?: string; topics?: string[] } = {};
-
-  // Parse name
-  const nameMatch = frontmatter.match(/^name:\s*(.+)$/m);
-  if (nameMatch) {
-    result.name = nameMatch[1].trim();
-  }
-
-  // Parse date
-  const dateMatch = frontmatter.match(/^date:\s*(.+)$/m);
-  if (dateMatch) {
-    result.date = dateMatch[1].trim();
-  }
-
-  // Parse topics
-  const topicsMatch = frontmatter.match(/^topics:\s*\n((?:\s*-\s*.+\n?)+)/m);
-  if (topicsMatch) {
-    const topicsList = topicsMatch[1];
-    result.topics = topicsList
-      .split("\n")
-      .map((line) =>
-        line
-          .replace(/^\s*-\s*/, "")
-          .trim()
-          .toLowerCase(),
-      )
-      .filter((topic) => topic.length > 0);
-  }
-
-  return result;
-}
-
-/**
  * BlogReader handles blog loading, rendering, and sidebar navigation
  */
-class BlogReader {
+export class BlogReader {
   private blogContent: HTMLElement | null;
   private posts: BlogPost[] = [];
   private allPosts: BlogPost[] = [];
@@ -212,12 +140,18 @@ class BlogReader {
     this.topicsBar.setPosts(this.allPosts);
     this.sidebar.setPosts(this.posts);
 
-    // Check if URL has a post ID in the pathname otherwise load the first post
+    // Check if URL has a post ID in the pathname
     const pathPostId = this.getPostIdFromPath();
     if (pathPostId && this.posts.some((p) => p.id === pathPostId)) {
       await this.loadBlogPost(pathPostId);
     } else {
-      await this.loadBlogPost(this.posts[0].id);
+      // Otherwise load the first post if it exists
+      const mostRecentPost = this.posts[0];
+      if (mostRecentPost) {
+        await this.loadBlogPost(mostRecentPost.id);
+      } else {
+        this.showError("No posts available");
+      }
     }
   }
 
@@ -593,9 +527,4 @@ class BlogReader {
       this.blogContent.innerHTML = div("error", escapeHtml(message));
     }
   }
-}
-
-// Only instantiate BlogReader in browser environment
-if (typeof window !== "undefined") {
-  new BlogReader();
 }
