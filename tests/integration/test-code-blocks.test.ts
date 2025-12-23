@@ -11,7 +11,7 @@ import { markedHighlight } from "marked-highlight";
 import hljs from "highlight.js";
 import { createHighlightConfig } from "../../src/blog";
 describe("Code Blocks Rendering Integration Test", () => {
-  const distBlogsDir = join(process.cwd(), "dist", "src", "blogs");
+  const distBlogsDir = join(process.cwd(), "dist", "posts");
   const manifestPath = join(distBlogsDir, "manifest.json");
   let manifest: { files: string[] };
   let marked: Marked;

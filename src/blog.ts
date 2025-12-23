@@ -169,7 +169,7 @@ export class BlogReader {
   private async loadBlogList(): Promise<void> {
     try {
       // Fetch manifest to get list of markdown files
-      const manifestResponse = await fetch(`${this.basePath}src/blogs/manifest.json`);
+      const manifestResponse = await fetch(`${this.basePath}posts/manifest.json`);
 
       if (!manifestResponse.ok) {
         throw new Error("Failed to load blog manifest");
@@ -180,7 +180,7 @@ export class BlogReader {
       const posts = await Promise.all(
         manifest.files.map(async (filename) => {
           try {
-            const markdownResponse = await fetch(`${this.basePath}src/blogs/${filename}`);
+            const markdownResponse = await fetch(`${this.basePath}posts/${filename}`);
             if (!markdownResponse.ok) {
               console.warn(`Failed to load ${filename}`);
               return null;
@@ -497,7 +497,7 @@ export class BlogReader {
         },
       });
 
-      const response = await fetch(`${this.basePath}src/blogs/${post.file}`);
+      const response = await fetch(`${this.basePath}posts/${post.file}`);
       if (!response.ok) {
         throw new Error("Failed to load blog post");
       }

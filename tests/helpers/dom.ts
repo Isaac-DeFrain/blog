@@ -97,7 +97,7 @@ export function createUrlBasedFetchMock(
     const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
 
     // Extract pathname from full URL for better matching
-    // This handles URLs like "http://localhost:3000/blog/src/blogs/manifest.json"
+    // This handles URLs like "http://localhost:3000/blog/posts/manifest.json"
     let pathname = url;
     let normalizedUrl = url;
     try {
@@ -126,8 +126,8 @@ export function createUrlBasedFetchMock(
       normalizedUrl = `${urlObj.protocol}//${urlObj.hostname}${urlObj.pathname}${urlObj.search}${urlObj.hash}`;
     } catch (error) {
       // If URL parsing fails, try to extract pathname manually
-      // Match pattern like "/blog/src/blogs/manifest.json" or "/src/blogs/manifest.json"
-      // Also handle URLs with ports: "http://localhost:3000/blog/src/blogs/manifest.json"
+      // Match pattern like "/blog/posts/manifest.json" or "/posts/manifest.json"
+      // Also handle URLs with ports: "http://localhost:3000/blog/posts/manifest.json"
       const pathnameMatch = url.match(/\/[^?#]*/);
       if (pathnameMatch) {
         pathname = pathnameMatch[0];

@@ -182,9 +182,12 @@ export function parseFrontmatter(markdown: string): {
 /**
  * Creates a script tag to inject the base path as a global variable.
  *
+ * Uses JSON.stringify to properly escape the base path string and prevent
+ * XSS vulnerabilities if the base path contains special characters.
+ *
  * @param basePath - The base path to inject
  * @returns Script tag string
  */
 export function basePathScript(basePath: string): string {
-  return `<script>window.__BASE_PATH__ = "${basePath}";</script>`;
+  return `<script>window.__BASE_PATH__ = ${JSON.stringify(basePath)};</script>`;
 }

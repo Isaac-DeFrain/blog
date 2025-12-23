@@ -6,7 +6,7 @@
     "dev": "vite",
     "audit": "npm audit && depcheck",
     "build": "tsc && vite build",
-    "clean": "rm -rf dist && rm -rf src/blogs/manifest.json",
+    "clean": "rm -rf dist && rm -rf posts/manifest.json",
     "preview": "vite preview",
     "lint": "tsc --noEmit && prettier --write .",
     "test:unit": "vitest run tests/unit",
@@ -15,9 +15,9 @@
     "test:build": "vitest run tests/build",
     "test:edge-cases": "vitest run tests/edge-cases",
     "test:all": "vitest run",
-    "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
-    "test": "run-s build test:all"
+    "test": "run-s build test:all",
+    "coverage": "vitest run --coverage"
   },
   "devDependencies": {
     "@types/node": "^25.0.1",

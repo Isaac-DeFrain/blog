@@ -10,8 +10,8 @@ import { parseFrontmatter } from "../../src/utils";
 import { isValidDate } from "../common";
 
 describe("Blog Post Loading Integration Test", () => {
-  const srcBlogsDir = join(process.cwd(), "src", "blogs");
-  const distBlogsDir = join(process.cwd(), "dist", "src", "blogs");
+  const srcBlogsDir = join(process.cwd(), "posts");
+  const distBlogsDir = join(process.cwd(), "dist", "posts");
   const manifestPath = join(distBlogsDir, "manifest.json");
 
   let originalConsoleError: typeof console.error;

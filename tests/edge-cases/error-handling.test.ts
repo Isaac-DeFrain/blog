@@ -19,7 +19,7 @@ describe("Error Handling", () => {
       global.fetch = vi.fn().mockRejectedValue(new Error("Failed to fetch"));
 
       try {
-        const response = await fetch("/src/blogs/manifest.json");
+        const response = await fetch("/posts/manifest.json");
         expect(response).toBeUndefined();
       } catch (error) {
         expect(error).toBeInstanceOf(Error);
@@ -37,7 +37,7 @@ describe("Error Handling", () => {
         }),
       );
 
-      const response = await fetch("/src/blogs/manifest.json");
+      const response = await fetch("/posts/manifest.json");
       expect(response.ok).toBe(false);
       expect(response.status).toBe(404);
 
@@ -56,7 +56,7 @@ describe("Error Handling", () => {
       );
 
       try {
-        const response = await fetch("/src/blogs/manifest.json");
+        const response = await fetch("/posts/manifest.json");
         const data = await response.json();
         expect(data).toBeUndefined();
       } catch (error) {
@@ -75,7 +75,7 @@ describe("Error Handling", () => {
         }),
       );
 
-      const response = await fetch("/src/blogs/manifest.json");
+      const response = await fetch("/posts/manifest.json");
       const data = await response.json();
       expect(data).toEqual({});
       expect(data.files).toBeUndefined();
@@ -94,7 +94,7 @@ describe("Error Handling", () => {
         }),
       );
 
-      const response = await fetch("/src/blogs/non-existent.md");
+      const response = await fetch("/posts/non-existent.md");
       expect(response.ok).toBe(false);
       expect(response.status).toBe(404);
 
@@ -110,7 +110,7 @@ describe("Error Handling", () => {
       });
 
       try {
-        await fetch("/src/blogs/post.md");
+        await fetch("/posts/post.md");
         expect(true).toBe(false); // Should not reach here
       } catch (error) {
         expect(error).toBeInstanceOf(Error);
@@ -226,7 +226,7 @@ date: invalid-date
       global.fetch = vi.fn().mockRejectedValue(new Error("Network error"));
 
       try {
-        await fetch("/src/blogs/manifest.json");
+        await fetch("/posts/manifest.json");
         expect(true).toBe(false);
       } catch (error) {
         expect(error).toBeInstanceOf(Error);

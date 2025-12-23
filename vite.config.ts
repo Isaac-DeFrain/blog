@@ -1,6 +1,6 @@
 /// <reference types="vitest/config" />
 import { defineConfig } from "vite";
-import { readFileSync, writeFileSync, copyFileSync, mkdirSync, readdirSync, existsSync } from "fs";
+import { readFileSync, writeFileSync, copyFileSync, mkdirSync, readdirSync, existsSync, statSync } from "fs";
 import { join } from "path";
 import { basePathScript } from "./src/utils";
 
@@ -56,8 +56,7 @@ export function process404Html(src404: string, dist404: string, basePath: string
   let html = readFileSync(src404, "utf-8");
 
   // Inject base path as a global variable right after opening <head> tag
-  const basePathScript = `<script>window.__BASE_PATH__ = ${JSON.stringify(basePath)};</script>`;
-  html = html.replace("<head>", `<head>${basePathScript}`);
+  html = html.replace("<head>", `<head>${basePathScript(basePath)}`);
 
   // Count non-empty segments in the base path (e.g. "/blog/" = 1 segment)
   const pathSegmentsToKeep = basePath.split("/").filter((segment) => segment.length > 0).length;
@@ -136,7 +135,7 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       reporter: ["text", "json", "html"],
-      exclude: ["node_modules/", "dist/", "tests/", "**/*.config.ts", "**/*.d.ts", "src/blogs/**"],
+      exclude: ["node_modules/", "dist/", "tests/", "**/*.config.ts", "**/*.d.ts", "posts/**"],
       thresholds: {
         lines: 80,
         functions: 80,
@@ -146,6 +145,43 @@ export default defineConfig({
     },
   },
   plugins: [
+    {
+      name: "serve-posts",
+      configureServer(server) {
+        // Serve posts directory files during development
+        return () => {
+          server.middlewares.use((req, res, next) => {
+            const url = req.url || "";
+
+            // Check if this is a request for a post file
+            if (url.startsWith("/posts/")) {
+              const filePath = join(process.cwd(), url);
+              try {
+                const stats = statSync(filePath);
+                if (stats.isFile()) {
+                  const content = readFileSync(filePath);
+                  // Set appropriate content type
+                  if (url.endsWith(".json")) {
+                    res.setHeader("Content-Type", "application/json");
+                  } else if (url.endsWith(".md")) {
+                    res.setHeader("Content-Type", "text/markdown; charset=utf-8");
+                  }
+                  res.end(content);
+                  return;
+                }
+              } catch (error) {
+                // File doesn't exist, return 404
+                res.statusCode = 404;
+                res.end("Not Found");
+                return;
+              }
+            }
+
+            next();
+          });
+        };
+      },
+    },
     {
       name: "spa-fallback",
       configureServer(server) {
@@ -160,6 +196,7 @@ export default defineConfig({
               url.startsWith("/styling/") ||
               url.startsWith("/assets/") ||
               url.startsWith("/node_modules/") ||
+              url.startsWith("/posts/") ||
               (url.includes(".") && !url.endsWith(".html"))
             ) {
               return next();
@@ -188,8 +225,8 @@ export default defineConfig({
       name: "copy-blog-files",
       closeBundle() {
         // Copy blog post files to dist directory so they're available at runtime
-        const srcBlogsDir = join(process.cwd(), "src", "blogs");
-        const distBlogsDir = join(process.cwd(), "dist", "src", "blogs");
+        const srcBlogsDir = join(process.cwd(), "posts");
+        const distBlogsDir = join(process.cwd(), "dist", "posts");
 
         try {
           copyDir(srcBlogsDir, distBlogsDir);
@@ -203,12 +240,12 @@ export default defineConfig({
       name: "generate-blog-manifest",
       buildStart() {
         // Generate manifest in source directory for development
-        generateBlogManifest(join(process.cwd(), "src", "blogs"));
+        generateBlogManifest(join(process.cwd(), "posts"));
       },
       closeBundle() {
         // Generate a manifest file listing all markdown files in the blogs directory
-        const srcBlogsDir = join(process.cwd(), "src", "blogs");
-        const distBlogsDir = join(process.cwd(), "dist", "src", "blogs");
+        const srcBlogsDir = join(process.cwd(), "posts");
+        const distBlogsDir = join(process.cwd(), "dist", "posts");
 
         // Generate manifest from source directory
         const manifest = generateBlogManifest(srcBlogsDir);

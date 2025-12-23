@@ -1,11 +1,5 @@
 import { describe, it, expect } from "vitest";
-import {
-  parseDateAsPacificTime,
-  formatDateAsPacificTime,
-  escapeHtml,
-  div,
-  li,
-} from "../../src/utils";
+import { parseDateAsPacificTime, formatDateAsPacificTime, escapeHtml, div, li } from "../../src/utils";
 
 describe("parseDateAsPacificTime", () => {
   it("should parse a valid date string", () => {
@@ -107,12 +101,8 @@ describe("escapeHtml", () => {
   });
 
   it("should handle XSS attack vectors", () => {
-    expect(escapeHtml('<script>alert("XSS")</script>')).toBe(
-      "&lt;script&gt;alert(&quot;XSS&quot;)&lt;/script&gt;",
-    );
-    expect(escapeHtml('<img src=x onerror="alert(1)">')).toBe(
-      "&lt;img src=x onerror=&quot;alert(1)&quot;&gt;",
-    );
+    expect(escapeHtml('<script>alert("XSS")</script>')).toBe("&lt;script&gt;alert(&quot;XSS&quot;)&lt;/script&gt;");
+    expect(escapeHtml('<img src=x onerror="alert(1)">')).toBe("&lt;img src=x onerror=&quot;alert(1)&quot;&gt;");
     expect(escapeHtml("javascript:alert('XSS')")).toBe("javascript:alert(&#x27;XSS&#x27;)");
   });
 
@@ -169,7 +159,6 @@ describe("li", () => {
   });
 
   it("should handle special characters in content", () => {
-    expect(li("test", "It's working")).toBe("<li class=\"test\">It's working</li>");
+    expect(li("test", "It's working")).toBe('<li class="test">It\'s working</li>');
   });
 });
-

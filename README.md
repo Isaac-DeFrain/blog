@@ -64,7 +64,7 @@ npm test
 
 ## Adding New Blog Posts
 
-1. Create a new markdown file in `src/blogs/` (e.g. `my-post.md`)
+1. Create a new markdown file in `posts/` (e.g. `my-post.md`)
 2. Add frontmatter to the markdown file with metadata:
 
 ```markdown

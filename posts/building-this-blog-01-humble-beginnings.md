@@ -1,5 +1,5 @@
 ---
-name: Building this Blog (part 1) - Humble Beginnings
+name: Building This Blog (part 1) - Humble Beginnings
 date: 2025-12-15
 topics:
   - building this blog
@@ -9,40 +9,38 @@ topics:
 
 # Building This Blog (part 1) - Humble Beginnings
 
-This is the humble beginning of a [blog](https://isaac-defrain.github.io/blog/) and subsequent series of posts about building said [blog](https://github.com/Isaac-DeFrain/blog). The series consists of 7 posts:
+This is the humble beginning of a [blog](https://isaac-defrain.github.io/blog/) and subsequent series of posts about building said [blog](https://github.com/Isaac-DeFrain/blog). The series consists of 5 posts:
 
-- [Humble Beginnings](./building-this-blog-01-humble-beginnings.md)
-- [SPA Routing](./building-this-blog-02-spa-routing.md)
-- [Script Injection Timing](./building-this-blog-03-script-injection.md)
-- [Build-Time Processing](./building-this-blog-04-build-time-processing.md)
-- [CI/CD Deployment Pipeline](./building-this-blog-05-cicd-pipeline.md)
-- [Manifest Testing](./building-this-blog-06-manifest-validation.md)
-- [Internal Links](./building-this-blog-07-internal-links.md)
+1. [Humble Beginnings](./building-this-blog-01-humble-beginnings.md)
+2. [Routing for GitHub Pages (part 1)](./building-this-blog-02-routing-for-github-pages-01.md)
+3. [Routing for GitHub Pages (part 2)](./building-this-blog-03-routing-for-github-pages-02.md)
+4. [Manifest Testing](./building-this-blog-04-testing.md)
+5. [CI/CD Deployment Pipeline](./building-this-blog-05-cicd-pipeline.md)
 
 First, a quick introduction.
 
 ## A little about me
 
-I've been a software developer for over 7 years (as of writing). Somehow I had managed to keep myself far away from any AI tools. Perhaps I viewed them as more of a crutch than anything, but even a crutch is a tool. However, in my extremely limited exposure, I had not found them terribly helpful. Most likely because I didn't know how to use them.
+I've been a software developer for over 7 years. Somehow I had managed to keep myself far away from any AI tools. Perhaps I viewed them as more of a crutch than anything, but even a crutch is a tool. However, in my extremely limited exposure, I had not found them terribly helpful. Most likely because I didn't know how to use them.
 
 Throughout my career, I had also managed to keep myself far away from web/frontend development and TypeScript. This did not make me cool... or a well-rounded developer, for that matter.
 
 It was high time I change _my_ status quo, start working with AI tools and stop hiding from the frontend. I decided to build my first web app, a simple blog.
 
-I'm certainly no frontend or AI expert, and I think, that's _exactly_ why my experience here is particulary valuable to share. I hope you enjoy and maybe even learn something along the way.
+I'm certainly no frontend or AI expert, and I think, that's _exactly_ why my experience here is particularly valuable to share. I hope you enjoy and maybe even learn something along the way.
 
 ## A little about this blog
 
 The initial idea was simple:
 
-> Build a basic web app for a blog
+> Build a basic, vanilla (framework-free) [TypeScript](https://www.typescriptlang.org/) blog web app
 
-But, of course, that couldn't be the whole goal... I also felt strongly compelled to use [Nix flakes](https://nixos.wiki/wiki/Flakes), vanilla (framework-free) [TypeScript](https://www.typescriptlang.org/), CI/CD best practices, and copious AI assistance. My aim was specifically to get (more) familiar with [Cursor](https://cursor.sh/) and TypeScript, while using the former to bootstrap and accelerate my learning of the latter.
+Of course, that couldn't be the whole goal... I also felt strongly compelled to use [Nix flakes](https://nixos.wiki/wiki/Flakes), CI/CD best practices, and copious AI assistance. My aim was specifically to get (more) familiar with [Cursor](https://cursor.sh/) and TypeScript, while using the former to bootstrap and accelerate my learning of the latter.
 
 This post will highlight:
 
 - [tech choices](#this-blogs-tech-choices)
-- [design decisions](#this-blogs-design)
+- [design decisions](#design)
 - [CI/CD best practices](#cicd-best-practices)
 - [deploying to GitHub Pages](#deploying-to-github-pages)
 
@@ -91,7 +89,13 @@ Vite serves as both the development server and build tool for the blog. It deliv
 - **Plugin system**: Extensible architecture allows custom build steps which we use to copy blog files, generate manifests, and process 404.html for GitHub Pages
 - **Modern tooling**: Works seamlessly with modern JavaScript features and ES modules
 
-For this blog, Vite handles the entire _build pipeline_: serving the SPA during development, compiling TypeScript code, copying markdown files to the `/dist` directory, generating the blog manifest, and configuring the base path for GitHub Pages deployment.
+For this blog, Vite handles the entire _build pipeline_:
+
+- serving the blog during development
+- compiling TypeScript code
+- copying markdown files to the `/dist` directory
+- generating the blog manifest
+- configuring the base path for GitHub Pages deployment
 
 ### Why Cursor
 
@@ -102,7 +106,7 @@ Cursor is an AI-powered IDE built on VS Code which has become an almost essentia
 - **Context-aware assistance**: Unlike generic AI chatbots, Cursor understands your entire codebase, making suggestions that fit your project's architecture and coding style
 - **Learning accelerator**: When working with unfamiliar technologies (TypeScript, frontend development in my case), Cursor provides real-time explanations and helps you understand best practices
 - **Code generation and refactoring**: Quickly generate boilerplate code, refactor existing code, and implement features while maintaining consistency with your project's patterns
-- **Error resolution**: Cursor helps mediagnose and fix errors faster by understanding the context of your code and suggesting targeted solutions
+- **Error resolution**: Cursor helps diagnose and fix errors faster by understanding the context of your code and suggesting targeted solutions
 
 For this blog, Cursor has helped me navigate and understand TypeScript syntax, Vite's build system, implementing client-side routing, and solving deployment challenges with GitHub Pages much more easily. It transformed what would have easily been several hard weeks of learning and trial-and-error into a productive 3-day push. It turns out that writing blog posts takes much longer than writing code...
 
@@ -112,9 +116,9 @@ Since the code is already hosted on [GitHub](https://github.com/), it makes sens
 
 Our deployment to GitHub Pages posed several unexpected challenges which will be discussed in detail later.
 
-## This blog's design
+## Design
 
-This blog is a [single-page application (SPA)](https://en.wikipedia.org/wiki/Single-page_application) built with TypeScript and Vite. It renders markdown blog posts with client-side routing, topic filtering, working internal post and section links, and light/dark theme toggling.
+This blog is a [single-page application (SPA)](https://en.wikipedia.org/wiki/Single-page_application) built with TypeScript and a highly customized Vite config. It renders markdown blog posts with client-side routing, topic filtering, internal post/section links, and light/dark theme toggling.
 
 ### Architecture
 
@@ -128,7 +132,7 @@ This blog's architecture is as simple as possible while supporting deployment to
 
 ### Layout
 
-The layout of the single page is simple:
+The layout of the single page:
 
 ```txt
 ┌──────────────────────────────────────────────────────────────┐
@@ -155,7 +159,7 @@ The layout of the single page is simple:
 │ │   Jan 10, 2024   │  │ │                               │ │  │
 │ │                  │  │ │ Blog content (markdown)       │ │  │
 │ │ • Post 3         │  │ │ rendered as HTML with         │ │  │
-│ │   Jan 5, 2024    │  │ │ code highlightling and        │ │  │
+│ │   Jan 5, 2024    │  │ │ code highlighting and         │ │  │
 │ │                  │  │ │ MathJax support               │ │  │
 │ │ (scrollable)     │  │ │                               │ │  │
 │ │ (topic-filtered) │  │ └───────────────────────────────┘ │  │
@@ -165,37 +169,39 @@ The layout of the single page is simple:
 
 ## CI/CD best practices
 
-Since I am attempting to use some notion of _best practices_, I should at least attempt define what I mean. This is a _non-exhaustive_ list of best practices:
+In attempting to use some notion of _best practices_, I should at least attempt define what I mean. This is a _non-exhaustive_ list of best practices:
 
 - reproducible dev environments/builds/deploys (e.g. Nix flakes)
-- automated formatting, linting, testing, and deployment
-- fully embrace [CI/CD](https://semaphore.io/cicd)
+- automated lint, audit, test, build and deploy
+- embrace [CI/CD](https://semaphore.io/cicd) practices
 
 We use GitHub Actions to
 
-- format
 - lint
+- audit
 - test
 - build
 - deploy
 
-_every_ push to the [`main` branch](https://github.com/Isaac-DeFrain/blog/tree/main). Successful builds are immediately deployed into [production on GitHub Pages](https://isaac-defrain.github.io/blog/).
+_every push_ to the [`main` branch](https://github.com/Isaac-DeFrain/blog/tree/main). Successful builds are immediately deployed into [production on GitHub Pages](https://isaac-defrain.github.io/blog/).
 
 ## Deploying to GitHub Pages
 
-Deploying an SPA to GitHub Pages presented several unexpected challenges. While the application worked initially in local development, production deployment failures revealed platform limitations that needed to be addressed.
+Deploying to GitHub Pages presented the most significant challenges while building this blog. While the application consistently worked locally (because of Vite's dev server), production deployment failures revealed platform uniquenesses that needed to be accounted for.
 
-I was not familiar with _any_ of the following concepts (except build-time processing) so Cursor was especially helpful in implementing these solutions.
+Since most of the following concepts were new to me, Cursor was especially helpful in implementing these solutions.
 
 ### Main challenges
 
-- [SPA routing](#spa-routing)
-- [Base path configuration](#base-path-configuration)
-- [Script injection timing](#script-injection-timing)
-- [Build-time processing](#build-time-processing)
-- [Internal post/section linking](#internal-postsection-linking)
+The main challenges we encountered were all caused by our choice of deployment to GitHub pages and insistence on vanilla TypeScript. These include:
 
-#### SPA routing
+- [Routing](#routing-for-github-pages)
+- [Base path configuration](#base-path-configuration-for-github-pages)
+- [Script injection timing](#script-injection-timing-for-github-pages)
+- [Build-time processing](#build-time-processing-for-github-pages)
+- [Post/section linking](#postsection-linking-for-github-pages)
+
+#### Routing for GitHub Pages
 
 _Problem_:
 
@@ -203,9 +209,9 @@ The most significant challenge was that **GitHub Pages doesn't natively support 
 
 _Solution_:
 
-We leveraged GitHub Pages' special behavior of serving `404.html` when a file isn't found. By creating a `404.html` file that mirrors the main `index.html` structure and processes it during build to inject the base path, we ensure that any "missing" route loads the SPA, which then reads the original pathname from the URL and routes accordingly. This solution is detailed in [part 2 of this series](./building-this-blog-02-spa-routing.md).
+We leveraged GitHub Pages' special behavior of serving `404.html` when a file isn't found. By creating a `404.html` file that mirrors the main `index.html` structure and processes it during build to inject the base path, we ensure that any "missing" route loads the SPA, which then reads the original pathname from the URL and routes accordingly. This solution is detailed in [part 2 of this series](./building-this-blog-02-routing-for-github-pages-01.md).
 
-#### Base path configuration
+#### Base path configuration for GitHub Pages
 
 _Problem_:
 
@@ -215,7 +221,7 @@ _Solution_:
 
 The build process detects the repository name from the `GITHUB_REPOSITORY` environment variable and injects `window.__BASE_PATH__` as a global variable into both `index.html` and `404.html`. The application code then uses this base path when constructing fetch URLs and managing navigation. Vite's `base` configuration is also set to ensure asset paths are correctly prefixed.
 
-#### Script injection timing
+#### Script injection timing for GitHub Pages
 
 _Problem_:
 
@@ -223,9 +229,9 @@ A subtle yet critical bug emerged where blog posts failed to load because `windo
 
 _Solution_:
 
-The script injection point was moved to immediately after the opening `<head>` tag, ensuring the base path variable is defined before any module scripts execute. This fix was applied to both `index.html` and `404.html` processing. The details of this debugging process are covered in [part 3 of this series](./building-this-blog-03-script-injection.md).
+The script injection point was moved to immediately after the opening `<head>` tag, ensuring the base path variable is defined before any module scripts execute. This fix was applied to both `index.html` and `404.html` processing. The details of this debugging process are covered in [part 2 of this series](./building-this-blog-02-routing-for-github-pages-01.md).
 
-#### Build-time processing
+#### Build-time processing for GitHub Pages
 
 _Problem_:
 
@@ -238,19 +244,19 @@ Multiple build-time transformations were needed:
 
 _Solution_:
 
-[Custom Vite plugins](../../vite.config.ts) handle all necessary transformations during the build process. The plugins run at different stages (`buildStart`, `transformIndexHtml`, `closeBundle`) to ensure proper ordering and availability of files. This approach keeps the source code clean while generating production-ready artifacts. The details of this process are covered in [part 4](./building-this-blog-04-build-time-processing.md) and [part 6](./building-this-blog-06-manifest-validation.md) of this series.
+[Custom Vite plugins](../../vite.config.ts) handle all necessary transformations during the build process. The plugins run at different stages (`buildStart`, `transformIndexHtml`, `closeBundle`) to ensure proper ordering and availability of files. This approach keeps the source code clean while generating production-ready artifacts. The details of this process are covered in [part 2](./building-this-blog-02-routing-for-github-pages-01.md) and [part 4](./building-this-blog-04-testing.md) of this series.
 
-#### Internal post/section linking
+#### Post/section linking for GitHub Pages
 
 _Problem_:
 
-1. Links to other blog posts (e.g. `./building-this-blog-02-spa-routing.md`) triggered full page navigation instead of SPA routing. This worked in development (Vite handles SPA routing), but failed on GitHub Pages because it doesn't support client-side routing.
+1. Links to other blog posts (e.g. `./building-this-blog-02-routing-for-github-pages-part-1.md`) triggered full page navigation instead of our routing. This worked in development (Vite handles SPA routing), but failed on GitHub Pages because it doesn't support client-side routing.
 2. Links to sections (same-post or cross-post, hash fragments like `#this-blogs-tech-choices`) within blog posts weren't being indexed or handled in any way, thus didn't work locally or on GitHub Pages.
 3. After initially resolving the section link problem, the scrolling was a little off. Basically the header and topic bar were covering the section title.
 
 _Solution_:
 
-We added _link interception_ and utilized our existing SPA routing by
+We added _link interception_ and utilized our existing routing by
 
 1. Detecting clicks on internal links within blog content via event delegation.
 2. Extracting the post ID from the link URL (handling base path and `.md` extensions).
@@ -258,13 +264,13 @@ We added _link interception_ and utilized our existing SPA routing by
 4. Allowing external links to navigate normally.
 5. Fix heights of the header and topic bar. Account for that when we scroll to a section.
 
-Internal blog post/section links use SPA routing on both the dev server and GitHub Pages, avoiding full page reloads. See [Building this Blog (part 7) - Internal Links](./building-this-blog-07-internal-links.md) for the full details.
+Internal blog post/section links use SPA routing on both the dev server and GitHub Pages, avoiding default browser navigation. See [Building this Blog (part 3) - Routing for GitHub Pages (part 2)](./building-this-blog-03-routing-for-github-pages-02.md) for the full details.
 
 ### Conclusion
 
-The challenges encountered while building and deploying the blog demonstrate that even when using best practices, local development and production environments can still differ significantly. What works locally on a dev server may require special handling for deployment platforms like GitHub Pages.
+The challenges encountered while building and deploying this blog demonstrate that even when using best practices, local development and production environments can still differ significantly. What works locally on a dev server may require special handling for deployment platforms like GitHub Pages.
 
-The cahllenges we encountered and solutions we implemented demonstrate several important principles:
+The challenges we encountered and solutions we implemented demonstrate several important principles:
 
 1. **Platform-specific features can be leveraged creatively**: The 404.html fallback is a GitHub Pages quirk that became a feature.
 2. **Build-time configuration is powerful**: Injecting environment-specific values at build time allows the same codebase to work in multiple contexts.
@@ -273,6 +279,6 @@ The cahllenges we encountered and solutions we implemented demonstrate several i
 5. **Custom build tooling bridges platform gaps**: Custom Vite plugins can transform and process files at build time to adapt code for platform-specific requirements.
 6. **Dev and production environments differ**: What works in development may require special handling in production, making it essential to test in production-like environments early and fully embrace CI/CD best practices.
 
-The transformation from initial design to production-ready deployment shows how iterative development through CI/CD best practices, combined with persistant debugging and creative problem-solving, can create robust applications.
+The transformation from initial design to production-ready deployment shows how iterative development through CI/CD best practices, combined with persistent debugging and creative problem-solving, can create robust applications.
 
-[Part 2 - SPA Routing](./building-this-blog-02-spa-routing.md)
+[Part 2: Routing for GitHub Pages (part 1)](./building-this-blog-02-routing-for-github-pages-01.md)

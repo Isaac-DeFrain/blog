@@ -110,4 +110,3 @@ topics:
   empty: ``,
   noNewline: `---name: Test---`,
 };
-

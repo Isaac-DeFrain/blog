@@ -68,4 +68,3 @@ ${topics.map((t) => `  - ${t}`).join("\n")}
 
 ${content}`;
 }
-
