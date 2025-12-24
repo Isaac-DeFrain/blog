@@ -3,6 +3,8 @@ name: Build and deploy to GitHub Pages
 on:
   push:
     branches: ["main"]
+  pull_request:
+    branches: ["main"]
 
   # Run workflow manually from Actions tab
   workflow_dispatch:
@@ -21,42 +23,67 @@ concurrency:
 
 jobs:
   #
-  # Build
+  # Audit Dependencies
+  #
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup environment
+        uses: ./.github/actions/setup-environment
+        with:
+          include-source-files-in-cache: "true"
+      - name: Run audit
+        run: nix develop --command npm run audit
+
+  #
+  # Lint
+  #
+  lint:
+    runs-on: ubuntu-latest
+    needs: audit
+    steps:
+      - name: Setup environment
+        uses: ./.github/actions/setup-environment
+        with:
+          include-source-files-in-cache: "true"
+      - name: Run lint
+        run: nix develop --command npm run lint
+
+  #
+  # Testing Coverage
+  #
+  test-coverage:
+    runs-on: ubuntu-latest
+    needs: audit
+    steps:
+      - name: Setup environment
+        uses: ./.github/actions/setup-environment
+        with:
+          include-source-files-in-cache: "true"
+      - name: Run test coverage
+        run: nix develop --command npm run coverage
+
+  #
+  # Build and upload artifact to GitHub Pages
   #
   build:
     runs-on: ubuntu-latest
+    needs: [lint, test-coverage]
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Install Nix
-        uses: DeterminateSystems/nix-installer-action@main
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
-      - name: Restore cache
-        uses: actions/cache@v4
+      - name: Setup environment
+        uses: ./.github/actions/setup-environment
         with:
-          path: |
-            node_modules
-          # Generate a new cache whenever packages or source files change.
-          key: ${{ runner.os }}-vite-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('**.[jt]s', '**.[jt]sx') }}
-          # If source files changed but packages didn't, rebuild from a prior cache.
-          restore-keys: |
-            ${{ runner.os }}-vite-${{ hashFiles('**/package-lock.json') }}-
-      - name: Install dependencies
-        run: nix develop --command npm ci
-      - name: Run lint
-        run: nix develop --command npm run lint
-      - name: Run audit
-        run: nix develop --command npm run audit
-      - name: Build and run tests
-        run: nix develop --command npm test
+          include-source-files-in-cache: "true"
+          setup-pages: "true"
+      - name: Build
+        run: nix develop --command npm run build
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: ./dist
 
   #
-  # Deployment
+  # Deploy artifact to GitHub Pages
   #
   deploy:
     environment:
