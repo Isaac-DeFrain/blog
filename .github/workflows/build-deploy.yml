@@ -21,35 +21,30 @@ concurrency:
 
 jobs:
   #
-  # Lint and Audit
+  # Setup, Lint, Audit, Build, Test Coverage, and Upload
   #
-  lint-audit:
+  build-test:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Setup environment
-        uses: ./.github/actions/setup-environment
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@main
+      - name: Restore cache
+        uses: actions/cache@v4
         with:
-          include-source-files-in-cache: "true"
+          path: |
+            node_modules
+          key: ${{ runner.os }}-vite-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('**.[jt]s', '**.[jt]sx') }}
+          restore-keys: |
+            ${{ runner.os }}-vite-${{ hashFiles('**/package-lock.json') }}-
+      - name: Install dependencies
+        run: nix develop --command npm ci
+        shell: bash
       - name: Run lint
         run: nix develop --command npm run lint
       - name: Run audit
         run: nix develop --command npm run audit
-
-  #
-  # Build and Test Coverage
-  #
-  build-test:
-    runs-on: ubuntu-latest
-    needs: lint-audit
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Setup environment
-        uses: ./.github/actions/setup-environment
-        with:
-          include-source-files-in-cache: "true"
       - name: Run build
         run: nix develop --command npm run build
       - name: Run test coverage
@@ -60,7 +55,7 @@ jobs:
           path: ./dist
 
   #
-  # Deploy artifact to GitHub Pages
+  # Deploy to GitHub Pages
   #
   deploy:
     environment:
