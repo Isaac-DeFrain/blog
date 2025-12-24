@@ -2,9 +2,7 @@
 
 Vanilla TypeScript blog SPA with Markdown support and MathJax rendering.
 
-[![Audit dependencies](https://github.com/Isaac-DeFrain/blog/actions/workflows/audit.yml/badge.svg)](https://github.com/Isaac-DeFrain/blog/actions/workflows/audit.yml)
-[![Test coverage](https://github.com/Isaac-DeFrain/blog/actions/workflows/coverage.yml/badge.svg)](https://github.com/Isaac-DeFrain/blog/actions/workflows/coverage.yml)
-[![Build and deploy to GitHub Pages](https://github.com/Isaac-DeFrain/blog/actions/workflows/build-deploy.yml/badge.svg)](https://github.com/Isaac-DeFrain/blog/actions/workflows/build-deploy.yml)
+[![Build and deploy](https://github.com/Isaac-DeFrain/blog/actions/workflows/build-deploy.yml/badge.svg)](https://github.com/Isaac-DeFrain/blog/actions/workflows/build-deploy.yml)
 
 ## Features
 
