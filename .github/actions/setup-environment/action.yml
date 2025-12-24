@@ -1,0 +1,38 @@
+name: "Setup environment"
+description: "Checkout, install Nix, restore cache, and install dependencies"
+
+inputs:
+  include-source-files-in-cache:
+    description: "Include source files in cache key for more granular caching"
+    required: false
+    default: "false"
+  setup-pages:
+    description: "Setup GitHub Pages configuration"
+    required: false
+    default: "false"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Install Nix
+      uses: DeterminateSystems/nix-installer-action@main
+
+    - name: Setup Pages
+      if: inputs.setup-pages == 'true'
+      uses: actions/configure-pages@v5
+
+    - name: Restore cache
+      uses: actions/cache@v4
+      with:
+        path: |
+          node_modules
+        key: ${{ runner.os }}-vite-${{ hashFiles('**/package-lock.json') }}${{ inputs.include-source-files-in-cache == 'true' && format('-{0}', hashFiles('**.[jt]s', '**.[jt]sx')) || '' }}
+        restore-keys: |
+          ${{ runner.os }}-vite-${{ hashFiles('**/package-lock.json') }}-
+
+    - name: Install dependencies
+      run: nix develop --command npm ci
+      shell: bash
