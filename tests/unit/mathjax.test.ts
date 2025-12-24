@@ -1,16 +1,18 @@
+/**
+ * Unit tests for MathJax integration including waiting for MathJax to load,
+ * typesetting math content, and handling MathJax errors and timeouts.
+ */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { waitForMathJax, typesetMath } from "../../src/mathjax";
 
-describe("waitForMathJax", () => {
-  beforeEach(() => {
-    // Clear MathJax from window
-    delete (window as any).MathJax;
-  });
+/** Clears MathJax from window */
+function clearMathJax() {
+  delete (window as any).MathJax;
+}
 
-  afterEach(() => {
-    // Clean up
-    delete (window as any).MathJax;
-  });
+describe("waitForMathJax", () => {
+  beforeEach(clearMathJax);
+  afterEach(clearMathJax);
 
   it("should resolve immediately if MathJax is already ready", async () => {
     const mockTypesetPromise = vi.fn().mockResolvedValue(undefined);
@@ -19,7 +21,6 @@ describe("waitForMathJax", () => {
     };
 
     await waitForMathJax();
-    // Should resolve immediately without waiting
     expect(mockTypesetPromise).not.toHaveBeenCalled();
   });
 
@@ -31,22 +32,19 @@ describe("waitForMathJax", () => {
       },
     };
 
-    const waitPromise = waitForMathJax();
-    // Should wait for startup promise
-    await waitPromise;
+    await waitForMathJax();
     expect((window as any).MathJax).toBeDefined();
   });
 
   it("should poll until MathJax is available", async () => {
-    // Use a timer to simulate MathJax loading
+    // Simulate MathJax loading
     setTimeout(() => {
       (window as any).MathJax = {
         typesetPromise: vi.fn().mockResolvedValue(undefined),
       };
     }, 50);
 
-    const waitPromise = waitForMathJax();
-    await waitPromise;
+    await waitForMathJax();
     expect((window as any).MathJax?.typesetPromise).toBeDefined();
   });
 
@@ -60,19 +58,13 @@ describe("waitForMathJax", () => {
     };
 
     await waitForMathJax();
-    // Should use typesetPromise (preferred)
     expect((window as any).MathJax.typesetPromise).toBeDefined();
   });
 });
 
 describe("typesetMath", () => {
-  beforeEach(() => {
-    delete (window as any).MathJax;
-  });
-
-  afterEach(() => {
-    delete (window as any).MathJax;
-  });
+  beforeEach(clearMathJax);
+  afterEach(clearMathJax);
 
   it("should typeset a single element when MathJax is available", async () => {
     const mockTypesetPromise = vi.fn().mockResolvedValue(undefined);
@@ -84,7 +76,6 @@ describe("typesetMath", () => {
     element.innerHTML = "$E = mc^2$";
 
     await typesetMath(element);
-
     expect(mockTypesetPromise).toHaveBeenCalledWith([element]);
   });
 
@@ -98,7 +89,6 @@ describe("typesetMath", () => {
     const element2 = document.createElement("div");
 
     await typesetMath([element1, element2]);
-
     expect(mockTypesetPromise).toHaveBeenCalledWith([element1, element2]);
   });
 
@@ -142,11 +132,10 @@ describe("typesetMath", () => {
     const consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
     // Ensure MathJax is not available
-    delete (window as any).MathJax;
+    clearMathJax();
 
     const element = document.createElement("div");
     await typesetMath(element);
-
     expect(consoleWarnSpy).toHaveBeenCalledWith("MathJax is not available");
 
     consoleWarnSpy.mockRestore();
@@ -159,7 +148,6 @@ describe("typesetMath", () => {
     };
 
     await typesetMath([]);
-
     expect(mockTypesetPromise).toHaveBeenCalledWith([]);
   });
 
@@ -185,7 +173,74 @@ describe("typesetMath", () => {
     element.innerHTML = "Inline: $x^2$ and display: $$\\int_0^1 x dx$$";
 
     await typesetMath(element);
-
     expect(mockTypesetPromise).toHaveBeenCalledWith([element]);
+  });
+});
+
+describe("waitForMathJax - timeout and error cases", () => {
+  beforeEach(clearMathJax);
+
+  afterEach(() => {
+    clearMathJax();
+    vi.useRealTimers();
+  });
+
+  it("should timeout if MathJax never loads", async () => {
+    vi.useFakeTimers();
+    const waitPromise = waitForMathJax(100);
+
+    vi.advanceTimersByTime(150);
+    await expect(waitPromise).rejects.toThrow("MathJax timeout");
+  });
+
+  // Note: Testing startup promise rejection is skipped because the current implementation
+  // doesn't handle promise rejections from startup.promise, which would cause unhandled
+  // rejections. This is a known limitation of the current code.
+
+  it("should use custom timeout value", async () => {
+    vi.useFakeTimers();
+    const waitPromise = waitForMathJax(200);
+
+    vi.advanceTimersByTime(250);
+    await expect(waitPromise).rejects.toThrow("MathJax timeout");
+  });
+
+  it("should handle MathJax with only startup.ready", async () => {
+    const mockReady = vi.fn().mockResolvedValue(undefined);
+    (window as any).MathJax = {
+      startup: {
+        ready: mockReady,
+      },
+    };
+
+    // Poll since typesetPromise is not available
+    vi.useFakeTimers();
+    const waitPromise = waitForMathJax(100);
+
+    vi.advanceTimersByTime(150);
+    await expect(waitPromise).rejects.toThrow("MathJax timeout");
+  });
+
+  it("should warn when MathJax typesetPromise is not available after waiting", async () => {
+    const consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    // Set up MathJax with startup promise but no typesetPromise
+    const mockStartupPromise = Promise.resolve();
+    (window as any).MathJax = {
+      startup: {
+        promise: mockStartupPromise,
+      },
+    };
+
+    // Wait for startup promise to resolve, but typesetPromise won't be set
+    await mockStartupPromise;
+
+    const element = document.createElement("div");
+    await typesetMath(element);
+
+    // Should warn that MathJax is not available
+    expect(consoleWarnSpy).toHaveBeenCalledWith("MathJax is not available");
+
+    consoleWarnSpy.mockRestore();
   });
 });

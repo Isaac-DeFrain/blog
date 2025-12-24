@@ -1,3 +1,7 @@
+/**
+ * Unit tests for blog module functions including frontmatter parsing,
+ * highlight configuration, and code highlighting functionality.
+ */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { createHighlightConfig } from "../../src/blog";
 import { parseFrontmatter } from "../../src/utils";
@@ -260,5 +264,13 @@ describe("createHighlightConfig", () => {
     const config = createHighlightConfig(mockHljs);
     config.highlight("print('hello')", "python");
     expect(mockHljs.highlight).toHaveBeenCalledWith("print('hello')", { language: "python" });
+  });
+
+  it("should handle null return from getLanguage", () => {
+    const config = createHighlightConfig(mockHljs);
+    const result = config.highlight("code", "unknown");
+    expect(mockHljs.getLanguage).toHaveBeenCalledWith("unknown");
+    expect(mockHljs.highlight).toHaveBeenCalledWith("code", { language: "plaintext" });
+    expect(result).toBeDefined();
   });
 });

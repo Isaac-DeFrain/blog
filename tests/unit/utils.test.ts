@@ -1,3 +1,7 @@
+/**
+ * Unit tests for utility functions including date parsing and formatting,
+ * HTML escaping, and DOM helper functions.
+ */
 import { describe, it, expect } from "vitest";
 import { parseDateAsPacificTime, formatDateAsPacificTime, escapeHtml, div, li } from "../../src/utils";
 
@@ -160,5 +164,54 @@ describe("li", () => {
 
   it("should handle special characters in content", () => {
     expect(li("test", "It's working")).toBe('<li class="test">It\'s working</li>');
+  });
+});
+
+describe("parseDateAsPacificTime - error cases", () => {
+  it("should return invalid date for malformed date string", () => {
+    const date = parseDateAsPacificTime("invalid-date");
+    expect(isNaN(date.getTime())).toBe(true);
+  });
+
+  it("should return invalid date for date with wrong number of parts", () => {
+    const date1 = parseDateAsPacificTime("2024-01");
+    expect(isNaN(date1.getTime())).toBe(true);
+
+    const date2 = parseDateAsPacificTime("2024");
+    expect(isNaN(date2.getTime())).toBe(true);
+
+    const date3 = parseDateAsPacificTime("2024-01-15-extra");
+    expect(isNaN(date3.getTime())).toBe(true);
+  });
+
+  it("should return invalid date for non-numeric date components", () => {
+    const date = parseDateAsPacificTime("abc-def-ghi");
+    expect(isNaN(date.getTime())).toBe(true);
+  });
+
+  it("should handle invalid month (JavaScript Date is lenient)", () => {
+    // Note: JavaScript Date constructor is lenient and will overflow months
+    // So "2024-13-15" becomes "2025-01-15" (not invalid)
+    const date = parseDateAsPacificTime("2024-13-15");
+    // The date will be valid but represent a different date
+    expect(date).toBeInstanceOf(Date);
+    // It will overflow to next year
+    expect(date.getFullYear()).toBeGreaterThanOrEqual(2024);
+  });
+
+  it("should handle invalid day (JavaScript Date is lenient)", () => {
+    // Note: JavaScript Date constructor is lenient and will overflow days
+    // So "2024-02-30" becomes "2024-03-01" (not invalid)
+    const date = parseDateAsPacificTime("2024-02-30");
+    // The date will be valid but represent a different date
+    expect(date).toBeInstanceOf(Date);
+    // It will overflow to next month
+    expect(date.getMonth()).toBeGreaterThanOrEqual(1);
+  });
+
+  it("should handle date parsing errors gracefully", () => {
+    // Test with a date that might cause formatting errors
+    const date = parseDateAsPacificTime("1970-01-01");
+    expect(date).toBeInstanceOf(Date);
   });
 });

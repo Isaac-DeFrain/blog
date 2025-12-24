@@ -1,6 +1,6 @@
 /**
  * Integration test that verifies all blog posts load correctly including manifest validation,
- * file existence checks, and frontmatter validation. This is a Vitest version of test-loading.ts.
+ * file existence checks, and frontmatter validation.
  */
 
 import { describe, it, expect, beforeAll, beforeEach, afterEach, vi } from "vitest";

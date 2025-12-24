@@ -1,6 +1,6 @@
 /**
  * Integration test that verifies code blocks are rendered correctly with syntax highlighting
- * and proper HTML structure. This is a Vitest version of test-code-blocks.ts.
+ * and proper HTML structure.
  */
 
 import { describe, it, expect, beforeAll } from "vitest";

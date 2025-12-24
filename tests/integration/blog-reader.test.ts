@@ -481,7 +481,7 @@ describe("BlogReader Integration", () => {
       });
 
       // Use URL-based mocking to handle fetch calls regardless of order
-      // This handles multiple calls to the same URL (e.g., manifest or markdown files)
+      // This handles multiple calls to the same URL (e.g. manifest or markdown files)
       const urlHandlers = new Map<string | RegExp, () => Response | Promise<Response>>();
 
       // Manifest handler - can be called multiple times
