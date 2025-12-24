@@ -229,7 +229,7 @@ A subtle yet critical bug emerged where blog posts failed to load because `windo
 
 _Solution_:
 
-The script injection point was moved to immediately after the opening `<head>` tag, ensuring the base path variable is defined before any module scripts execute. This fix was applied to both `index.html` and `404.html` processing. The details of this debugging process are covered in [part 2 of this series](./building-this-blog-02-routing-for-github-pages-01.md).
+The script injection point was moved to immediately after the opening `<head>` tag, ensuring the base path variable is defined before any module scripts execute. This fix was applied to both `index.html` and `404.html` processing. This debugging process is covered in detail in [part 2 of this series](./building-this-blog-02-routing-for-github-pages-01.md).
 
 #### Build-time processing for GitHub Pages
 
