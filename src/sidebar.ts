@@ -58,6 +58,7 @@ export class Sidebar {
    *
    * If no posts are available, displays a "No posts available" message.
    * Escapes HTML in names to prevent XSS attacks.
+   * All posts are rendered to allow scrolling through the full list on mobile.
    */
   public render(): void {
     if (!this.blogList) return;
@@ -101,6 +102,38 @@ export class Sidebar {
 
       this.blogList?.appendChild(li);
     });
+
+    // Scroll active post into view if it exists
+    if (this.currentPostId) {
+      this.scrollActivePostIntoView();
+    }
+  }
+
+  /**
+   * Scrolls the active post into view within the sidebar.
+   * This ensures the active post is visible when there are many posts.
+   */
+  private scrollActivePostIntoView(): void {
+    if (!this.blogList) return;
+
+    const activeItem = this.blogList.querySelector(".blog-list-item.active");
+    if (!activeItem) return;
+
+    // Find the scrollable parent (sidebar-card)
+    const sidebarCard = this.blogList.closest(".sidebar-card");
+    if (!sidebarCard) return;
+
+    const cardRect = sidebarCard.getBoundingClientRect();
+    const itemRect = activeItem.getBoundingClientRect();
+
+    // Check if the active item is outside the visible area
+    if (itemRect.top < cardRect.top || itemRect.bottom > cardRect.bottom) {
+      // Scroll the item into view with some padding
+      activeItem.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest",
+      });
+    }
   }
 
   /**

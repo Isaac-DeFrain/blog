@@ -36,6 +36,8 @@
 /* Markdown styles */
 .blog-content {
   text-align: left;
+  max-width: 70ch;
+  margin: 0 auto;
 }
 
 .blog-content h1,
@@ -97,35 +99,6 @@
   color: var(--text-primary);
 }
 
-.blog-content pre {
-  background: var(--code-bg);
-  padding: var(--spacing-lg);
-  border-radius: var(--radius-md);
-  overflow-x: auto;
-  margin-bottom: var(--spacing-lg);
-  border: var(--border-width-base) solid var(--border);
-  text-align: left;
-  direction: ltr;
-}
-
-.blog-content pre code {
-  background: none;
-  padding: 0;
-  text-align: left;
-  display: block;
-  white-space: pre;
-}
-
-.blog-content pre code.hljs {
-  text-align: left;
-  direction: ltr;
-}
-
-.blog-content pre .hljs {
-  text-align: left;
-  direction: ltr;
-}
-
 .blog-content blockquote {
   border-left: var(--border-width-thick) solid var(--link-color);
   padding-left: var(--spacing-lg);
@@ -182,7 +155,8 @@
   }
 
   .sidebar-card {
-    max-height: none;
+    max-height: var(--sidebar-mobile-max-height);
+    overflow-y: auto;
   }
 
   .blog-card {

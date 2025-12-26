@@ -53,7 +53,6 @@ export class MobileHeaderHide {
    * Sets up scroll and mouse event listeners for auto-hide functionality.
    */
   private setup(): void {
-    window.console.log("setup");
     if (!this.header || !this.topicsContainer) return;
 
     // Bind handlers and store references for cleanup
@@ -97,7 +96,6 @@ export class MobileHeaderHide {
    * Only shows header if scrolled back to sidebar, but doesn't show on scroll when hidden.
    */
   private handleScroll(): void {
-    window.console.log("handleScroll");
     if (!this.mobileMediaQuery.matches) return;
 
     const sidebar = document.querySelector(".sidebar");
@@ -191,7 +189,6 @@ export class MobileHeaderHide {
    * Hides the header and topics bar with smooth transition.
    */
   private hide(): void {
-    window.console.log("hide");
     if (this.isHidden || !this.header || !this.topicsContainer) return;
 
     this.header.classList.add("header-hidden");

@@ -47,6 +47,9 @@
   --sidebar-top-offset: clamp(80px, 8vw, 100px);
   --sidebar-max-height-offset: clamp(100px, 10vw, 120px);
   --scrollbar-width: clamp(6px, 0.6vw, 8px);
+  /* Height for approximately 10 blog list items on mobile */
+  /* Each item: ~4.5rem (padding + content + margins), 10 items: ~45rem + card padding: ~2rem = ~47rem */
+  --sidebar-mobile-max-height: clamp(28rem, 35vw, 32rem);
   --border-width-thin: clamp(1.5px, 0.2vw, 2px);
   --border-width-medium: clamp(2.5px, 0.3vw, 3px);
   --border-width-thick: clamp(3.5px, 0.4vw, 4px);

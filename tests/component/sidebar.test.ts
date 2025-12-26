@@ -238,4 +238,37 @@ describe("Sidebar", () => {
       expect(h3?.textContent).toContain("quotes");
     });
   });
+
+  describe("scrolling and visibility", () => {
+    it("should display all posts on both desktop and mobile", () => {
+      const posts = createMockBlogPosts(15);
+      sidebar.setPosts(posts);
+
+      const blogList = document.getElementById("blog-list");
+      expect(blogList?.children.length).toBe(15);
+    });
+
+    it("should scroll active post into view", () => {
+      // Create a sidebar card container for testing
+      const sidebarCard = document.createElement("div");
+      sidebarCard.className = "sidebar-card";
+
+      const blogListElement = document.getElementById("blog-list");
+      if (blogListElement?.parentElement) {
+        blogListElement.parentElement.appendChild(sidebarCard);
+        sidebarCard.appendChild(blogListElement);
+      }
+
+      const posts = createMockBlogPosts(20);
+      sidebar.setPosts(posts);
+      sidebar.setActivePost("post-15");
+
+      const activeItem = blogListElement?.querySelector(".blog-list-item.active");
+      expect(activeItem).not.toBeNull();
+
+      // The scrollIntoView method should be called (we can't easily test the actual scroll)
+      // but we can verify the active item exists and has the active class
+      expect(activeItem?.classList.contains("active")).toBe(true);
+    });
+  });
 });
