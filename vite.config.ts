@@ -145,6 +145,9 @@ export default defineConfig({
     },
   },
   plugins: [
+    //
+    // Development plugins
+    //
     {
       name: "serve-posts",
       configureServer(server) {
@@ -156,16 +159,19 @@ export default defineConfig({
             // Check if this is a request for a post file
             if (url.startsWith("/posts/")) {
               const filePath = join(process.cwd(), url);
+
               try {
                 const stats = statSync(filePath);
                 if (stats.isFile()) {
                   const content = readFileSync(filePath);
+
                   // Set appropriate content type
                   if (url.endsWith(".json")) {
                     res.setHeader("Content-Type", "application/json");
                   } else if (url.endsWith(".md")) {
                     res.setHeader("Content-Type", "text/markdown; charset=utf-8");
                   }
+
                   res.end(content);
                   return;
                 }
@@ -210,6 +216,9 @@ export default defineConfig({
         };
       },
     },
+    //
+    // GitHub Pages Production plugins
+    //
     {
       name: "inject-base-path",
       transformIndexHtml: {
@@ -249,11 +258,14 @@ export default defineConfig({
 
         // Generate manifest from source directory
         const manifest = generateBlogManifest(srcBlogsDir);
+
         if (manifest) {
           // Write manifest to dist directory
           mkdirSync(distBlogsDir, { recursive: true });
+
           const manifestPath = join(distBlogsDir, "manifest.json");
           writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
+
           console.debug("Blog manifest generated");
         }
       },
@@ -266,6 +278,7 @@ export default defineConfig({
         // So we make 404.html load the SPA, which will read the pathname and route accordingly
         const src404 = join(process.cwd(), "404.html");
         const dist404 = join(process.cwd(), "dist", "404.html");
+
         try {
           process404Html(src404, dist404, basePath);
         } catch (error) {
