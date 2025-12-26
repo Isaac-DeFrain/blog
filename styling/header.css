@@ -48,3 +48,18 @@
 .theme-button:hover {
   transform: scale(var(--scale-hover));
 }
+
+/* Mobile auto-hide styles */
+@media (max-width: 768px) {
+  .header {
+    transition:
+      transform var(--transition-base) ease,
+      opacity var(--transition-base) ease;
+  }
+
+  .header.header-hidden {
+    transform: translateY(-100%);
+    opacity: 0;
+    pointer-events: none;
+  }
+}

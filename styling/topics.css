@@ -88,3 +88,18 @@
 .topics-container:hover::-webkit-scrollbar-thumb:hover {
   background: var(--text-muted);
 }
+
+/* Mobile auto-hide styles */
+@media (max-width: 768px) {
+  .topics-container {
+    transition:
+      transform var(--transition-base) ease,
+      opacity var(--transition-base) ease;
+  }
+
+  .topics-container.topics-hidden {
+    transform: translateY(-100%);
+    opacity: 0;
+    pointer-events: none;
+  }
+}
