@@ -1,0 +1,128 @@
+/* Mermaid diagram styles */
+
+.blog-content pre {
+  background: var(--code-bg);
+  padding: var(--spacing-lg);
+  border-radius: var(--radius-md);
+  overflow-x: auto;
+  margin-bottom: var(--spacing-lg);
+  border: var(--border-width-base) solid var(--border);
+  text-align: left;
+  direction: ltr;
+}
+
+.blog-content pre code {
+  background: none;
+  padding: 0;
+  text-align: left;
+  display: block;
+  white-space: pre;
+}
+
+.blog-content pre code.hljs {
+  text-align: left;
+  direction: ltr;
+}
+
+.blog-content pre .hljs {
+  text-align: left;
+  direction: ltr;
+}
+
+.blog-content .mermaid {
+  background: transparent;
+  padding: var(--spacing-lg);
+  text-align: center;
+  margin: var(--spacing-xl) 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.blog-content .mermaid svg {
+  max-width: 100%;
+  height: auto;
+  background: transparent;
+  text-align: center;
+}
+
+/* Flowchart node backgrounds - make transparent */
+.blog-content .mermaid svg .node rect,
+.blog-content .mermaid svg .node circle,
+.blog-content .mermaid svg .node ellipse,
+.blog-content .mermaid svg .node polygon,
+.blog-content .mermaid svg .node path,
+.blog-content .mermaid svg .node {
+  fill: transparent !important;
+}
+
+.blog-content .mermaid svg .node rect text,
+.blog-content .mermaid svg .node circle text,
+.blog-content .mermaid svg .node ellipse text,
+.blog-content .mermaid svg .node polygon text,
+.blog-content .mermaid svg .node path text,
+.blog-content .mermaid svg .node text {
+  color: var(--text-primary) !important;
+}
+
+html.dark-mode .blog-content .mermaid svg .node rect,
+html.dark-mode .blog-content .mermaid svg .node circle,
+html.dark-mode .blog-content .mermaid svg .node ellipse,
+html.dark-mode .blog-content .mermaid svg .node polygon,
+html.dark-mode .blog-content .mermaid svg .node path,
+html.dark-mode .blog-content .mermaid svg .node {
+  fill: transparent !important;
+}
+
+html.dark-mode .blog-content .mermaid svg .node rect text,
+html.dark-mode .blog-content .mermaid svg .node circle text,
+html.dark-mode .blog-content .mermaid svg .node ellipse text,
+html.dark-mode .blog-content .mermaid svg .node polygon text,
+html.dark-mode .blog-content .mermaid svg .node path text,
+html.dark-mode .blog-content .mermaid svg .node text,
+html.dark-mode .blog-content .mermaid svg .node text {
+  color: var(--text-primary) !important;
+}
+
+/* Dark mode text colors */
+html.dark-mode .blog-content .mermaid svg text,
+html.dark-mode .blog-content .mermaid svg .nodeLabel,
+html.dark-mode .blog-content .mermaid svg .edgeLabel,
+html.dark-mode .blog-content .mermaid svg .cluster-label text {
+  fill: var(--text-muted) !important;
+}
+
+html.dark-mode .blog-content .mermaid svg marker path {
+  fill: var(--text-muted) !important;
+  stroke: var(--text-muted) !important;
+}
+
+html.dark-mode .blog-content .mermaid svg path,
+html.dark-mode .blog-content .mermaid svg line,
+html.dark-mode .blog-content .mermaid svg .edgePath path,
+html.dark-mode .blog-content .mermaid svg .flowchart-link {
+  stroke: var(--text-muted) !important;
+}
+
+/* Sequence diagram notes */
+.blog-content .mermaid svg .note rect,
+.blog-content .mermaid svg .note path {
+  fill: var(--code-bg) !important;
+  stroke: var(--border) !important;
+}
+
+.blog-content .mermaid svg .noteText,
+.blog-content .mermaid svg .note text {
+  fill: var(--text-primary) !important;
+}
+
+html.dark-mode .blog-content .mermaid svg .note rect,
+html.dark-mode .blog-content .mermaid svg .note path {
+  fill: var(--code-bg) !important;
+  stroke: var(--border) !important;
+}
+
+html.dark-mode .blog-content .mermaid svg .noteText,
+html.dark-mode .blog-content .mermaid svg .note text {
+  fill: var(--text-primary) !important;
+}

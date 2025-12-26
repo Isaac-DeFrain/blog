@@ -7,7 +7,7 @@
  * It manages the lifecycle of blog posts from discovery through rendering, including:
  *
  * - **Blog Discovery**: Loads and parses blog post metadata from markdown files via `manifest.json`
- * - **Content Rendering**: Converts markdown to HTML with syntax highlighting and MathJax support
+ * - **Content Rendering**: Converts markdown to HTML with syntax highlighting, MathJax, and Mermaid diagram support
  * - **SPA Routing**: Handles client-side navigation for internal blog links without page reloads
  * - **Topic Filtering**: Integrates with [[`TopicsBar`]] for filtering posts by topic
  * - **Sidebar Navigation**: Manages post list display and active post highlighting
@@ -287,11 +287,16 @@ export class BlogReader {
       ${div("blog-content", html)}
     `;
 
-    // Dynamically import and render MathJax for the new content
+    // Dynamically import and render MathJax and Mermaid for the new content
     const contentElement = this.blogContent.querySelector(".blog-content");
     if (contentElement) {
-      const { typesetMath } = await import("./mathjax");
+      const [{ typesetMath }, { renderMermaidDiagrams }] = await Promise.all([
+        import("./mathjax"),
+        import("./mermaid"),
+      ]);
+
       await typesetMath(contentElement as HTMLElement);
+      await renderMermaidDiagrams(contentElement as HTMLElement);
     }
 
     // Check if there's a hash fragment in the URL and scroll to it
@@ -410,7 +415,7 @@ export class BlogReader {
    *
    * Fetches the markdown file from the server, converts it to HTML using
    * the marked library, and displays it with metadata.
-   * Triggers MathJax rendering for any mathematical expressions.
+   * Triggers MathJax rendering for any mathematical expressions and Mermaid rendering for diagram code blocks.
    *
    * Updates the sidebar to highlight the active post and smoothly scrolls to the top
    * of the page after loading.
@@ -476,12 +481,17 @@ export class BlogReader {
       // Configure marked for syntax highlighting and heading IDs
       marked.use(markedHighlight(createHighlightConfig(hljs)));
 
-      // Add heading IDs for section links
+      // Add heading IDs for section links and handle Mermaid code blocks
       marked.use({
         renderer: {
           heading({ text, depth }) {
-            // Strip HTML tags from text to get plain text for ID generation
-            const plainText = text.replace(/<[^>]*>/g, "");
+            // Process inline code in heading text (marked.js doesn't process inline code
+            // in headings when using a custom renderer, so we need to do it manually)
+            // parseInline is synchronous in marked.js, despite TypeScript types
+            const processedText = marked.parseInline(text) as string;
+
+            // Strip HTML tags from processed text to get plain text for ID generation
+            const plainText = processedText.replace(/<[^>]*>/g, "");
 
             // Generate ID from heading text (similar to GitHub)
             const id = plainText
@@ -492,7 +502,16 @@ export class BlogReader {
               .trim();
 
             const tag = `h${depth}`;
-            return `<${tag} id="${id}">${text}</${tag}>\n`;
+            return `<${tag} id="${id}">${processedText}</${tag}>\n`;
+          },
+          code({ lang, text }) {
+            if (lang === "mermaid") {
+              return `<pre class="mermaid">${text}</pre>`;
+            }
+
+            // For non-mermaid code blocks, use the default renderer
+            // marked-highlight will handle syntax highlighting
+            return false;
           },
         },
       });

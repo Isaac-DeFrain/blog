@@ -21,8 +21,8 @@
   },
   "devDependencies": {
     "@types/node": "^25.0.1",
-    "@vitest/ui": "^4.0.16",
     "@vitest/coverage-v8": "^4.0.16",
+    "@vitest/ui": "^4.0.16",
     "depcheck": "^1.4.7",
     "happy-dom": "^20.0.11",
     "marked": "^16.2.1",

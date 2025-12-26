@@ -1,6 +1,6 @@
 # [blog](https://isaac-defrain.github.io/blog/)
 
-Vanilla TypeScript blog SPA with Markdown support and MathJax rendering.
+Vanilla TypeScript blog SPA with Markdown support, MathJax rendering, and Mermaid diagrams.
 
 [![Build and deploy](https://github.com/Isaac-DeFrain/blog/actions/workflows/build-deploy.yml/badge.svg)](https://github.com/Isaac-DeFrain/blog/actions/workflows/build-deploy.yml)
 
@@ -11,6 +11,7 @@ Vanilla TypeScript blog SPA with Markdown support and MathJax rendering.
 - Custom routing for GitHub Pages
 - Markdown rendering with syntax highlighting
 - MathJax support for mathematical equations
+- Mermaid diagram support
 
 ## Setup
 
@@ -93,6 +94,7 @@ The post ID is automatically generated from the filename (e.g. `my-post.md` beco
 - **Blockquotes**: `> text`
 - **Inline math**: `$equation$`
 - **Display math**: `$$equation$$`
+- **Mermaid diagrams**: Fenced code blocks with `mermaid` language identifier
 
 ## Tools
 
@@ -101,6 +103,7 @@ The post ID is automatically generated from the filename (e.g. `my-post.md` beco
 - **Vite**: Fast build tool and dev server
 - **Marked**: Markdown parser
 - **MathJax**: Mathematical equation rendering
+- **Mermaid**: Diagram and flowchart rendering
 
 ## License
 
