@@ -9,6 +9,17 @@ export const li = <T>(className: T, content: T): string => {
 };
 
 /**
+ * Gets the base path for the application.
+ * This is injected by the build process for GitHub Pages deployments.
+ *
+ * @returns The base path (e.g. "/blog/" or "/")
+ */
+export function getBasePath(): string {
+  // @ts-expect-error - Injected by build process
+  return window.__BASE_PATH__ || "/";
+}
+
+/**
  * Parses a date string (YYYY-MM-DD) and interprets it as Pacific Time.
  *
  * Creates a Date object representing noon Pacific Time for the given date.

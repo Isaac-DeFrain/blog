@@ -7,7 +7,7 @@
  * It manages the lifecycle of blog posts from discovery through rendering, including:
  *
  * - **Blog Discovery**: Loads and parses blog post metadata from markdown files via `manifest.json`
- * - **Content Rendering**: Converts markdown to HTML with syntax highlighting, MathJax, and Mermaid diagram support
+ * - **Content Rendering**: Converts markdown to HTML with syntax highlighting, MathJax, Mermaid, and Graphviz diagram support
  * - **SPA Routing**: Handles client-side navigation for internal blog links without page reloads
  * - **Topic Filtering**: Integrates with [[`TopicsBar`]] for filtering posts by topic
  * - **Sidebar Navigation**: Manages post list display and active post highlighting
@@ -17,7 +17,14 @@
 import { ThemeManager } from "./theme";
 import { TopicsBar, type BlogPost } from "./topics-bar";
 import { Sidebar } from "./sidebar";
-import { div, escapeHtml, formatDateAsPacificTime, parseDateAsPacificTime, parseFrontmatter } from "./utils";
+import {
+  div,
+  escapeHtml,
+  formatDateAsPacificTime,
+  parseDateAsPacificTime,
+  parseFrontmatter,
+  getBasePath,
+} from "./utils";
 import type { HLJSApi } from "highlight.js";
 
 /**
@@ -33,17 +40,6 @@ export function createHighlightConfig(hljs: HLJSApi) {
       return hljs.highlight(code, { language }).value;
     },
   };
-}
-
-/**
- * Gets the base path for the application.
- * This is injected by the build process for GitHub Pages deployments.
- *
- * @returns The base path (e.g. "/blog/" or "/")
- */
-function getBasePath(): string {
-  // @ts-expect-error - Injected by build process
-  return window.__BASE_PATH__ || "/";
 }
 
 /**
@@ -287,16 +283,22 @@ export class BlogReader {
       ${div("blog-content", html)}
     `;
 
-    // Dynamically import and render MathJax and Mermaid for the new content
+    // Dynamically import and render MathJax, Mermaid, and Graphviz for the new content
     const contentElement = this.blogContent.querySelector(".blog-content");
     if (contentElement) {
-      const [{ typesetMath }, { renderMermaidDiagrams }] = await Promise.all([
-        import("./mathjax"),
-        import("./mermaid"),
-      ]);
+      const [{ typesetMath }, { renderMermaidDiagrams }, { renderGraphvizDiagrams }, { initializeTypeScriptRunner }] =
+        await Promise.all([
+          import("./mathjax"),
+          import("./mermaid"),
+          import("./graphviz"),
+          import("./typescript-runner"),
+        ]);
 
       await typesetMath(contentElement as HTMLElement);
       await renderMermaidDiagrams(contentElement as HTMLElement);
+      await renderGraphvizDiagrams(contentElement as HTMLElement);
+
+      initializeTypeScriptRunner(contentElement as HTMLElement);
     }
 
     // Check if there's a hash fragment in the URL and scroll to it
@@ -415,7 +417,7 @@ export class BlogReader {
    *
    * Fetches the markdown file from the server, converts it to HTML using
    * the marked library, and displays it with metadata.
-   * Triggers MathJax rendering for any mathematical expressions and Mermaid rendering for diagram code blocks.
+   * Triggers MathJax rendering for any mathematical expressions, Mermaid rendering for Mermaid diagram code blocks, and Graphviz rendering for DOT/Graphviz diagram code blocks.
    *
    * Updates the sidebar to highlight the active post and smoothly scrolls to the top
    * of the page after loading.
@@ -482,6 +484,7 @@ export class BlogReader {
       marked.use(markedHighlight(createHighlightConfig(hljs)));
 
       // Add heading IDs for section links and handle Mermaid code blocks
+      const highlightConfig = createHighlightConfig(hljs);
       marked.use({
         renderer: {
           heading({ text, depth }) {
@@ -509,7 +512,32 @@ export class BlogReader {
               return `<pre class="mermaid">${text}</pre>`;
             }
 
-            // For non-mermaid code blocks, use the default renderer
+            if (lang === "dot" || lang === "graphviz") {
+              return `<pre class="graphviz">${text}</pre>`;
+            }
+
+            if (lang === "typescript:run") {
+              // Create executable TypeScript code block with run button and output area
+              // Highlight the TypeScript code using highlight.js
+              const highlighted = highlightConfig.highlight(text, "typescript");
+              const blockId = `ts-run-${Math.random().toString(36).substring(2, 11)}`;
+              return `
+                <div class="ts-executable-block" data-block-id="${blockId}">
+                  <div class="ts-code-display">
+                    <pre><code class="${highlightConfig.langPrefix}typescript">${highlighted}</code></pre>
+                  </div>
+                  <div class="ts-controls">
+                    <button class="ts-run-button" data-block-id="${blockId}">Run</button>
+                  </div>
+                  <div class="ts-output-container" data-block-id="${blockId}" style="display: none;">
+                    <div class="ts-output-content"></div>
+                  </div>
+                  <script type="application/json" data-ts-code="${blockId}">${JSON.stringify(text)}</script>
+                </div>
+              `;
+            }
+
+            // For other code blocks, use the default renderer
             // marked-highlight will handle syntax highlighting
             return false;
           },
