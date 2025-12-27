@@ -1,0 +1,123 @@
+/* Executable TypeScript code block styles */
+
+.ts-executable-block {
+  margin: var(--spacing-xl) 0;
+  border: var(--border-width-base) solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  overflow: hidden;
+}
+
+.ts-code-display {
+  position: relative;
+  background: var(--code-bg);
+  border-bottom: var(--border-width-base) solid var(--border);
+}
+
+.ts-code-display pre {
+  margin: 0;
+  padding: var(--spacing-lg);
+  overflow-x: auto;
+  background: transparent;
+}
+
+.ts-code-display code {
+  background: transparent;
+  padding: 0;
+  font-size: clamp(0.85em, 0.95vw, 0.9em);
+}
+
+.ts-controls {
+  padding: var(--spacing-md) var(--spacing-lg);
+  background: var(--bg-card);
+  border-bottom: var(--border-width-base) solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+}
+
+.ts-run-button {
+  padding: var(--spacing-sm) var(--spacing-lg);
+  background: var(--link-color);
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-base);
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity var(--transition-base);
+}
+
+.ts-run-button:hover:not(:disabled) {
+  opacity: var(--opacity-hover);
+}
+
+.ts-run-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.ts-output-container {
+  padding: var(--spacing-lg);
+  background: var(--bg-card);
+  border-top: var(--border-width-base) solid var(--border);
+  min-height: 2rem;
+}
+
+.ts-output-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.ts-output-item {
+  padding: var(--spacing-sm);
+  background: var(--code-bg);
+  border-radius: var(--radius-sm);
+  font-family: "Courier New", Courier, monospace;
+  font-size: var(--font-size-sm);
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  color: var(--text-primary);
+}
+
+.ts-output-item:empty {
+  display: none;
+}
+
+.ts-error {
+  padding: var(--spacing-md);
+  background: rgba(229, 62, 62, 0.1);
+  border-left: var(--border-width-thick) solid #e53e3e;
+  border-radius: var(--radius-sm);
+  color: #e53e3e;
+  font-family: "Courier New", Courier, monospace;
+  font-size: var(--font-size-sm);
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.ts-diagnostics {
+  padding: var(--spacing-md);
+  background: rgba(255, 193, 7, 0.1);
+  border-left: var(--border-width-thick) solid #ffc107;
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  margin-bottom: var(--spacing-md);
+}
+
+.ts-diagnostics strong {
+  display: block;
+  margin-bottom: var(--spacing-sm);
+  color: var(--text-primary);
+}
+
+.ts-diagnostics pre {
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  font-family: "Courier New", Courier, monospace;
+  font-size: var(--font-size-sm);
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
