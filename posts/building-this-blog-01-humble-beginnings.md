@@ -14,7 +14,7 @@ This is the humble beginning of a [blog](https://isaac-defrain.github.io/blog/) 
 1. [Humble Beginnings](./building-this-blog-01-humble-beginnings.md)
 2. [Routing for GitHub Pages (part 1)](./building-this-blog-02-routing-for-github-pages-01.md)
 3. [Routing for GitHub Pages (part 2)](./building-this-blog-03-routing-for-github-pages-02.md)
-4. [Manifest Testing](./building-this-blog-04-testing.md)
+4. [Testing](./building-this-blog-04-testing.md)
 5. [CI/CD Deployment Pipeline](./building-this-blog-05-cicd-pipeline.md)
 
 First, a quick introduction.
@@ -280,5 +280,7 @@ The challenges we encountered and solutions we implemented demonstrate several i
 6. **Dev and production environments differ**: What works in development may require special handling in production, making it essential to test in production-like environments early and fully embrace CI/CD best practices.
 
 The transformation from initial design to production-ready deployment shows how iterative development through CI/CD best practices, combined with persistent debugging and creative problem-solving, can create robust applications.
+
+---
 
 [Part 2: Routing for GitHub Pages (part 1)](./building-this-blog-02-routing-for-github-pages-01.md)
