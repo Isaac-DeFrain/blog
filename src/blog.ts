@@ -24,8 +24,10 @@ import {
   parseDateAsPacificTime,
   parseFrontmatter,
   getBasePath,
+  unescapeHtml,
 } from "./utils";
 import type { HLJSApi } from "highlight.js";
+import { FOUR_TICK_PLAINTEXT_REGEX } from "../tests/helpers/markdown";
 
 /**
  * Creates highlight.js configuration for marked-highlight.
@@ -36,10 +38,48 @@ export function createHighlightConfig(hljs: HLJSApi) {
   return {
     langPrefix: "hljs language-",
     highlight(code: string, lang: string) {
+      // Skip highlighting for markdown nested code blocks
+      // (e.g. ````markdown blocks containing ```typescript:run blocks)
+      if (["markdown", "plaintext", "txt"].includes(lang) && /```\w+/.test(code)) {
+        return code;
+      }
+
       const language = hljs.getLanguage(lang) ? lang : "plaintext";
-      return hljs.highlight(code, { language }).value;
+      return hljs.highlight(unescapeHtml(code), { language }).value;
     },
   };
+}
+
+/**
+ * Creates HTML for a TypeScript executable code block with run button and output area.
+ *
+ * The text parameter may contain HTML entities (e.g., &lt;, &gt;, &quot;) from markdown parsing.
+ * These are unescaped at execution time in the TypeScript runner module.
+ *
+ * @param text - The code text (may contain HTML entities from markdown parsing)
+ * @param blockId - Unique identifier for the code block
+ * @param highlightConfig - Highlight.js configuration for syntax highlighting
+ * @returns HTML string for the executable TypeScript block
+ */
+export function createTypeScriptExecutableBlock(
+  text: string,
+  blockId: string,
+  highlightConfig: ReturnType<typeof createHighlightConfig>,
+): string {
+  return `
+    <div class="ts-executable-block" data-block-id="${blockId}">
+      <div class="ts-code-display">
+        <pre><code class="typescript">${highlightConfig.highlight(text, "typescript")}</code></pre>
+      </div>
+      <div class="ts-controls">
+        <button class="ts-run-button" data-block-id="${blockId}">Run</button>
+      </div>
+      <div class="ts-output-container" data-block-id="${blockId}" style="display: none;">
+        <div class="ts-output-content"></div>
+      </div>
+      <script type="application/json" data-ts-code="${blockId}">${JSON.stringify(unescapeHtml(text))}</script>
+    </div>
+  `;
 }
 
 /**
@@ -250,15 +290,20 @@ export class BlogReader {
     const currentTopic = this.topicsBar.getSelectedTopic();
 
     try {
-      await this.loadBlogPost(postId);
-
-      // Update URL without page reload, preserving hash if provided
-      const url = `${this.basePath}${postId}${hash || ""}`;
-      window.history.pushState({ postId }, "", url);
+      await this.loadBlogPost(postId, hash);
 
       // Restore the topic filter if it was set
+      // Use skipCallback to avoid triggering handleTopicFilterChange which might load a different post
       if (currentTopic !== null) {
-        this.topicsBar.setSelectedTopic(currentTopic);
+        this.topicsBar.setSelectedTopic(currentTopic, true);
+        // Manually filter posts and update sidebar to match the restored filter
+        this.posts = this.allPosts
+          .filter((post) => post.topics.some((t) => t.toLowerCase() === currentTopic.toLowerCase()))
+          .sort((a, b) => {
+            return parseDateAsPacificTime(b.date).getTime() - parseDateAsPacificTime(a.date).getTime();
+          });
+
+        this.sidebar.setPosts(this.posts);
       }
     } catch (error) {
       console.error("Error loading blog post:", error);
@@ -267,12 +312,105 @@ export class BlogReader {
   }
 
   /**
+   * Checks if the markdown content contains Mermaid diagrams.
+   *
+   * @param markdown - The markdown content to check
+   * @returns True if Mermaid diagrams are present
+   */
+  private needsMermaid(markdown: string): boolean {
+    return /```mermaid/.test(markdown);
+  }
+
+  /**
+   * Checks if the markdown content contains Graphviz diagrams.
+   *
+   * @param markdown - The markdown content to check
+   * @returns True if Graphviz diagrams are present
+   */
+  private needsGraphviz(markdown: string): boolean {
+    return /```(?:dot|graphviz)/.test(markdown);
+  }
+
+  /**
+   * Checks if the markdown content contains MathJax expressions.
+   *
+   * @param markdown - The markdown content to check
+   * @returns True if MathJax expressions are present
+   */
+  private needsMathJax(markdown: string): boolean {
+    // Exclude code blocks to avoid false positives (e.g., $ in code)
+    const codeBlockRegex = /```[\s\S]*?```/g;
+    const markdownWithoutCodeBlocks = markdown.replace(codeBlockRegex, "");
+
+    // Check for display math: $$...$$
+    if (/\$\$[\s\S]*?\$\$/.test(markdownWithoutCodeBlocks)) {
+      return true;
+    }
+
+    // Check for inline math: $...$ (single $, not $$)
+    // This regex matches $ followed by content and ending with $, but not $$
+    if (/(?<!\$)\$(?!\$)[^$\n]+\$(?!\$)/.test(markdownWithoutCodeBlocks)) {
+      return true;
+    }
+
+    // Check for LaTeX delimiters: \(...\) or \[...\]
+    if (/\\\([\s\S]*?\\\)|\\\[[\s\S]*?\\\]/.test(markdownWithoutCodeBlocks)) {
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Checks if the markdown content contains TypeScript executable blocks.
+   * Only counts blocks that are not nested inside 4-tick plaintext blocks.
+   *
+   * @param markdown - The markdown content to check
+   * @returns True if TypeScript executable blocks are present
+   */
+  private needsTypeScriptRunner(markdown: string): boolean {
+    // First, find all 4-tick plaintext blocks to exclude nested code blocks
+    const fourTickBlocks: { start: number; end: number }[] = [];
+    FOUR_TICK_PLAINTEXT_REGEX.lastIndex = 0;
+
+    let match: RegExpExecArray | null = null;
+    while ((match = FOUR_TICK_PLAINTEXT_REGEX.exec(markdown)) !== null) {
+      fourTickBlocks.push({
+        start: match.index,
+        end: match.index + match[0].length,
+      });
+    }
+
+    // Then, find all typescript:run code blocks using a regex that matches the full block
+    const typescriptRunBlockRegex = /```typescript:run\s*\n([\s\S]*?)```/g;
+    typescriptRunBlockRegex.lastIndex = 0;
+
+    while ((match = typescriptRunBlockRegex.exec(markdown)) !== null) {
+      const blockStart = match.index;
+      const blockEnd = match.index + match[0].length;
+
+      // Check if this block is nested inside a 4-tick plaintext block
+      const isNestedInPlaintext = fourTickBlocks.some(
+        (plaintextBlock) => blockStart > plaintextBlock.start && blockEnd < plaintextBlock.end,
+      );
+
+      if (!isNestedInPlaintext) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /**
    * Renders blog post content to the DOM.
    *
    * @param html - The parsed HTML content
    * @param date - The post date string
+   * @param markdown - The original markdown content (for feature detection)
+   * @param hash - Optional hash fragment to scroll to after rendering
    */
-  private async renderBlogPostContent(html: string, date: string): Promise<void> {
+  private async renderBlogPostContent(html: string, date: string, markdown: string, hash?: string): Promise<void> {
     if (!this.blogContent) {
       console.error("Blog post content is is null");
       return;
@@ -283,30 +421,50 @@ export class BlogReader {
       ${div("blog-content", html)}
     `;
 
-    // Dynamically import and render MathJax, Mermaid, and Graphviz for the new content
+    // Check which modules are needed and conditionally import them
     const contentElement = this.blogContent.querySelector(".blog-content");
-    if (contentElement) {
-      const [{ typesetMath }, { renderMermaidDiagrams }, { renderGraphvizDiagrams }, { initializeTypeScriptRunner }] =
-        await Promise.all([
-          import("./mathjax"),
-          import("./mermaid"),
-          import("./graphviz"),
-          import("./typescript-runner"),
-        ]);
-
-      await typesetMath(contentElement as HTMLElement);
-      await renderMermaidDiagrams(contentElement as HTMLElement);
-      await renderGraphvizDiagrams(contentElement as HTMLElement);
-
-      initializeTypeScriptRunner(contentElement as HTMLElement);
+    if (!contentElement) {
+      return;
     }
 
-    // Check if there's a hash fragment in the URL and scroll to it
-    const hash = window.location.hash;
-    if (hash) {
+    const needsMath = this.needsMathJax(markdown);
+    const needsMermaid = this.needsMermaid(markdown);
+    const needsGraphviz = this.needsGraphviz(markdown);
+    const needsTypeScript = this.needsTypeScriptRunner(markdown);
+
+    // Conditionally import and render modules in parallel
+    const renderPromises: Promise<void>[] = [];
+
+    if (needsMath) {
+      renderPromises.push(import("./mathjax").then((module) => module.typesetMath(contentElement as HTMLElement)));
+    }
+    if (needsMermaid) {
+      renderPromises.push(
+        import("./mermaid").then((module) => module.renderMermaidDiagrams(contentElement as HTMLElement)),
+      );
+    }
+    if (needsGraphviz) {
+      renderPromises.push(
+        import("./graphviz").then((module) => module.renderGraphvizDiagrams(contentElement as HTMLElement)),
+      );
+    }
+    if (needsTypeScript) {
+      renderPromises.push(
+        import("./typescript-runner").then((module) =>
+          module.initializeTypeScriptRunner(contentElement as HTMLElement),
+        ),
+      );
+    }
+
+    // Wait for all rendering to complete
+    await Promise.all(renderPromises);
+
+    // Check if there's a hash fragment to scroll to
+    const hashToScroll = hash || window.location.hash;
+    if (hashToScroll) {
       // Wait a bit for MathJax to finish rendering
       await new Promise((resolve) => setTimeout(resolve, 100));
-      this.scrollToHash(hash);
+      this.scrollToHash(hashToScroll);
     } else {
       // Scroll to top of content if no hash
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -423,9 +581,10 @@ export class BlogReader {
    * of the page after loading.
    *
    * @param postId - The unique identifier of the blog post to load
+   * @param hash - Optional hash fragment to include in the URL
    * @returns Promise that resolves when the post has been loaded and rendered
    */
-  private async loadBlogPost(postId: string): Promise<void> {
+  private async loadBlogPost(postId: string, hash?: string): Promise<void> {
     if (!this.blogContent) {
       console.error("blogContent element not found");
       return;
@@ -440,7 +599,17 @@ export class BlogReader {
       this.topicsBar.setPosts(this.allPosts);
 
       if (currentTopic !== null) {
-        this.topicsBar.setSelectedTopic(currentTopic);
+        // Restore the topic filter without triggering the callback to avoid unnecessary post loads
+        this.topicsBar.setSelectedTopic(currentTopic, true);
+
+        // Manually filter posts and update sidebar
+        this.posts = this.allPosts
+          .filter((post) => post.topics.some((t) => t.toLowerCase() === currentTopic.toLowerCase()))
+          .sort((a, b) => {
+            return parseDateAsPacificTime(b.date).getTime() - parseDateAsPacificTime(a.date).getTime();
+          });
+      } else {
+        this.posts = [...this.allPosts];
       }
 
       this.sidebar.setPosts(this.posts);
@@ -466,6 +635,11 @@ export class BlogReader {
     this.currentPostId = postId;
     this.sidebar.setActivePost(postId);
 
+    // Update URL immediately after validating post exists, before heavy async operations
+    // This provides instant feedback to the user while content loads
+    const url = `${this.basePath}${postId}${hash || ""}`;
+    window.history.pushState({ postId }, "", url);
+
     // Update document title
     document.title = `Isaac's Blog | ${post.name}`;
     this.blogContent.innerHTML = div("loading", "Loading post...");
@@ -480,11 +654,15 @@ export class BlogReader {
       // Get hljs from the module (handles both default and named exports)
       const hljs = hljsModule.default || hljsModule;
 
+      // Configure highlight.js to not escape HTML entities (code is safe from markdown)
+      // This prevents => from being encoded as =&gt;
+      hljs.configure({ ignoreUnescapedHTML: true });
+
       // Configure marked for syntax highlighting and heading IDs
-      marked.use(markedHighlight(createHighlightConfig(hljs)));
+      const highlightConfig = createHighlightConfig(hljs);
+      marked.use(markedHighlight(highlightConfig));
 
       // Add heading IDs for section links and handle Mermaid code blocks
-      const highlightConfig = createHighlightConfig(hljs);
       marked.use({
         renderer: {
           heading({ text, depth }) {
@@ -517,28 +695,10 @@ export class BlogReader {
             }
 
             if (lang === "typescript:run") {
-              // Create executable TypeScript code block with run button and output area
-              // Highlight the TypeScript code using highlight.js
-              const highlighted = highlightConfig.highlight(text, "typescript");
               const blockId = `ts-run-${Math.random().toString(36).substring(2, 11)}`;
-              return `
-                <div class="ts-executable-block" data-block-id="${blockId}">
-                  <div class="ts-code-display">
-                    <pre><code class="${highlightConfig.langPrefix}typescript">${highlighted}</code></pre>
-                  </div>
-                  <div class="ts-controls">
-                    <button class="ts-run-button" data-block-id="${blockId}">Run</button>
-                  </div>
-                  <div class="ts-output-container" data-block-id="${blockId}" style="display: none;">
-                    <div class="ts-output-content"></div>
-                  </div>
-                  <script type="application/json" data-ts-code="${blockId}">${JSON.stringify(text)}</script>
-                </div>
-              `;
+              return createTypeScriptExecutableBlock(text, blockId, highlightConfig);
             }
 
-            // For other code blocks, use the default renderer
-            // marked-highlight will handle syntax highlighting
             return false;
           },
         },
@@ -553,8 +713,16 @@ export class BlogReader {
       const markdown = await response.text();
       const markdownWithoutFrontmatter = markdown.replace(/^---\s*\n[\s\S]*?\n---\s*\n/, "");
 
-      const html = await marked.parse(markdownWithoutFrontmatter);
-      await this.renderBlogPostContent(html, post.date);
+      // Check if post contains executable TypeScript blocks and preload dependencies
+      const hasTypeScriptBlocks = /```typescript:run/.test(markdownWithoutFrontmatter);
+      const preloadPromise = hasTypeScriptBlocks
+        ? import("./typescript-runner").then((module) => module.preloadTypeScriptDependencies())
+        : Promise.resolve();
+
+      // Parse markdown and preload TypeScript dependencies in parallel
+      const [html] = await Promise.all([marked.parse(markdownWithoutFrontmatter), preloadPromise]);
+
+      await this.renderBlogPostContent(html, post.date, markdownWithoutFrontmatter, hash);
     } catch (error) {
       this.showError("Failed to load blog post content. Please try again.");
       console.error("Error loading blog post:", error);
