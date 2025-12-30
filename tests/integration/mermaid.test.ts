@@ -11,6 +11,7 @@ import { markedHighlight } from "marked-highlight";
 import hljs from "highlight.js";
 import { createHighlightConfig } from "../../src/blog";
 import { renderMermaidDiagrams } from "../../src/mermaid";
+import { findUnnestedCodeBlocks } from "../helpers/markdown";
 
 describe("Mermaid Diagram Rendering Integration Test", () => {
   const distBlogsDir = join(process.cwd(), "dist", "posts");
@@ -18,11 +19,9 @@ describe("Mermaid Diagram Rendering Integration Test", () => {
   let manifest: { files: string[] };
   let marked: Marked;
 
-  // Mock window.mermaid for renderMermaidDiagrams
-  const mockMermaid = {
-    run: vi.fn().mockResolvedValue(undefined),
-    initialize: vi.fn(),
-  };
+  // Mock window.mermaid (loaded from CDN)
+  const mockMermaidRun = vi.fn().mockResolvedValue(undefined);
+  const mockMermaidInitialize = vi.fn();
 
   beforeAll(() => {
     if (!existsSync(distBlogsDir)) {
@@ -54,11 +53,17 @@ describe("Mermaid Diagram Rendering Integration Test", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    // Set up window.mermaid mock
-    (global as any).window = {
-      ...global.window,
-      mermaid: mockMermaid,
+    // Set up window.mermaid mock (simulating CDN load)
+    (window as any).mermaid = {
+      run: mockMermaidRun,
+      initialize: mockMermaidInitialize,
     };
+    mockMermaidRun.mockResolvedValue(undefined);
+    mockMermaidInitialize.mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    delete (window as any).mermaid;
   });
 
   afterEach(() => {
@@ -66,8 +71,6 @@ describe("Mermaid Diagram Rendering Integration Test", () => {
   });
 
   describe("Mermaid diagram rendering", () => {
-    const mermaidBlockRegex = /```mermaid\n([\s\S]*?)```/g;
-
     it("should render mermaid code blocks with mermaid class", () => {
       for (const filename of manifest.files) {
         const filePath = join(distBlogsDir, filename);
@@ -79,32 +82,24 @@ describe("Mermaid Diagram Rendering Integration Test", () => {
         const markdown = readFileSync(filePath, "utf-8");
         const markdownWithoutFrontmatter = markdown.replace(/^---\s*\n[\s\S]*?\n---\s*\n/, "");
 
-        // Find all mermaid blocks
-        const mermaidBlocks: string[] = [];
-        let match: RegExpExecArray | null = null;
-        mermaidBlockRegex.lastIndex = 0; // Reset regex
+        // Find all top-level code blocks (excluding those nested in 4-backtick markdown blocks)
+        const allCodeBlocks = findUnnestedCodeBlocks(markdownWithoutFrontmatter);
 
-        while ((match = mermaidBlockRegex.exec(markdownWithoutFrontmatter)) !== null) {
-          mermaidBlocks.push(match[1]);
-        }
+        // Filter for mermaid blocks
+        const topLevelMermaidBlocks = allCodeBlocks.filter((block) => block.lang === "mermaid");
 
-        if (mermaidBlocks.length === 0) {
-          continue; // No mermaid blocks in this file
+        if (topLevelMermaidBlocks.length === 0) {
+          continue; // No top-level mermaid blocks in this file
         }
 
         // Render the markdown to HTML
         const html = marked.parse(markdownWithoutFrontmatter) as string;
 
-        // Verify mermaid blocks are wrapped in pre tags with class "mermaid"
-        // Count mermaid pre elements in HTML
-        const mermaidPreMatches = html.match(/<pre[^>]*class=["']mermaid["'][^>]*>/g);
-        expect(mermaidPreMatches?.length || 0).toBeGreaterThanOrEqual(mermaidBlocks.length);
-
         // Verify that mermaid elements exist and have content
         const container = document.createElement("div");
         container.innerHTML = html;
         const mermaidElements = container.querySelectorAll(".mermaid");
-        expect(mermaidElements.length).toBeGreaterThanOrEqual(mermaidBlocks.length);
+        expect(mermaidElements.length).toBeGreaterThanOrEqual(topLevelMermaidBlocks.length);
 
         // Verify each mermaid element has content
         mermaidElements.forEach((element) => {
@@ -186,7 +181,9 @@ sequenceDiagram
         }
 
         const markdown = readFileSync(filePath, "utf-8");
-        if (markdown.includes("```mermaid")) {
+        // Check if there are any unnested mermaid code blocks
+        const mermaidBlocks = findUnnestedCodeBlocks(markdown).filter((block) => block.lang === "mermaid");
+        if (mermaidBlocks.length > 0) {
           postWithMermaid = markdown;
           break;
         }

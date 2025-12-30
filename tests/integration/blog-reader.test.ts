@@ -117,9 +117,13 @@ describe("BlogReader Integration", () => {
 
       global.fetch = createUrlBasedFetchMock(urlHandlers) as typeof fetch;
 
-      // Mock MathJax
+      // MathJax is mocked via vi.mock in mathjax.test.ts
+      // For this test, we'll set it up directly
       (window as any).MathJax = {
         typesetPromise: vi.fn().mockResolvedValue(undefined),
+        startup: {
+          promise: Promise.resolve(),
+        },
       };
 
       // Import and instantiate BlogReader

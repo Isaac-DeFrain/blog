@@ -11,34 +11,30 @@ import { markedHighlight } from "marked-highlight";
 import hljs from "highlight.js";
 import { createHighlightConfig } from "../../src/blog";
 import { renderGraphvizDiagrams } from "../../src/graphviz";
+import { findUnnestedCodeBlocks } from "../helpers/markdown";
+import { createMockSVGElement } from "../helpers/mocks";
+
+// Mock Viz instance
+const mockRenderSVGElement = vi.fn((_dot: string) => {
+  return createMockSVGElement();
+});
+
+const mockVizInstance = {
+  renderSVGElement: mockRenderSVGElement,
+};
+
+// Mock the @viz-js/viz module
+vi.mock("@viz-js/viz", () => {
+  return {
+    instance: vi.fn(() => Promise.resolve(mockVizInstance)),
+  };
+});
 
 describe("Graphviz Diagram Rendering Integration Test", () => {
   const distBlogsDir = join(process.cwd(), "dist", "posts");
   const manifestPath = join(distBlogsDir, "manifest.json");
   let manifest: { files: string[] };
   let marked: Marked;
-
-  // Mock SVG element creation
-  function createMockSVGElement(): SVGElement {
-    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-    const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
-    svg.appendChild(g);
-    return svg;
-  }
-
-  // Mock window.Viz for renderGraphvizDiagrams
-  const mockRenderSVGElement = vi.fn().mockResolvedValue(createMockSVGElement());
-  const mockRenderString = vi.fn();
-  
-  // Create a proper constructor class for Viz mock
-  class MockViz {
-    renderSVGElement = mockRenderSVGElement;
-    renderString = mockRenderString;
-  }
-  
-  // Create a spy-able constructor wrapper
-  let mockVizConstructor: typeof MockViz;
-  let vizCallTracker: ReturnType<typeof vi.fn>;
 
   beforeAll(() => {
     if (!existsSync(distBlogsDir)) {
@@ -75,22 +71,6 @@ describe("Graphviz Diagram Rendering Integration Test", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    // Set up window.Viz mock using Proxy to intercept constructor calls
-    vizCallTracker = vi.fn() as any;
-    mockVizConstructor = new Proxy(MockViz, {
-      construct() {
-        (vizCallTracker as any)();
-        return new MockViz();
-      },
-      apply() {
-        (vizCallTracker as any)();
-        return new MockViz();
-      }
-    }) as any;
-    (global as any).window = {
-      ...global.window,
-      Viz: mockVizConstructor,
-    };
   });
 
   afterEach(() => {
@@ -98,12 +78,9 @@ describe("Graphviz Diagram Rendering Integration Test", () => {
   });
 
   describe("Graphviz diagram rendering", () => {
-    const graphvizBlockRegex = /```(?:dot|graphviz)\n([\s\S]*?)```/g;
-
     it("should render graphviz code blocks with graphviz class", () => {
       for (const filename of manifest.files) {
         const filePath = join(distBlogsDir, filename);
-
         if (!existsSync(filePath)) {
           continue;
         }
@@ -111,32 +88,27 @@ describe("Graphviz Diagram Rendering Integration Test", () => {
         const markdown = readFileSync(filePath, "utf-8");
         const markdownWithoutFrontmatter = markdown.replace(/^---\s*\n[\s\S]*?\n---\s*\n/, "");
 
-        // Find all graphviz blocks (both dot and graphviz)
-        const graphvizBlocks: string[] = [];
-        let match: RegExpExecArray | null = null;
-        graphvizBlockRegex.lastIndex = 0; // Reset regex
+        // Find all top-level code blocks (excluding those nested in 4-backtick markdown blocks)
+        const allCodeBlocks = findUnnestedCodeBlocks(markdownWithoutFrontmatter);
 
-        while ((match = graphvizBlockRegex.exec(markdownWithoutFrontmatter)) !== null) {
-          graphvizBlocks.push(match[1]);
-        }
+        // Filter for graphviz blocks (dot or graphviz language)
+        const topLevelGraphvizBlocks = allCodeBlocks.filter(
+          (block) => block.lang === "dot" || block.lang === "graphviz",
+        );
 
-        if (graphvizBlocks.length === 0) {
-          continue; // No graphviz blocks in this file
+        if (topLevelGraphvizBlocks.length === 0) {
+          continue; // No top-level graphviz blocks in this file
         }
 
         // Render the markdown to HTML
         const html = marked.parse(markdownWithoutFrontmatter) as string;
 
-        // Verify graphviz blocks are wrapped in pre tags with class "graphviz"
-        // Count graphviz pre elements in HTML
-        const graphvizPreMatches = html.match(/<pre[^>]*class=["']graphviz["'][^>]*>/g);
-        expect(graphvizPreMatches?.length || 0).toBeGreaterThanOrEqual(graphvizBlocks.length);
-
         // Verify that graphviz elements exist and have content
         const container = document.createElement("div");
         container.innerHTML = html;
+
         const graphvizElements = container.querySelectorAll(".graphviz");
-        expect(graphvizElements.length).toBeGreaterThanOrEqual(graphvizBlocks.length);
+        expect(graphvizElements.length).toBeGreaterThanOrEqual(topLevelGraphvizBlocks.length);
 
         // Verify each graphviz element has content
         graphvizElements.forEach((element) => {
@@ -170,7 +142,7 @@ digraph {
       await renderGraphvizDiagrams(container);
 
       // Verify Viz was called with the correct DOT code
-      expect(vizCallTracker).toHaveBeenCalled();
+      expect(mockRenderSVGElement).toHaveBeenCalled();
       expect(mockRenderSVGElement).toHaveBeenCalledWith(expect.stringContaining("digraph"));
     });
 
@@ -195,7 +167,7 @@ graph {
 
       await renderGraphvizDiagrams(container);
 
-      expect(vizCallTracker).toHaveBeenCalled();
+      expect(mockRenderSVGElement).toHaveBeenCalled();
       expect(mockRenderSVGElement).toHaveBeenCalledWith(expect.stringContaining("graph"));
     });
 
@@ -231,7 +203,6 @@ graph {
       await renderGraphvizDiagrams(container);
 
       // Verify both diagrams were rendered
-      expect(vizCallTracker).toHaveBeenCalledTimes(2);
       expect(mockRenderSVGElement).toHaveBeenCalledTimes(2);
     });
 
@@ -266,7 +237,6 @@ digraph {
       await renderGraphvizDiagrams(container);
 
       // Verify graphviz was rendered
-      expect(vizCallTracker).toHaveBeenCalledTimes(1);
       expect(mockRenderSVGElement).toHaveBeenCalledTimes(1);
 
       // Verify mermaid element still exists
@@ -299,7 +269,7 @@ digraph G {
 
       await renderGraphvizDiagrams(container);
 
-      expect(vizCallTracker).toHaveBeenCalled();
+      expect(mockRenderSVGElement).toHaveBeenCalled();
       expect(mockRenderSVGElement).toHaveBeenCalledWith(expect.stringContaining("digraph G"));
     });
 
@@ -344,8 +314,7 @@ digraph G {
       await renderGraphvizDiagrams(container);
 
       // Verify rendering was attempted
-      expect(vizCallTracker).toHaveBeenCalled();
+      expect(mockRenderSVGElement).toHaveBeenCalled();
     });
   });
 });
-
