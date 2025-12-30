@@ -105,7 +105,7 @@ export function createUrlBasedFetchMock(
       let urlObj: URL;
       if (typeof input === "string") {
         // If it's already a full URL, parse it directly
-        if (input.startsWith("http://") || input.startsWith("https://")) {
+        if (/^https?:\/\//.test(input)) {
           urlObj = new URL(input);
         } else {
           // Relative URL - use current location as base
@@ -120,6 +120,7 @@ export function createUrlBasedFetchMock(
         const baseUrl = window.location.href || "http://localhost/";
         urlObj = new URL(input.url, baseUrl);
       }
+
       pathname = urlObj.pathname;
       // Normalize URL by removing port for matching (ports can vary in test environments)
       // Keep the original URL structure but create a normalized version without port
@@ -176,16 +177,25 @@ export async function waitFor(
   options: { timeout?: number; interval?: number } = {},
 ): Promise<void> {
   const { timeout = 5000, interval = 50 } = options;
-  const startTime = Date.now();
 
-  while (Date.now() - startTime < timeout) {
-    if (condition()) {
-      return;
-    }
-    await new Promise((resolve) => setTimeout(resolve, interval));
-  }
+  // Promise that resolves when condition becomes true
+  const conditionMet = new Promise<void>((resolve) => {
+    (function check() {
+      if (condition()) {
+        resolve();
+      } else {
+        setTimeout(check, interval);
+      }
+    })();
+  });
 
-  throw new Error(`Condition not met within ${timeout}ms`);
+  // Promise that rejects after timeout
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    setTimeout(() => reject(new Error(`Condition not met within ${timeout}ms`)), timeout);
+  });
+
+  // Race between condition being met and timeout
+  return Promise.race([conditionMet, timeoutPromise]);
 }
 
 /**
