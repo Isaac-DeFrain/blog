@@ -11,6 +11,9 @@
  * - User is on mobile viewport (max-width: 768px)
  * - User has scrolled past the sidebar
  * - User is only scrolling (no other mouse movement or touch events for a period)
+ * Shows the header when:
+ * - User scrolls back to the sidebar
+ * - User has scrolled up 50 times consecutively (when hidden)
  */
 export class MobileHeaderHide {
   private header: HTMLElement | null;
@@ -18,9 +21,12 @@ export class MobileHeaderHide {
   private mobileMediaQuery: MediaQueryList;
   private isHidden: boolean = false;
   private idleTimeout: number | null = null;
+  private lastScrollY: number = 0;
+  private scrollUpCount: number = 0;
 
   private readonly IDLE_DELAY_MS = 2000; // 2 seconds of inactivity
   private readonly MOBILE_BREAKPOINT = 768;
+  private readonly SCROLL_THRESHOLD = 100; // Number of scroll ups required to show header
 
   private boundHandlers: {
     scroll?: () => void;
@@ -55,6 +61,9 @@ export class MobileHeaderHide {
   private setup(): void {
     if (!this.header || !this.topicsContainer) return;
 
+    // Initialize scroll position
+    this.lastScrollY = window.scrollY;
+
     // Bind handlers and store references for cleanup
     this.boundHandlers.scroll = this.handleScroll.bind(this);
     this.boundHandlers.mousemove = this.handleMouseMove.bind(this);
@@ -88,12 +97,14 @@ export class MobileHeaderHide {
     }
 
     this.boundHandlers = {};
+    this.scrollUpCount = 0;
+    this.lastScrollY = 0;
     this.show();
   }
 
   /**
    * Handles scroll events to check if user has scrolled past sidebar.
-   * Only shows header if scrolled back to sidebar, but doesn't show on scroll when hidden.
+   * Tracks scroll direction and shows header after 50 scroll ups when hidden.
    */
   private handleScroll(): void {
     if (!this.mobileMediaQuery.matches) return;
@@ -102,21 +113,42 @@ export class MobileHeaderHide {
     if (!sidebar) return;
 
     const sidebarRect = sidebar.getBoundingClientRect();
+    const currentScrollY = window.scrollY;
 
     // Check if sidebar is out of view (scrolled past)
     const scrolledPastSidebar = sidebarRect.bottom < 0;
 
+    // Determine scroll direction
+    const scrollingUp = currentScrollY < this.lastScrollY;
+    const scrollingDown = currentScrollY > this.lastScrollY;
+
     if (scrolledPastSidebar) {
-      // If header is already hidden, don't show it on scroll
-      // Only mouse movement will reveal it
-      if (!this.isHidden) {
+      if (this.isHidden) {
+        // Header is hidden - track scroll ups
+        if (scrollingUp) {
+          this.scrollUpCount++;
+
+          // Show header after reaching threshold
+          if (this.scrollUpCount >= this.SCROLL_THRESHOLD) {
+            this.show();
+            this.scrollUpCount = 0;
+            this.scheduleHide();
+          }
+        } else if (scrollingDown) {
+          // Reset counter on scroll down
+          this.scrollUpCount = 0;
+        }
+      } else {
+        // Header is visible - schedule hide
         this.scheduleHide();
       }
-      // If already hidden, do nothing - let it stay hidden
     } else {
-      // Scrolled back to sidebar - show header
+      // Scrolled back to sidebar - show header and reset counter
       this.show();
+      this.scrollUpCount = 0;
     }
+
+    this.lastScrollY = currentScrollY;
   }
 
   /**
@@ -141,19 +173,19 @@ export class MobileHeaderHide {
 
   /**
    * Handles touch events to reset idle timer.
-   * Shows header immediately and reschedules hide if scrolled past sidebar.
+   * Does not show header on touch - only reschedules hide if scrolled past sidebar.
    */
   private handleTouchStart(): void {
     if (!this.mobileMediaQuery.matches) return;
 
-    // Show immediately on any touch
-    this.show();
+    // Reset scroll up counter on touch (user is interacting)
+    this.scrollUpCount = 0;
 
-    // Only schedule hide if scrolled past sidebar
+    // Only schedule hide if scrolled past sidebar and header is visible
     const sidebar = document.querySelector(".sidebar");
     if (sidebar) {
       const sidebarRect = sidebar.getBoundingClientRect();
-      if (sidebarRect.bottom < 0) {
+      if (sidebarRect.bottom < 0 && !this.isHidden) {
         this.scheduleHide();
       }
     }
@@ -205,5 +237,6 @@ export class MobileHeaderHide {
     this.header.classList.remove("header-hidden");
     this.topicsContainer.classList.remove("topics-hidden");
     this.isHidden = false;
+    this.scrollUpCount = 0; // Reset counter when showing
   }
 }

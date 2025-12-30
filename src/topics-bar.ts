@@ -53,10 +53,31 @@ export class TopicsBar {
    * Sets the selected topic and re-renders the topics bar.
    *
    * @param topic - The topic to select, or null to clear the filter
+   * @param skipCallback - If true, don't trigger the filter change callback (useful when restoring a filter)
    */
-  public setSelectedTopic(topic: string | null): void {
+  public setSelectedTopic(topic: string | null, skipCallback: boolean = false): void {
+    // Only update if the topic has changed
+    if (this.selectedTopic === topic && !skipCallback) {
+      return;
+    }
+
     this.selectedTopic = topic;
     this.render();
+
+    // Filter posts and notify callback, similar to button click behavior
+    if (!skipCallback) {
+      if (topic === null) {
+        const filteredPosts = [...this.allPosts];
+        this.onFilterChange(filteredPosts);
+      } else {
+        const filteredPosts = this.allPosts
+          .filter((post) => post.topics.some((t) => t.toLowerCase() === topic.toLowerCase()))
+          .sort((a, b) => {
+            return parseDateAsPacificTime(b.date).getTime() - parseDateAsPacificTime(a.date).getTime();
+          });
+        this.onFilterChange(filteredPosts);
+      }
+    }
   }
 
   /**
