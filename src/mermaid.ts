@@ -2,32 +2,50 @@
  * Mermaid utilities for rendering diagram code blocks.
  *
  * Provides helper functions to render Mermaid diagrams in dynamically loaded content.
- * Mermaid is loaded from CDN and initialized with startOnLoad: true in index.html.
  * This module uses mermaid.run() to automatically render all elements with class "mermaid".
  */
 
-// Declare global mermaid type
+// Extend Window interface for Mermaid
 declare global {
   interface Window {
     mermaid?: {
-      run: (config?: { querySelector?: string; nodes?: NodeList | HTMLElement[] }) => Promise<void>;
-      initialize: (config: { startOnLoad?: boolean; theme?: string; securityLevel?: string }) => void;
+      run?: (options?: { nodes?: HTMLElement[] }) => Promise<void>;
+      initialize?: (config?: { startOnLoad?: boolean }) => void;
     };
   }
 }
 
+// Cache the initialized mermaid instance
+let mermaidInitialized = false;
+
 /**
- * Gets the global Mermaid instance from window.
- * Mermaid is loaded from CDN in index.html and exposed as window.mermaid.
- *
- * @returns The Mermaid instance, or null if not available
+ * Initializes Mermaid if not already initialized.
  */
-function getMermaid(): Window["mermaid"] {
-  if (typeof window !== "undefined" && window.mermaid) {
+async function ensureMermaidInitialized(): Promise<typeof window.mermaid> {
+  if (mermaidInitialized && window.mermaid) {
     return window.mermaid;
   }
 
-  return undefined;
+  // Wait for Mermaid to be available from CDN
+  if (typeof window !== "undefined" && !window.mermaid) {
+    await new Promise<void>((resolve) => {
+      const checkMermaid = () => {
+        if (window.mermaid) {
+          resolve();
+        } else {
+          setTimeout(checkMermaid, 50);
+        }
+      };
+      checkMermaid();
+    });
+  }
+
+  if (window.mermaid && !mermaidInitialized) {
+    window.mermaid.initialize?.({ startOnLoad: false });
+    mermaidInitialized = true;
+  }
+
+  return window.mermaid!;
 }
 
 /**
@@ -41,9 +59,10 @@ function getMermaid(): Window["mermaid"] {
  * @returns Promise that resolves when rendering is complete
  */
 export async function renderMermaidDiagrams(elements: HTMLElement | HTMLElement[]): Promise<void> {
-  const mermaid = getMermaid();
-  if (!mermaid) {
-    console.warn("Mermaid is not available. Make sure it's loaded from CDN in index.html");
+  const mermaidInstance = await ensureMermaidInitialized();
+
+  if (!mermaidInstance) {
+    console.warn("Mermaid is not available");
     return;
   }
 
@@ -62,10 +81,9 @@ export async function renderMermaidDiagrams(elements: HTMLElement | HTMLElement[
 
   try {
     // Use mermaid.run() to automatically render all .mermaid elements
-    // This works with the CDN approach and startOnLoad: true configuration
-    if (typeof mermaid.run === "function") {
+    if (typeof mermaidInstance.run === "function") {
       // Pass the specific nodes to render to avoid re-rendering already rendered diagrams
-      await mermaid.run({ nodes: mermaidElements });
+      await mermaidInstance.run({ nodes: mermaidElements });
     } else {
       console.warn("Mermaid.run() is not available");
     }
