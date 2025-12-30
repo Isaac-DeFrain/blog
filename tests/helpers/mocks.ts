@@ -2,6 +2,7 @@
  * Mock data factories for tests
  */
 
+import { vi } from "vitest";
 import type { BlogPost } from "../../src/topics-bar";
 
 /**
@@ -67,4 +68,39 @@ ${topics.map((t) => `  - ${t}`).join("\n")}
 ---
 
 ${content}`;
+}
+
+/**
+ * Creates a mock SVG element for testing Graphviz rendering
+ */
+export function createMockSVGElement(): SVGSVGElement {
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+  const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+  svg.appendChild(g);
+  return svg;
+}
+
+/**
+ * Sets up a MathJax mock for testing
+ */
+export function setupMathJaxMock(includeStartup: boolean = false) {
+  (window as any).MathJax = {
+    typesetPromise: vi.fn().mockResolvedValue(undefined),
+    ...(includeStartup && {
+      startup: {
+        promise: Promise.resolve(),
+      },
+    }),
+  };
+}
+
+/**
+ * Sets up a mermaid mock for testing
+ */
+export function setupMermaidMock() {
+  (window as any).mermaid = {
+    run: vi.fn().mockResolvedValue(undefined),
+    initialize: vi.fn(),
+  };
 }
