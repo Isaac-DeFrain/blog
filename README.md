@@ -104,7 +104,7 @@ You can create interactive, executable TypeScript code blocks in your blog posts
 
 **Usage:**
 
-````markdown
+````plaintext
 ```typescript:run
 const add = (x: number, y: number) => x + y;
 const x = 19;
