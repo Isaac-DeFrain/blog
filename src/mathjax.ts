@@ -14,67 +14,75 @@ declare global {
         ready?: () => Promise<void>;
         promise?: Promise<void>;
       };
+      tex?: {
+        inlineMath?: string[][];
+        displayMath?: string[][];
+        processEscapes?: boolean;
+        processEnvironments?: boolean;
+      };
+      options?: {
+        skipHtmlTags?: string[];
+      };
     };
   }
 }
 
+// Cache MathJax initialization
+let mathJaxInitialized = false;
+
 /**
- * Waits for MathJax to be fully loaded and ready.
- *
- * @param timeout - Maximum time to wait in milliseconds (default: 5000ms)
- * @returns Promise that resolves when MathJax is ready to use, or rejects on timeout
+ * Initializes MathJax by waiting for it to load from CDN.
  */
-export async function waitForMathJax(timeout: number = 5000): Promise<void> {
-  // If MathJax is already loaded and has typesetPromise, it's ready
-  if (window.MathJax?.typesetPromise) {
-    return Promise.resolve();
+async function initializeMathJax(): Promise<void> {
+  // If we think MathJax is initialized but it's not actually available, reset the cache
+  if (mathJaxInitialized && typeof window !== "undefined" && !window.MathJax) {
+    mathJaxInitialized = false;
   }
 
-  // Wait for MathJax to load with timeout
-  return new Promise<void>((resolve, reject) => {
-    const startTime = Date.now();
-    const checkMathJax = () => {
-      if (window.MathJax?.typesetPromise) {
-        resolve();
-      } else if (window.MathJax?.startup?.promise) {
-        window.MathJax.startup.promise.then(() => resolve());
-      } else {
-        const elapsed = Date.now() - startTime;
-        if (elapsed >= timeout) {
-          reject(new Error("MathJax timeout"));
+  if (mathJaxInitialized) {
+    return;
+  }
+
+  // Wait for MathJax to be available from CDN
+  if (typeof window !== "undefined" && !window.MathJax) {
+    // Wait for MathJax to load from CDN script
+    await new Promise<void>((resolve) => {
+      const checkMathJax = () => {
+        if (window.MathJax) {
+          resolve();
         } else {
           setTimeout(checkMathJax, 50);
         }
-      }
-    };
-    checkMathJax();
-  });
+      };
+
+      checkMathJax();
+    });
+  }
+
+  // Wait for MathJax to be ready
+  if (window.MathJax?.startup?.promise) {
+    await window.MathJax.startup.promise;
+  }
+
+  mathJaxInitialized = true;
 }
 
 /**
  * Typesets mathematical expressions in the given element(s).
- *
- * Waits for MathJax to be ready before attempting to typeset.
  *
  * @param elements - The HTML element(s) containing math expressions to typeset
  * @returns Promise that resolves when typesetting is complete
  */
 export async function typesetMath(elements: HTMLElement | HTMLElement[]): Promise<void> {
   try {
-    await waitForMathJax();
-  } catch {
-    // MathJax didn't load within timeout
-    console.warn("MathJax is not available");
-    return;
-  }
+    await initializeMathJax();
 
-  if (!window.MathJax?.typesetPromise) {
-    console.warn("MathJax is not available");
-    return;
-  }
+    if (!window.MathJax?.typesetPromise) {
+      console.warn("MathJax is not available");
+      return;
+    }
 
-  const elementsArray = Array.isArray(elements) ? elements : [elements];
-  try {
+    const elementsArray = Array.isArray(elements) ? elements : [elements];
     await window.MathJax.typesetPromise(elementsArray);
   } catch (error) {
     console.error("MathJax typesetting error:", error);
