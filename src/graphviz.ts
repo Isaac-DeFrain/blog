@@ -2,32 +2,24 @@
  * Graphviz utilities for rendering diagram code blocks.
  *
  * Provides helper functions to render Graphviz diagrams in dynamically loaded content.
- * Graphviz is loaded from CDN and exposed as window.Viz in index.html.
- * This module uses Viz.js to render DOT code to SVG.
+ * This module uses @viz-js/viz to render DOT code to SVG.
  */
 
-// Declare global Viz type
-declare global {
-  interface Window {
-    Viz?: new () => {
-      renderSVGElement: (dot: string) => Promise<SVGElement>;
-      renderString: (dot: string, options?: { format?: string; engine?: string }) => Promise<string>;
-    };
-  }
-}
+import { instance, type Viz } from "@viz-js/viz";
+
+// Cache the Viz instance to avoid re-initializing it multiple times
+let vizInstance: Viz | null = null;
 
 /**
- * Gets the global Viz constructor from window.
- * Viz.js is loaded from CDN in index.html and exposed as window.Viz.
+ * Gets the Viz instance, initializing it if necessary.
  *
- * @returns The Viz constructor, or undefined if not available
+ * @returns Promise that resolves with the Viz instance
  */
-function getViz(): Window["Viz"] | undefined {
-  if (typeof window !== "undefined" && window.Viz) {
-    return window.Viz;
+async function getViz(): Promise<Viz> {
+  if (!vizInstance) {
+    vizInstance = await instance();
   }
-
-  return undefined;
+  return vizInstance;
 }
 
 /**
@@ -40,12 +32,6 @@ function getViz(): Window["Viz"] | undefined {
  * @returns Promise that resolves when rendering is complete
  */
 async function renderGraphvizDiagram(element: HTMLElement): Promise<void> {
-  const Viz = getViz();
-  if (!Viz) {
-    console.warn("Viz.js is not available. Make sure it's loaded from CDN in index.html");
-    return;
-  }
-
   // Get the DOT code from the element's textContent
   const dotCode = element.textContent?.trim();
   if (!dotCode) {
@@ -54,8 +40,10 @@ async function renderGraphvizDiagram(element: HTMLElement): Promise<void> {
   }
 
   try {
-    const viz = new Viz();
-    const svgElement = await viz.renderSVGElement(dotCode);
+    const viz = await getViz();
+
+    // Use renderSVGElement to get the SVG element directly
+    const svgElement = viz.renderSVGElement(dotCode);
 
     // Replace the pre element with the SVG
     // Create a wrapper div to maintain styling consistency
@@ -84,12 +72,6 @@ async function renderGraphvizDiagram(element: HTMLElement): Promise<void> {
  * @returns Promise that resolves when rendering is complete
  */
 export async function renderGraphvizDiagrams(elements: HTMLElement | HTMLElement[]): Promise<void> {
-  const Viz = getViz();
-  if (!Viz) {
-    console.warn("Viz.js is not available. Make sure it's loaded from CDN in index.html");
-    return;
-  }
-
   const elementsArray = Array.isArray(elements) ? elements : [elements];
 
   // Find all elements with class 'graphviz' or 'dot' within the provided elements
