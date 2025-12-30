@@ -1,50 +1,34 @@
 /**
  * Unit tests for Graphviz diagram rendering.
- * Graphviz is loaded from CDN in index.html.
  * This module tests the renderGraphvizDiagrams function.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { createMockSVGElement } from "../helpers/mocks";
 
-// Mock SVG element creation
-function createMockSVGElement(): SVGElement {
-  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-  const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
-  svg.appendChild(g);
-  return svg;
-}
+// Mock Viz instance
+const mockRenderSVGElement = vi.fn((_dot: string) => {
+  return createMockSVGElement();
+});
 
-// Mock window.Viz (loaded from CDN)
-const mockRenderSVGElement = vi.fn().mockResolvedValue(createMockSVGElement());
-const mockRenderString = vi.fn();
+const mockVizInstance = {
+  renderSVGElement: mockRenderSVGElement,
+};
 
-// Create a constructor function that can be spied on
-function VizConstructor() {
+// Mock the @viz-js/viz module
+vi.mock("@viz-js/viz", () => {
   return {
-    renderSVGElement: mockRenderSVGElement,
-    renderString: mockRenderString,
+    instance: vi.fn(() => Promise.resolve(mockVizInstance)),
   };
-}
-
-const mockVizConstructor = vi.fn(VizConstructor);
+});
 
 describe("renderGraphvizDiagrams", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.resetModules();
-
-    // Reset mock to return resolved value by default
-    mockRenderSVGElement.mockResolvedValue(createMockSVGElement());
-
-    // Set up window.Viz mock
-    (global as any).window = {
-      ...global.window,
-      Viz: mockVizConstructor,
-    };
   });
 
   afterEach(() => {
     vi.clearAllMocks();
-    delete (global as any).window.Viz;
   });
 
   it("should render diagrams using Viz when Viz is available", async () => {
@@ -59,7 +43,6 @@ describe("renderGraphvizDiagrams", () => {
 
     await renderGraphvizDiagrams(container);
 
-    expect(mockVizConstructor).toHaveBeenCalled();
     expect(mockRenderSVGElement).toHaveBeenCalledWith("digraph { a -> b }");
   });
 
@@ -80,7 +63,7 @@ describe("renderGraphvizDiagrams", () => {
 
     await renderGraphvizDiagrams(container);
 
-    expect(mockVizConstructor).toHaveBeenCalledTimes(2);
+    expect(mockRenderSVGElement).toHaveBeenCalledTimes(2);
     expect(mockRenderSVGElement).toHaveBeenCalledWith("digraph { a -> b }");
     expect(mockRenderSVGElement).toHaveBeenCalledWith("graph { x -- y }");
   });
@@ -102,7 +85,6 @@ describe("renderGraphvizDiagrams", () => {
 
     await renderGraphvizDiagrams(container);
 
-    expect(mockVizConstructor).toHaveBeenCalledTimes(2);
     expect(mockRenderSVGElement).toHaveBeenCalledTimes(2);
   });
 
@@ -114,7 +96,6 @@ describe("renderGraphvizDiagrams", () => {
 
     await renderGraphvizDiagrams(container);
 
-    expect(mockVizConstructor).not.toHaveBeenCalled();
     expect(mockRenderSVGElement).not.toHaveBeenCalled();
   });
 
@@ -128,13 +109,15 @@ describe("renderGraphvizDiagrams", () => {
 
     await renderGraphvizDiagrams(container);
 
-    expect(mockVizConstructor).not.toHaveBeenCalled();
     expect(mockRenderSVGElement).not.toHaveBeenCalled();
   });
 
-  it("should handle missing Viz gracefully", async () => {
-    const consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-    delete (global as any).window.Viz;
+  it("should handle Viz instance errors gracefully", async () => {
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    // Mock instance to reject
+    const { instance } = await import("@viz-js/viz");
+    vi.mocked(instance).mockRejectedValueOnce(new Error("Failed to load Viz"));
 
     const { renderGraphvizDiagrams } = await import("../../src/graphviz");
 
@@ -147,13 +130,12 @@ describe("renderGraphvizDiagrams", () => {
 
     await renderGraphvizDiagrams(container);
 
-    expect(consoleWarnSpy).toHaveBeenCalledWith(
-      "Viz.js is not available. Make sure it's loaded from CDN in index.html",
-    );
-    expect(mockVizConstructor).not.toHaveBeenCalled();
+    expect(consoleErrorSpy).toHaveBeenCalledWith("Graphviz rendering error:", expect.any(Error));
     expect(mockRenderSVGElement).not.toHaveBeenCalled();
 
-    consoleWarnSpy.mockRestore();
+    consoleErrorSpy.mockRestore();
+    // Restore the mock
+    vi.mocked(instance).mockResolvedValue(mockVizInstance as any);
   });
 
   it("should handle empty diagram code gracefully", async () => {
@@ -178,7 +160,11 @@ describe("renderGraphvizDiagrams", () => {
 
   it("should handle rendering errors gracefully", async () => {
     const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-    mockRenderSVGElement.mockRejectedValue(new Error("Invalid DOT syntax"));
+
+    // Mock renderSVGElement to throw an error
+    mockRenderSVGElement.mockImplementationOnce(() => {
+      throw new Error("Invalid DOT syntax");
+    });
 
     const { renderGraphvizDiagrams } = await import("../../src/graphviz");
 
@@ -190,6 +176,7 @@ describe("renderGraphvizDiagrams", () => {
     container.appendChild(graphvizElement);
 
     await renderGraphvizDiagrams(container);
+
     expect(consoleErrorSpy).toHaveBeenCalledWith("Graphviz rendering error:", expect.any(Error));
 
     // Check that error message was added to DOM
@@ -234,7 +221,6 @@ describe("renderGraphvizDiagrams", () => {
 
     await renderGraphvizDiagrams([container1, container2]);
 
-    expect(mockVizConstructor).toHaveBeenCalledTimes(2);
     expect(mockRenderSVGElement).toHaveBeenCalledTimes(2);
   });
 

@@ -7,6 +7,8 @@ import { createHighlightConfig } from "../../src/blog";
 import { parseFrontmatter } from "../../src/utils";
 import type { HLJSApi } from "highlight.js";
 
+type KnownLanguage = "typescript" | "javascript" | "python" | "markdown" | "dot" | "graphviz";
+
 describe("parseFrontmatter", () => {
   it("should parse valid frontmatter with all fields", () => {
     const markdown = `---
@@ -212,10 +214,12 @@ describe("createHighlightConfig", () => {
   let mockHljs: HLJSApi;
 
   beforeEach(() => {
+    const knownLanguages: KnownLanguage[] = ["typescript", "javascript", "python", "markdown", "dot", "graphviz"];
+
     mockHljs = {
       getLanguage: vi.fn((lang: string) => {
         // Mock: return truthy for known languages
-        return lang === "typescript" || lang === "javascript" || lang === "python" ? { name: lang } : null;
+        return knownLanguages.includes(lang as KnownLanguage) ? { name: lang } : null;
       }),
       highlight: vi.fn((code: string, options: { language: string }) => {
         return {
@@ -272,5 +276,33 @@ describe("createHighlightConfig", () => {
     expect(mockHljs.getLanguage).toHaveBeenCalledWith("unknown");
     expect(mockHljs.highlight).toHaveBeenCalledWith("code", { language: "plaintext" });
     expect(result).toBeDefined();
+  });
+
+  it("should skip highlighting for markdown code blocks with nested code block syntax", () => {
+    const config = createHighlightConfig(mockHljs);
+    const codeWithNestedBlock = "```typescript\nconst x = 1;\n```";
+
+    // Clear any previous calls
+    vi.clearAllMocks();
+    const result = config.highlight(codeWithNestedBlock, "markdown");
+
+    // Should not call highlight.js for markdown with nested code blocks
+    expect(mockHljs.highlight).not.toHaveBeenCalled();
+
+    // Should return escaped HTML (plain text) instead of highlighted HTML
+    expect(result).not.toContain('<span class="hljs">');
+    expect(result).toContain("typescript");
+  });
+
+  it("should still highlight markdown code blocks without nested code block syntax", () => {
+    const config = createHighlightConfig(mockHljs);
+    const plainMarkdown = "# Heading\n\nSome text";
+
+    // Clear any previous calls
+    vi.clearAllMocks();
+    config.highlight(plainMarkdown, "markdown");
+
+    // Should call highlight.js for markdown without nested code blocks
+    expect(mockHljs.highlight).toHaveBeenCalledWith(plainMarkdown, { language: "markdown" });
   });
 });

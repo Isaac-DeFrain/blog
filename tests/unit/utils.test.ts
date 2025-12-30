@@ -3,7 +3,7 @@
  * HTML escaping, and DOM helper functions.
  */
 import { describe, it, expect } from "vitest";
-import { parseDateAsPacificTime, formatDateAsPacificTime, escapeHtml, div, li } from "../../src/utils";
+import { parseDateAsPacificTime, formatDateAsPacificTime, escapeHtml, unescapeHtml, div, li } from "../../src/utils";
 
 describe("parseDateAsPacificTime", () => {
   it("should parse a valid date string", () => {
@@ -128,6 +128,61 @@ describe("escapeHtml", () => {
   it("should handle newlines and whitespace", () => {
     expect(escapeHtml("Line 1\nLine 2")).toBe("Line 1\nLine 2");
     expect(escapeHtml("  Indented  ")).toBe("  Indented  ");
+  });
+});
+
+describe("unescapeHtml", () => {
+  it("should unescape less-than and greater-than", () => {
+    expect(unescapeHtml("&lt;script&gt;")).toBe("");
+    expect(unescapeHtml("&lt;/div&gt;")).toBe("");
+    expect(unescapeHtml("=&gt;")).toBe("=>");
+  });
+
+  it("should unescape ampersand", () => {
+    expect(unescapeHtml("A &amp; B")).toBe("A & B");
+  });
+
+  it("should unescape double quotes", () => {
+    expect(unescapeHtml("Say &quot;hello&quot;")).toBe('Say "hello"');
+  });
+
+  it("should unescape single quotes", () => {
+    expect(unescapeHtml("It&#x27;s working")).toBe("It's working");
+  });
+
+  it("should handle mixed escaped content", () => {
+    expect(unescapeHtml("&lt;script&gt;alert(&quot;XSS&quot;)&lt;/script&gt;")).toBe('alert("XSS")');
+  });
+
+  it("should handle empty string", () => {
+    expect(unescapeHtml("")).toBe("");
+  });
+
+  it("should handle strings without HTML entities", () => {
+    expect(unescapeHtml("Hello World")).toBe("Hello World");
+    expect(unescapeHtml("123")).toBe("123");
+  });
+
+  it("should handle mixed content", () => {
+    expect(unescapeHtml("Hello &lt;b&gt;World&lt;/b&gt; &amp; &quot;Friends&quot;")).toBe('Hello World & "Friends"');
+  });
+
+  it("should strip HTML tags from text", () => {
+    expect(unescapeHtml('<span class="hljs-keyword">function</span>')).toBe("function");
+    expect(unescapeHtml("<div>Hello</div>")).toBe("Hello");
+    expect(unescapeHtml("<p>Text <strong>bold</strong> more text</p>")).toBe("Text bold more text");
+  });
+
+  it("should handle newlines and whitespace", () => {
+    expect(unescapeHtml("Line 1\nLine 2")).toBe("Line 1\nLine 2");
+    expect(unescapeHtml("  Indented  ")).toBe("  Indented  ");
+  });
+
+  it("should round-trip with escapeHtml", () => {
+    const original = 'if (x > 5 && y < 10) { console.log("test"); }';
+    const escaped = escapeHtml(original);
+    const unescaped = unescapeHtml(escaped);
+    expect(unescaped).toBe(original);
   });
 });
 

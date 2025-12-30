@@ -1,30 +1,31 @@
 /**
  * Unit tests for Mermaid diagram rendering.
- * Mermaid is loaded from CDN and initialized in index.html.
  * This module tests the renderMermaidDiagrams function.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 // Mock window.mermaid (loaded from CDN)
+const mockRun = vi.fn().mockResolvedValue(undefined);
+const mockInitialize = vi.fn();
+
 const mockMermaid = {
-  run: vi.fn().mockResolvedValue(undefined),
-  initialize: vi.fn(),
+  run: mockRun,
+  initialize: mockInitialize,
 };
 
 describe("renderMermaidDiagrams", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.resetModules();
-    // Set up window.mermaid mock
-    (global as any).window = {
-      ...global.window,
-      mermaid: mockMermaid,
-    };
+    mockRun.mockResolvedValue(undefined);
+    mockInitialize.mockImplementation(() => {});
+    // Set up window.mermaid mock (simulating CDN load)
+    (window as any).mermaid = mockMermaid;
   });
 
   afterEach(() => {
     vi.clearAllMocks();
-    delete (global as any).window.mermaid;
+    delete (window as any).mermaid;
   });
 
   it("should render diagrams using run() when mermaid is available", async () => {
@@ -38,7 +39,7 @@ describe("renderMermaidDiagrams", () => {
 
     await renderMermaidDiagrams(container);
 
-    expect(mockMermaid.run).toHaveBeenCalledWith({ nodes: [mermaidElement] });
+    expect(mockRun).toHaveBeenCalledWith({ nodes: [mermaidElement] });
   });
 
   it("should find and render multiple mermaid diagrams", async () => {
@@ -58,7 +59,7 @@ describe("renderMermaidDiagrams", () => {
 
     await renderMermaidDiagrams(container);
 
-    expect(mockMermaid.run).toHaveBeenCalledWith({ nodes: [mermaid1, mermaid2] });
+    expect(mockRun).toHaveBeenCalledWith({ nodes: [mermaid1, mermaid2] });
   });
 
   it("should handle empty element arrays", async () => {
@@ -69,7 +70,7 @@ describe("renderMermaidDiagrams", () => {
 
     await renderMermaidDiagrams(container);
 
-    expect(mockMermaid.run).not.toHaveBeenCalled();
+    expect(mockRun).not.toHaveBeenCalled();
   });
 
   it("should handle elements without mermaid diagrams", async () => {
@@ -82,13 +83,13 @@ describe("renderMermaidDiagrams", () => {
 
     await renderMermaidDiagrams(container);
 
-    expect(mockMermaid.run).not.toHaveBeenCalled();
+    expect(mockRun).not.toHaveBeenCalled();
   });
 
-  it("should handle missing mermaid gracefully", async () => {
-    const consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-    delete (global as any).window.mermaid;
-
+  it("should initialize mermaid on first use", async () => {
+    // Clear mermaid to test initialization
+    delete (window as any).mermaid;
+    
     const { renderMermaidDiagrams } = await import("../../src/mermaid");
 
     const container = document.createElement("div");
@@ -97,19 +98,20 @@ describe("renderMermaidDiagrams", () => {
     mermaidElement.textContent = "graph TD\n    A-->B";
     container.appendChild(mermaidElement);
 
+    // Simulate mermaid loading from CDN
+    setTimeout(() => {
+      (window as any).mermaid = mockMermaid;
+    }, 10);
+
     await renderMermaidDiagrams(container);
 
-    expect(consoleWarnSpy).toHaveBeenCalledWith(
-      "Mermaid is not available. Make sure it's loaded from CDN in index.html",
-    );
-    expect(mockMermaid.run).not.toHaveBeenCalled();
-
-    consoleWarnSpy.mockRestore();
+    expect(mockInitialize).toHaveBeenCalledWith({ startOnLoad: false });
+    expect(mockRun).toHaveBeenCalled();
   });
 
   it("should handle run() errors gracefully", async () => {
     const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-    mockMermaid.run.mockRejectedValue(new Error("Run failed"));
+    mockRun.mockRejectedValueOnce(new Error("Run failed"));
 
     const { renderMermaidDiagrams } = await import("../../src/mermaid");
 
@@ -128,7 +130,7 @@ describe("renderMermaidDiagrams", () => {
 
   it("should handle missing run() function", async () => {
     const consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-    const originalRun = mockMermaid.run;
+    const originalRun = mockRun;
     delete (mockMermaid as any).run;
 
     const { renderMermaidDiagrams } = await import("../../src/mermaid");
@@ -164,6 +166,6 @@ describe("renderMermaidDiagrams", () => {
 
     await renderMermaidDiagrams([container1, container2]);
 
-    expect(mockMermaid.run).toHaveBeenCalledWith({ nodes: [mermaid1, mermaid2] });
+    expect(mockRun).toHaveBeenCalledWith({ nodes: [mermaid1, mermaid2] });
   });
 });
