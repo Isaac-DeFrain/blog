@@ -126,7 +126,7 @@ export function generateBlogManifest(blogsDir: string): { files: string[] } | nu
 export default defineConfig({
   base: basePath,
   build: {
-    chunkSizeWarningLimit: 1000, // 1 MB
+    chunkSizeWarningLimit: 3600, // 3.6 MB
   },
   test: {
     globals: true,
