@@ -32,22 +32,26 @@ function setupConsoleCapture(): void {
 
   console.log = (...args: unknown[]) => {
     originalLog.apply(console, args);
-    postMessageToMain({ type: "output", data: args.map((arg) => String(arg)).join(" ") });
+    const output = args.map((arg) => String(arg)).join(" ");
+    postMessageToMain({ type: "output", data: output });
   };
 
   console.error = (...args: unknown[]) => {
     originalError.apply(console, args);
-    postMessageToMain({ type: "output", data: `[ERROR] ${args.map((arg) => String(arg)).join(" ")}` });
+    const output = `[ERROR] ${args.map((arg) => String(arg)).join(" ")}`;
+    postMessageToMain({ type: "output", data: output });
   };
 
   console.warn = (...args: unknown[]) => {
     originalWarn.apply(console, args);
-    postMessageToMain({ type: "output", data: `[WARN] ${args.map((arg) => String(arg)).join(" ")}` });
+    const output = `[WARN] ${args.map((arg) => String(arg)).join(" ")}`;
+    postMessageToMain({ type: "output", data: output });
   };
 
   console.info = (...args: unknown[]) => {
     originalInfo.apply(console, args);
-    postMessageToMain({ type: "output", data: `[INFO] ${args.map((arg) => String(arg)).join(" ")}` });
+    const output = `[INFO] ${args.map((arg) => String(arg)).join(" ")}`;
+    postMessageToMain({ type: "output", data: output });
   };
 }
 
@@ -104,3 +108,6 @@ self.addEventListener("message", (event: MessageEvent<WorkerMessage>) => {
     }
   }
 });
+
+// Export empty object to make this file a module for testing purposes
+export {};

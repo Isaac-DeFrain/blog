@@ -5,7 +5,7 @@
  * Compiles TypeScript to JavaScript and executes it in a Web Worker for sandboxing.
  *
  * Features:
- * - Compiles TypeScript using the TypeScript compiler loaded from CDN
+ * - Compiles TypeScript using the bundled TypeScript compiler
  * - Executes code in a Web Worker for isolation
  * - Filters false-positive diagnostics for DOM globals (console, window, document, etc.)
  * - Supports ES2020 and DOM libraries
@@ -16,38 +16,36 @@ import { getBasePath } from "./utils";
 import type * as ts from "typescript";
 
 /**
- * Type for the TypeScript compiler loaded from CDN
+ * Type for the TypeScript compiler
  */
 type TypeScriptCompiler = typeof ts;
 
 /**
- * Loads the TypeScript compiler from CDN if not already loaded.
+ * Loads the TypeScript compiler from the bundled module.
+ * Caches the result on window.ts for subsequent calls.
  *
  * @returns Promise that resolves when TypeScript is available
  */
 async function loadTypeScript(): Promise<TypeScriptCompiler> {
-  // @ts-expect-error - TypeScript will be available on window after loading
+  // Check if already cached on window
+  // @ts-expect-error - TypeScript may be cached on window
   if (window.ts) {
     // @ts-expect-error
     return window.ts;
   }
 
-  return new Promise((resolve, reject) => {
-    const script = document.createElement("script");
-    script.src = "https://cdn.jsdelivr.net/npm/typescript@5.3.3/lib/typescript.js";
-    script.onload = () => {
-      // @ts-expect-error - TypeScript is now available on window
-      if (window.ts) {
-        // @ts-expect-error
-        resolve(window.ts);
-      } else {
-        reject(new Error("TypeScript failed to load"));
-      }
-    };
+  try {
+    // Dynamically import TypeScript compiler (bundled by Vite)
+    const tsModule = await import("typescript");
 
-    script.onerror = () => reject(new Error("Failed to load TypeScript compiler"));
-    document.head.appendChild(script);
-  });
+    // Cache on window for subsequent calls
+    // @ts-expect-error - Storing TypeScript on window for caching
+    window.ts = tsModule;
+
+    return tsModule as TypeScriptCompiler;
+  } catch (error) {
+    throw new Error(`Failed to load TypeScript compiler: ${error instanceof Error ? error.message : String(error)}`);
+  }
 }
 
 /**
@@ -114,13 +112,13 @@ async function compileTypeScript(tsCode: string): Promise<{ jsCode: string; diag
   for (const diagnostic of semanticDiagnostics) {
     if (diagnostic.file && diagnostic.file === sourceFile) {
       const message = ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n");
-      
+
       // Filter out false positives about missing DOM globals
       // These exist at runtime in the browser, so we suppress the errors
-      if (message.includes("Cannot find name") && knownDomGlobals.some(global => message.includes(`'${global}'`))) {
+      if (message.includes("Cannot find name") && knownDomGlobals.some((global) => message.includes(`'${global}'`))) {
         continue;
       }
-      
+
       const category = diagnostic.category === ts.DiagnosticCategory.Error ? "Error" : "Warning";
       diagnostics.push(`${category}: ${message}`);
     }
@@ -132,6 +130,9 @@ async function compileTypeScript(tsCode: string): Promise<{ jsCode: string; diag
   };
 }
 
+// Cache for worker script URL to avoid re-fetching
+let cachedWorkerScriptUrl: string | null = null;
+
 /**
  * Gets the worker script URL.
  * Uses Vite's ?url import to get the proper URL that works in both dev and production.
@@ -139,6 +140,10 @@ async function compileTypeScript(tsCode: string): Promise<{ jsCode: string; diag
  * @returns Promise that resolves to the worker script URL
  */
 async function getWorkerScriptUrl(): Promise<string> {
+  if (cachedWorkerScriptUrl !== null) {
+    return cachedWorkerScriptUrl;
+  }
+
   // Use Vite's ?url suffix to get the URL of the worker script
   // This ensures Vite handles bundling and path resolution correctly
   // @ts-expect-error - Vite's ?url import is not recognized by TypeScript
@@ -149,11 +154,16 @@ async function getWorkerScriptUrl(): Promise<string> {
   const basePath = getBasePath();
   if (basePath !== "/" && !workerUrl.startsWith(basePath)) {
     // Ensure the URL includes the base path
-    const url = new URL(workerUrl, window.location.href);
-    return `${basePath}${url.pathname.startsWith("/") ? url.pathname.slice(1) : url.pathname}`;
+    // Use a fallback base URL if window.location is not available (e.g., in test environments)
+    const baseUrl = typeof window !== "undefined" && window.location ? window.location.href : "http://localhost/";
+    const url = new URL(workerUrl, baseUrl);
+    const pathname = url.pathname.startsWith("/") ? url.pathname.slice(1) : url.pathname;
+    cachedWorkerScriptUrl = `${basePath}${pathname}`;
+  } else {
+    cachedWorkerScriptUrl = workerUrl;
   }
 
-  return workerUrl;
+  return cachedWorkerScriptUrl as string;
 }
 
 /**
@@ -209,13 +219,28 @@ async function executeInWorker(
 }
 
 /**
+ * Preloads TypeScript execution dependencies.
+ * Loads the TypeScript compiler module and resolves the worker script URL in parallel.
+ * This should be called as early as possible when a post with executable TypeScript blocks is detected.
+ *
+ * @returns Promise that resolves when all dependencies are loaded
+ */
+export async function preloadTypeScriptDependencies(): Promise<void> {
+  await Promise.all([loadTypeScript(), getWorkerScriptUrl()]);
+}
+
+/**
  * Initializes executable TypeScript code blocks in the given container.
  * Attaches event listeners to run buttons and handles execution.
  *
  * @param container - The container element to search for executable blocks
  */
-export function initializeTypeScriptRunner(container: HTMLElement): void {
+export async function initializeTypeScriptRunner(container: HTMLElement): Promise<void> {
   const executableBlocks = container.querySelectorAll(".ts-executable-block");
+
+  if (executableBlocks.length === 0) {
+    return;
+  }
 
   executableBlocks.forEach((block) => {
     const blockElement = block as HTMLElement;
@@ -231,8 +256,12 @@ export function initializeTypeScriptRunner(container: HTMLElement): void {
 
     if (!runButton || !outputContainer || !outputContent || !codeScript) return;
 
-    const tsCode = JSON.parse(codeScript.textContent || "");
+    // Ensure button text is set (for backwards compatibility with tests)
+    if (!runButton.textContent || runButton.textContent.trim() === "") {
+      runButton.textContent = "Run";
+    }
 
+    const tsCode = JSON.parse(codeScript.textContent || "");
     runButton.addEventListener("click", async () => {
       // Disable button during execution
       runButton.disabled = true;
@@ -243,7 +272,6 @@ export function initializeTypeScriptRunner(container: HTMLElement): void {
       outputContent.innerHTML = "";
 
       try {
-        // Compile TypeScript
         const { jsCode, diagnostics } = await compileTypeScript(tsCode);
 
         // Show compilation diagnostics if any
@@ -254,7 +282,6 @@ export function initializeTypeScriptRunner(container: HTMLElement): void {
           outputContent.appendChild(diagnosticsDiv);
         }
 
-        // Execute in worker
         await executeInWorker(
           jsCode,
           (data) => {
@@ -276,14 +303,12 @@ export function initializeTypeScriptRunner(container: HTMLElement): void {
             outputContent.appendChild(outputDiv);
           },
           (errorMessage) => {
-            // Handle error
             const errorDiv = document.createElement("div");
             errorDiv.className = "ts-error";
             errorDiv.textContent = errorMessage;
             outputContent.appendChild(errorDiv);
           },
           () => {
-            // Execution done
             runButton.disabled = false;
             runButton.textContent = "Run";
           },
