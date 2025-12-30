@@ -108,7 +108,7 @@ Cursor is an AI-powered IDE built on VS Code which has become an almost essentia
 - **Code generation and refactoring**: Quickly generate boilerplate code, refactor existing code, and implement features while maintaining consistency with your project's patterns
 - **Error resolution**: Cursor helps diagnose and fix errors faster by understanding the context of your code and suggesting targeted solutions
 
-For this blog, Cursor has helped me navigate and understand TypeScript syntax, Vite's build system, implementing client-side routing, and solving deployment challenges with GitHub Pages much more easily. It transformed what would have easily been several hard weeks of learning and trial-and-error into a productive 3-day push. It turns out that writing blog posts takes much longer than writing code...
+For this blog, Cursor has helped me navigate and understand TypeScript syntax, Vite's build system, implementing client-side routing, integrating Mermaid and Graphviz diagram rendering, building executable TypeScript code blocks with Web Workers, and solving deployment challenges with GitHub Pages much more easily. It transformed what would have been several hard weeks of learning and trial-and-error into a productive 2-week push. It turns out that writing blog posts takes much longer than writing code though...
 
 ### Why GitHub Actions/Pages
 
@@ -118,7 +118,7 @@ Our deployment to GitHub Pages posed several unexpected challenges which will be
 
 ## Design
 
-This blog is a [single-page application (SPA)](https://en.wikipedia.org/wiki/Single-page_application) built with TypeScript and a highly customized Vite config. It renders markdown blog posts with client-side routing, topic filtering, internal post/section links, and light/dark theme toggling.
+This blog is a [single-page application (SPA)](https://en.wikipedia.org/wiki/Single-page_application) built with TypeScript and a highly customized Vite config. It renders markdown blog posts with client-side routing, topic filtering, internal post/section links, and light/dark theme toggling. The blog supports rich content features including [Mermaid diagrams](#mermaid-diagrams), [Graphviz diagrams](#graphviz-diagrams), and [executable TypeScript code blocks](#executable-typescript-code-blocks).
 
 ### Architecture
 
@@ -126,7 +126,7 @@ This blog's architecture is as simple as possible while supporting deployment to
 
 - **Framework**: Vanilla TypeScript with Vite
 - **Blog Content**: Markdown files with YAML frontmatter (name, date, topics)
-- **Rendering**: Marked.js for markdown → HTML, Highlight.js for code syntax highlighting, MathJax for math
+- **Rendering**: Marked.js for markdown → HTML, Highlight.js for code syntax highlighting, MathJax for math, Mermaid for diagrams, Graphviz for graph visualization, and executable TypeScript code blocks
 - **Routing**: Client-side routing with browser history API
 - **Deployment**: GitHub Pages with base path support
 
@@ -159,13 +159,128 @@ The layout of the single page:
 │ │   Jan 10, 2024   │  │ │                               │ │  │
 │ │                  │  │ │ Blog content (markdown)       │ │  │
 │ │ • Post 3         │  │ │ rendered as HTML with         │ │  │
-│ │   Jan 5, 2024    │  │ │ code highlighting and         │ │  │
-│ │                  │  │ │ MathJax support               │ │  │
+│ │   Jan 5, 2024    │  │ │ code highlighting, MathJax,   │ │  │
+│ │                  │  │ │ Mermaid/Graphviz diagrams,    │ │  │
+│ │                  │  │ │ and executable TypeScript     │ │  │
 │ │ (scrollable)     │  │ │                               │ │  │
 │ │ (topic-filtered) │  │ └───────────────────────────────┘ │  │
 │ └──────────────────┘  └───────────────────────────────────┘  │
 └──────────────────────────────────────────────────────────────┘
 ```
+
+### Content Features
+
+The blog supports several advanced content features that enhance the reading and learning experience:
+
+#### Mermaid Diagrams
+
+[Mermaid](https://mermaid.js.org/) diagrams can be embedded directly in markdown using fenced code blocks with the `mermaid` language identifier. Mermaid renders flowcharts, sequence diagrams, class diagrams, and more as SVG graphics. The diagrams are automatically rendered when blog posts are loaded, with proper styling for both light and dark themes.
+
+**Usage:**
+
+````plaintext
+```mermaid
+graph TD
+    A[Start] --> B{Decision}
+    B -->|Yes| C[Action 1]
+    B -->|No| D[Action 2]
+```
+````
+
+Makes:
+
+```mermaid
+graph TD
+    A[Start] --> B{Decision}
+    B -->|Yes| C[Action 1]
+    B -->|No| D[Action 2]
+```
+
+#### Graphviz Diagrams
+
+[Graphviz](https://graphviz.org/) DOT language diagrams can be embedded using fenced code blocks with either `dot` or `graphviz` language identifiers. Graphviz provides powerful graph visualization capabilities, rendering complex directed and undirected graphs as SVG. The blog uses [Viz.js](https://github.com/mdaines/viz.js/) to render Graphviz diagrams in the browser.
+
+**Usage:**
+
+````plaintext
+```dot
+digraph G {
+    A -> B
+    B -> C
+    C -> A
+}
+```
+````
+
+Makes:
+
+```dot
+digraph G {
+    A -> B
+    B -> C
+    C -> A
+}
+```
+
+#### Executable TypeScript Code Blocks
+
+Interactive, executable TypeScript code blocks allow readers to run code directly in the browser. Code blocks with the `typescript:run` language identifier are compiled to JavaScript using the TypeScript compiler (loaded from CDN) and executed in a sandboxed Web Worker environment. This feature enables interactive examples, demonstrations, and learning exercises within blog posts.
+
+**Features:**
+
+- Compiles TypeScript to JavaScript using the TypeScript compiler
+- Executes code in a Web Worker for sandboxing and isolation
+- Captures `console.log`, `console.error`, `console.warn`, and `console.info` output
+- Shows compilation diagnostics (errors and warnings)
+- Provides a `render()` function for HTML output
+- 10-second execution timeout for safety
+
+**Usage:**
+
+````plaintext
+```typescript:run
+const add = (x: number, y: number) => x + y;
+const x = 19;
+const y = 23;
+console.log(`${x} + ${y} = ${add(x, y)}`);
+```
+````
+
+Makes:
+
+```typescript:run
+const add = (x: number, y: number) => x + y;
+const x = 19;
+const y = 23;
+console.log(`${x} + ${y} = ${add(x, y)}`);
+```
+
+All three features are dynamically loaded and initialized when blog posts are rendered, ensuring fast initial page load while providing rich interactive content when needed.
+
+#### Mobile UX
+
+The blog includes mobile-specific UX enhancements to improve the reading experience on smaller screens. On mobile devices (viewport width ≤ 768px), the header and topics bar automatically hide when the user scrolls past the sidebar and becomes idle, maximizing the available screen space for content.
+
+**Behavior:**
+
+- **Auto-hide**: When scrolling past the sidebar, the header and topics bar hide after 2 seconds of inactivity (no scrolling, mouse movement, or touch events)
+- **Auto-show**: The header reappears when:
+  - The user scrolls back to the sidebar area
+  - The user moves the mouse (on devices with mouse input)
+  - The user scrolls up 100 times consecutively while the header is hidden
+- **Smooth transitions**: Header visibility changes use CSS transitions for a polished user experience
+
+**Implementation:**
+
+The `MobileHeaderHide` class in [`src/mobile-header-hide.ts`](../../src/mobile-header-hide.ts) manages this behavior using:
+
+- Media queries to detect mobile viewport (max-width: 768px)
+- Scroll event tracking to determine when the sidebar is out of view
+- Idle timeout detection (2 seconds) to trigger hiding
+- Scroll direction tracking to enable the "scroll up 100 times" show behavior
+- Event delegation for mouse and touch interactions
+
+This feature enhances mobile reading by providing more vertical space for content while keeping navigation easily accessible when needed.
 
 ## CI/CD best practices
 
