@@ -17,7 +17,8 @@
     "test:all": "vitest run",
     "test:watch": "vitest",
     "test": "run-s build test:all",
-    "coverage": "vitest run --coverage"
+    "coverage": "vitest run --coverage",
+    "generate-coverage-badge": "tsx scripts/generate-coverage-badge.ts"
   },
   "devDependencies": {
     "@types/node": "^25.0.1",
