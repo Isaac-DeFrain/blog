@@ -1,7 +1,7 @@
 /* Graphviz diagram styles */
 
 .blog-content .graphviz-container {
-  background: transparent;
+  background: transparent !important;
   padding: var(--spacing-lg);
   text-align: center;
   margin: var(--spacing-xl) 0;
@@ -14,14 +14,26 @@
 .blog-content .graphviz-container svg {
   max-width: 100%;
   height: auto;
-  background: transparent;
+  fill: transparent !important;
+  background: transparent !important;
   text-align: center;
+}
+
+/* Ensure SVG root and any background elements are transparent */
+.blog-content .graphviz-container svg > g {
+  fill: transparent !important;
+  background: transparent !important;
+}
+
+/* Make any root-level rectangles (potential backgrounds) transparent */
+.blog-content .graphviz-container svg > rect {
+  fill: transparent !important;
+  background: transparent !important;
 }
 
 /* Graphviz SVG styling - ensure text is readable */
 .blog-content .graphviz-container svg text {
-  fill: var(--text-primary);
-  font-family: var(--font-family, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
+  fill: var(--text-primary) !important;
 }
 
 /* Graphviz node and edge styling */
@@ -29,43 +41,54 @@
 .blog-content .graphviz-container svg .node circle,
 .blog-content .graphviz-container svg .node ellipse,
 .blog-content .graphviz-container svg .node polygon {
-  fill: var(--code-bg);
-  stroke: var(--border);
+  fill: transparent !important;
+  stroke: var(--text-muted);
+}
+
+.blog-content .graphviz-container svg .graph {
+  fill: transparent !important;
+  background: transparent !important;
 }
 
 .blog-content .graphviz-container svg .edge path,
 .blog-content .graphviz-container svg .edge line {
-  stroke: var(--text-muted);
+  stroke: var(--text-muted) !important;
   fill: none;
 }
 
 .blog-content .graphviz-container svg .edge polygon {
-  fill: var(--text-muted);
-  stroke: var(--text-muted);
+  fill: var(--text-muted) !important;
+  stroke: var(--text-muted) !important;
 }
 
 /* Dark mode adjustments */
+html.dark-mode .blog-content .graphviz-container svg,
+html.dark-mode .blog-content .graphviz-container svg > g {
+  fill: transparent !important;
+  background: transparent !important;
+}
+
 html.dark-mode .blog-content .graphviz-container svg text {
-  fill: var(--text-primary);
+  fill: var(--text-light-mode-primary) !important;
 }
 
 html.dark-mode .blog-content .graphviz-container svg .node rect,
 html.dark-mode .blog-content .graphviz-container svg .node circle,
 html.dark-mode .blog-content .graphviz-container svg .node ellipse,
 html.dark-mode .blog-content .graphviz-container svg .node polygon {
-  fill: var(--code-bg);
-  stroke: var(--border);
+  fill: transparent !important;
+  stroke: var(--text-muted);
 }
 
 html.dark-mode .blog-content .graphviz-container svg .edge path,
 html.dark-mode .blog-content .graphviz-container svg .edge line {
-  stroke: var(--text-muted);
+  stroke: var(--text-muted) !important;
   fill: none;
 }
 
 html.dark-mode .blog-content .graphviz-container svg .edge polygon {
-  fill: var(--text-muted);
-  stroke: var(--text-muted);
+  fill: var(--text-muted) !important;
+  stroke: var(--text-muted) !important;
 }
 
 /* Error message styling */
@@ -78,4 +101,3 @@ html.dark-mode .blog-content .graphviz-container svg .edge polygon {
   color: var(--text-secondary);
   text-align: center;
 }
-
