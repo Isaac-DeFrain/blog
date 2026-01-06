@@ -287,14 +287,15 @@ This feature enhances mobile reading by providing more vertical space for conten
 In attempting to use some notion of _best practices_, I should at least attempt define what I mean. This is a _non-exhaustive_ list of best practices:
 
 - reproducible dev environments/builds/deploys (e.g. Nix flakes)
-- automated lint, audit, test, build and deploy
+- automated lint, audit, test, coverage, build, and deploy
 - embrace [CI/CD](https://semaphore.io/cicd) practices
+- test strictly and make coverage reports easily accessible
 
 We use GitHub Actions to
 
 - lint
 - audit
-- test
+- test (technically, we run coverage)
 - build
 - deploy
 

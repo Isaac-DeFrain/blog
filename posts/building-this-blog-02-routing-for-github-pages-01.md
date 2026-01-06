@@ -239,7 +239,7 @@ The implementation used several custom plugins working in tandem:
 
 - **`spa-fallback`**: Handles SPA routing in development by serving `index.html` for all routes
 - **`inject-base-path`**: Injects `window.__BASE_PATH__` into HTML files at build time (runs during `transformIndexHtml`)
-- **`copy-blog-files`**: Ensures blog markdown files are available at runtime by copying them to `dist/posts/` (runs during `closeBundle`)
+- **`copy-posts`**: Ensures blog markdown files are available at runtime by copying them to `dist/posts/` (runs during `closeBundle`)
 - **`generate-blog-manifest`**: Generates a manifest file listing all blog posts for both dev and production (runs during `buildStart` and `closeBundle`)
 - **`process-404`**: Processes `404.html` with base path injection, `pathSegmentsToKeep` calculation, and asset path rewriting for GitHub Pages (runs during `closeBundle`)
 
@@ -279,7 +279,7 @@ The following list illustrates the complete build process, showing when each plu
    - Bundle assets
    - Optimize output
 4. **`closeBundle` hook**
-   - **`copy-blog-files` plugin**: copies `posts/` → `dist/posts/`
+   - **`copy-posts` plugin**: copies `posts/` → `dist/posts/`
    - **`generate-blog-manifest` plugin**: generates `manifest.json` in `dist/posts/` directory
    - **`process-404` plugin**: processes `404.html`:
      - injects base path
