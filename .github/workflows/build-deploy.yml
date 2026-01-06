@@ -3,13 +3,15 @@ name: Build and deploy
 on:
   push:
     branches: ["main"]
+    paths-ignore:
+      - "coverage-badge.svg"
 
   # Run workflow manually from Actions tab
   workflow_dispatch:
 
 # Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -21,7 +23,7 @@ concurrency:
 
 jobs:
   #
-  # Setup, Lint, Audit, Build, Test Coverage, and Upload
+  # Setup, install dependencies, lint, audit, build, run test coverage, and upload artifacts
   #
   build-test:
     runs-on: ubuntu-latest
@@ -49,6 +51,23 @@ jobs:
         run: nix develop --command npm run build
       - name: Run test coverage
         run: nix develop --command npm run coverage
+      - name: Generate coverage badge
+        run: nix develop --command npm run generate-coverage-badge
+      - name: Commit coverage badge
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add coverage-badge.svg
+          if ! git diff --staged --quiet; then
+            git commit -m "Update coverage badge"
+            git push
+          fi
+      - name: Upload coverage results
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/
+          retention-days: 30
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
