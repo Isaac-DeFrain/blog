@@ -25,8 +25,10 @@ import {
   parseFrontmatter,
   getBasePath,
   unescapeHtml,
+  resolveWithTimeout,
 } from "./utils";
 import type { HLJSApi } from "highlight.js";
+import { initializeTypeScriptRunner, wrapTypeScriptCode } from "./typescript-runner";
 import { FOUR_TICK_PLAINTEXT_REGEX } from "../tests/helpers/markdown";
 
 /**
@@ -53,23 +55,25 @@ export function createHighlightConfig(hljs: HLJSApi) {
 /**
  * Creates HTML for a TypeScript executable code block with run button and output area.
  *
- * The text parameter may contain HTML entities (e.g., &lt;, &gt;, &quot;) from markdown parsing.
- * These are unescaped at execution time in the TypeScript runner module.
+ * The TypeScript code is processed at build time: type annotations are stripped and
+ * the code is wrapped in a run() function. This pre-processed function is stored and
+ * executed lazily when the run button is clicked.
  *
- * @param text - The code text (may contain HTML entities from markdown parsing)
+ * @param text - The TypeScript code text (may contain HTML entities from markdown parsing)
  * @param blockId - Unique identifier for the code block
  * @param highlightConfig - Highlight.js configuration for syntax highlighting
  * @returns HTML string for the executable TypeScript block
  */
 export function createTypeScriptExecutableBlock(
-  text: string,
+  tsCode: string,
   blockId: string,
   highlightConfig: ReturnType<typeof createHighlightConfig>,
 ): string {
+  const processedCode = wrapTypeScriptCode(unescapeHtml(tsCode));
   return `
     <div class="ts-executable-block" data-block-id="${blockId}">
       <div class="ts-code-display">
-        <pre><code class="typescript">${highlightConfig.highlight(text, "typescript")}</code></pre>
+        <pre><code class="typescript">${highlightConfig.highlight(tsCode, "typescript")}</code></pre>
       </div>
       <div class="ts-controls">
         <button class="ts-run-button" data-block-id="${blockId}">Run</button>
@@ -77,7 +81,7 @@ export function createTypeScriptExecutableBlock(
       <div class="ts-output-container" data-block-id="${blockId}" style="display: none;">
         <div class="ts-output-content"></div>
       </div>
-      <script type="application/json" data-ts-code="${blockId}">${JSON.stringify(unescapeHtml(text))}</script>
+      <script type="application/json" data-ts-code="${blockId}">${JSON.stringify(processedCode)}</script>
     </div>
   `;
 }
@@ -427,13 +431,12 @@ export class BlogReader {
       return;
     }
 
+    // Conditionally import and render modules in parallel
+    const renderPromises: Promise<void>[] = [];
     const needsMath = this.needsMathJax(markdown);
     const needsMermaid = this.needsMermaid(markdown);
     const needsGraphviz = this.needsGraphviz(markdown);
     const needsTypeScript = this.needsTypeScriptRunner(markdown);
-
-    // Conditionally import and render modules in parallel
-    const renderPromises: Promise<void>[] = [];
 
     if (needsMath) {
       renderPromises.push(import("./mathjax").then((module) => module.typesetMath(contentElement as HTMLElement)));
@@ -449,11 +452,7 @@ export class BlogReader {
       );
     }
     if (needsTypeScript) {
-      renderPromises.push(
-        import("./typescript-runner").then((module) =>
-          module.initializeTypeScriptRunner(contentElement as HTMLElement),
-        ),
-      );
+      renderPromises.push(Promise.resolve(initializeTypeScriptRunner(contentElement as HTMLElement)));
     }
 
     // Wait for all rendering to complete
@@ -463,7 +462,7 @@ export class BlogReader {
     const hashToScroll = hash || window.location.hash;
     if (hashToScroll) {
       // Wait a bit for MathJax to finish rendering
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await new Promise(resolveWithTimeout(100));
       this.scrollToHash(hashToScroll);
     } else {
       // Scroll to top of content if no hash
@@ -713,15 +712,8 @@ export class BlogReader {
       const markdown = await response.text();
       const markdownWithoutFrontmatter = markdown.replace(/^---\s*\n[\s\S]*?\n---\s*\n/, "");
 
-      // Check if post contains executable TypeScript blocks and preload dependencies
-      const hasTypeScriptBlocks = /```typescript:run/.test(markdownWithoutFrontmatter);
-      const preloadPromise = hasTypeScriptBlocks
-        ? import("./typescript-runner").then((module) => module.preloadTypeScriptDependencies())
-        : Promise.resolve();
-
-      // Parse markdown and preload TypeScript dependencies in parallel
-      const [html] = await Promise.all([marked.parse(markdownWithoutFrontmatter), preloadPromise]);
-
+      // Parse markdown
+      const html = await marked.parse(markdownWithoutFrontmatter);
       await this.renderBlogPostContent(html, post.date, markdownWithoutFrontmatter, hash);
     } catch (error) {
       this.showError("Failed to load blog post content. Please try again.");
