@@ -2,7 +2,8 @@
 
 Vanilla TypeScript blog SPA with Markdown support, MathJax rendering, and Mermaid diagrams.
 
-[![Build and deploy](https://github.com/Isaac-DeFrain/blog/actions/workflows/build-deploy.yml/badge.svg)](https://github.com/Isaac-DeFrain/blog/actions/workflows/build-deploy.yml)
+[![Build and deploy](https://github.com/Isaac-DeFrain/blog/actions/workflows/build-deploy.yml/badge.svg)](https://github.com/Isaac-DeFrain/blog/actions)
+![Coverage](./coverage-badge.svg)
 
 ## Features
 
@@ -64,6 +65,20 @@ Run all tests
 npm test
 ```
 
+### Test Coverage
+
+Run test coverage
+
+```bash
+npm run coverage
+```
+
+Generate coverage badge SVG
+
+```bash
+npm run generate-coverage-badge
+```
+
 ## Adding New Blog Posts
 
 1. Create a new markdown file in `posts/` (e.g. `my-post.md`)
@@ -100,7 +115,7 @@ The post ID is automatically generated from the filename (e.g. `my-post.md` beco
 
 ### Executable TypeScript Code Blocks
 
-You can create interactive, executable TypeScript code blocks in your blog posts. These blocks compile and execute TypeScript code in a sandboxed Web Worker environment.
+You can create executable TypeScript code blocks in your blog posts. Executing these blocks do not require any additional compilation/transpilation.
 
 **Usage:**
 
@@ -115,21 +130,9 @@ console.log(`${x} + ${y} = ${add(x, y)}`);
 
 **Features:**
 
-- Compiles TypeScript to JavaScript using the TypeScript compiler (loaded from CDN)
-- Executes code in a Web Worker for sandboxing and isolation
+- Simply removes types from the TypeScript code and executes the resulting JavaScript lazily
 - Captures `console.log`, `console.error`, `console.warn`, and `console.info` output
-- Shows compilation diagnostics (errors and warnings)
 - Provides a `render()` function for HTML output
-- Automatically filters false-positive errors for DOM globals (`console`, `window`, `document`, etc.) that exist at runtime
-- 10-second execution timeout for safety
-
-**Compiler Options:**
-
-- Target: ES2020
-- Module: ES2020
-- Libraries: ES2020, DOM
-- Strict mode: disabled
-- Skip lib check: enabled
 
 ## Tools
 
@@ -137,9 +140,11 @@ console.log(`${x} + ${y} = ${add(x, y)}`);
 - **TypeScript**: Type-safe JavaScript
 - **Vite**: Fast build tool and dev server
 - **Marked**: Markdown parser
+- **marked-highlight**: Syntax highlighting integration for Marked
+- **highlight.js**: Syntax highlighting for code blocks
 - **MathJax**: Mathematical equation rendering
 - **Mermaid**: Diagram and flowchart rendering
-- **TypeScript Compiler (CDN)**: Runtime TypeScript compilation for executable code blocks
+- **Graphviz**: Diagram rendering via @viz-js/viz
 
 ## License
 
