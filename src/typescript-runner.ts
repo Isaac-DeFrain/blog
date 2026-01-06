@@ -2,231 +2,136 @@
  * @module typescript-runner
  *
  * TypeScript code execution module for executable code blocks in blog posts.
- * Compiles TypeScript to JavaScript and executes it in a Web Worker for sandboxing.
  *
- * Features:
- * - Compiles TypeScript using the bundled TypeScript compiler
- * - Executes code in a Web Worker for isolation
- * - Filters false-positive diagnostics for DOM globals (console, window, document, etc.)
- * - Supports ES2020 and DOM libraries
- * - Provides compilation diagnostics (errors and warnings)
+ * The code is known at compilation time (it's in the blog post markdown), so we process
+ * it at build time and make execution lazy by putting it behind a function call.
+ *
+ * Build time (in blog.ts):
+ * - Strips TypeScript type annotations to convert to JavaScript
+ * - Wraps code in a run() function
+ * - Stores the pre-processed function in the HTML
+ *
+ * Runtime (when run button is clicked):
+ * - Extracts the pre-processed function
+ * - Adds stdout/stderr hooks and console overrides
+ * - Executes the function lazily
  */
 
-import { getBasePath } from "./utils";
-import type * as ts from "typescript";
-
 /**
- * Type for the TypeScript compiler
- */
-type TypeScriptCompiler = typeof ts;
-
-/**
- * Loads the TypeScript compiler from the bundled module.
- * Caches the result on window.ts for subsequent calls.
- *
- * @returns Promise that resolves when TypeScript is available
- */
-async function loadTypeScript(): Promise<TypeScriptCompiler> {
-  // Check if already cached on window
-  // @ts-expect-error - TypeScript may be cached on window
-  if (window.ts) {
-    // @ts-expect-error
-    return window.ts;
-  }
-
-  try {
-    // Dynamically import TypeScript compiler (bundled by Vite)
-    const tsModule = await import("typescript");
-
-    // Cache on window for subsequent calls
-    // @ts-expect-error - Storing TypeScript on window for caching
-    window.ts = tsModule;
-
-    return tsModule as TypeScriptCompiler;
-  } catch (error) {
-    throw new Error(`Failed to load TypeScript compiler: ${error instanceof Error ? error.message : String(error)}`);
-  }
-}
-
-/**
- * Compiles TypeScript code to JavaScript.
- *
- * Uses a custom compiler host for browser environment and filters out false-positive
- * diagnostics for DOM globals that exist at runtime but can't be resolved during compilation.
+ * Strips TypeScript type annotations from code to convert it to JavaScript.
+ * This is a simple approach that handles common cases but may not cover all TypeScript features.
  *
  * @param tsCode - The TypeScript source code
- * @returns Object with compiled JavaScript code and any diagnostics (filtered)
+ * @returns JavaScript code with type annotations removed
  */
-async function compileTypeScript(tsCode: string): Promise<{ jsCode: string; diagnostics: string[] }> {
-  const ts = await loadTypeScript();
-  const diagnostics: string[] = [];
+export function stripTypeScriptTypes(tsCode: string): string {
+  let jsCode = tsCode;
 
-  const compilerOptions: ts.CompilerOptions = {
-    target: ts.ScriptTarget.ES2020,
-    module: ts.ModuleKind.ES2020,
-    lib: ["ES2020", "DOM"],
-    strict: false,
-    esModuleInterop: true,
-    skipLibCheck: true,
-  };
+  // Remove type annotations from function parameters: (x: number) => (x)
+  jsCode = jsCode.replace(/:\s*[A-Za-z_$][A-Za-z0-9_$<>[\]|&\s,.]*(?=\s*[,)])/g, "");
 
-  // Compile TypeScript to JavaScript
-  const result = ts.transpile(tsCode, compilerOptions);
+  // Remove type annotations from variable declarations: const x: number = -> const x =
+  jsCode = jsCode.replace(/:\s*[A-Za-z_$][A-Za-z0-9_$<>[\]|&\s,.]*(?=\s*[=,;])/g, "");
 
-  // Create source file for diagnostics
-  const sourceFile = ts.createSourceFile("temp.ts", tsCode, ts.ScriptTarget.ES2020, true);
+  // Remove type assertions: as Type -> (empty)
+  jsCode = jsCode.replace(/\s+as\s+[A-Za-z_$][A-Za-z0-9_$<>[\]|&\s,.]*/g, "");
 
-  // Create a minimal compiler host for browser environment
-  const compilerHost: ts.CompilerHost = {
-    getSourceFile: (fileName: string) => {
-      if (fileName === "temp.ts") {
-        return sourceFile;
-      }
-      return undefined;
-    },
-    writeFile: () => {
-      // No-op in browser
-    },
-    getCurrentDirectory: () => "/",
-    getDirectories: () => [],
-    fileExists: (fileName: string) => fileName === "temp.ts",
-    readFile: (fileName: string) => {
-      if (fileName === "temp.ts") {
-        return tsCode;
-      }
-      return undefined;
-    },
-    getCanonicalFileName: (fileName: string) => fileName,
-    useCaseSensitiveFileNames: () => true,
-    getNewLine: () => "\n",
-    getDefaultLibFileName: () => "lib.d.ts", // Return a simple string since skipLibCheck is true
-  };
+  // Remove interface declarations (multiline)
+  jsCode = jsCode.replace(/interface\s+[A-Za-z_$][A-Za-z0-9_$]*\s*\{[^}]*\}/g, "");
 
-  // Get diagnostics (warnings/errors)
-  const program = ts.createProgram(["temp.ts"], compilerOptions, compilerHost);
-  const semanticDiagnostics = ts.getPreEmitDiagnostics(program);
+  // Remove type aliases: type X = ...
+  jsCode = jsCode.replace(/type\s+[A-Za-z_$][A-Za-z0-9_$]*\s*=\s*[^;]+;/g, "");
 
-  // Known DOM globals that exist at runtime but TypeScript can't resolve in browser environment
-  const knownDomGlobals = ["console", "window", "document", "navigator", "location", "localStorage", "sessionStorage"];
+  // Remove generic type parameters from function declarations: <T> -> (empty)
+  jsCode = jsCode.replace(/<[A-Za-z_$][A-Za-z0-9_$<>[\]|&\s,.]*>(?=\s*\()/g, "");
 
-  for (const diagnostic of semanticDiagnostics) {
-    if (diagnostic.file && diagnostic.file === sourceFile) {
-      const message = ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n");
-
-      // Filter out false positives about missing DOM globals
-      // These exist at runtime in the browser, so we suppress the errors
-      if (message.includes("Cannot find name") && knownDomGlobals.some((global) => message.includes(`'${global}'`))) {
-        continue;
-      }
-
-      const category = diagnostic.category === ts.DiagnosticCategory.Error ? "Error" : "Warning";
-      diagnostics.push(`${category}: ${message}`);
-    }
-  }
-
-  return {
-    jsCode: result,
-    diagnostics,
-  };
-}
-
-// Cache for worker script URL to avoid re-fetching
-let cachedWorkerScriptUrl: string | null = null;
-
-/**
- * Gets the worker script URL.
- * Uses Vite's ?url import to get the proper URL that works in both dev and production.
- *
- * @returns Promise that resolves to the worker script URL
- */
-async function getWorkerScriptUrl(): Promise<string> {
-  if (cachedWorkerScriptUrl !== null) {
-    return cachedWorkerScriptUrl;
-  }
-
-  // Use Vite's ?url suffix to get the URL of the worker script
-  // This ensures Vite handles bundling and path resolution correctly
-  // @ts-expect-error - Vite's ?url import is not recognized by TypeScript
-  const workerUrlModule = await import("./typescript-worker.ts?url");
-  const workerUrl = workerUrlModule.default;
-
-  // Apply base path if needed (Vite's ?url should already handle this, but just in case)
-  const basePath = getBasePath();
-  if (basePath !== "/" && !workerUrl.startsWith(basePath)) {
-    // Ensure the URL includes the base path
-    // Use a fallback base URL if window.location is not available (e.g., in test environments)
-    const baseUrl = typeof window !== "undefined" && window.location ? window.location.href : "http://localhost/";
-    const url = new URL(workerUrl, baseUrl);
-    const pathname = url.pathname.startsWith("/") ? url.pathname.slice(1) : url.pathname;
-    cachedWorkerScriptUrl = `${basePath}${pathname}`;
-  } else {
-    cachedWorkerScriptUrl = workerUrl;
-  }
-
-  return cachedWorkerScriptUrl as string;
+  return jsCode;
 }
 
 /**
- * Executes JavaScript code in a Web Worker.
+ * Wraps TypeScript code in a run() function and converts it to JavaScript.
+ * This is called at build time when processing markdown.
  *
- * @param jsCode - The JavaScript code to execute
- * @param onOutput - Callback for output messages
- * @param onError - Callback for errors
- * @param onDone - Callback when execution completes
- * @returns Promise that resolves when execution starts
+ * @param tsCode - The TypeScript source code to wrap and convert
+ * @returns The JavaScript code with run() function
  */
-async function executeInWorker(
-  jsCode: string,
-  onOutput: (data: unknown) => void,
-  onError: (message: string) => void,
-  onDone: () => void,
-): Promise<void> {
-  const workerUrl = await getWorkerScriptUrl();
-  const worker = new Worker(workerUrl, { type: "module" });
+export function wrapTypeScriptCode(tsCode: string): string {
+  const jsCode = stripTypeScriptTypes(tsCode);
+  return wrapJsCodeRun(jsCode);
+}
 
-  const timeout = setTimeout(() => {
-    worker.terminate();
-    onError("Execution timeout: Code took too long to execute");
-  }, 10000); // 10 second timeout
-
-  worker.onmessage = (event) => {
-    const { type, data, message } = event.data;
-
-    switch (type) {
-      case "output":
-        onOutput(data);
-        break;
-      case "error":
-        clearTimeout(timeout);
-        worker.terminate();
-        onError(message || "Unknown error occurred");
-        break;
-      case "done":
-        clearTimeout(timeout);
-        worker.terminate();
-        onDone();
-        break;
-    }
-  };
-
-  worker.onerror = (error) => {
-    clearTimeout(timeout);
-    worker.terminate();
-    onError(`Worker error: ${error.message}`);
-  };
-
-  worker.postMessage({ type: "execute", code: jsCode });
+export function wrapJsCodeRun(jsCode: string): string {
+  return `function run(stdout, stderr) {\n${jsCode}\n}`;
 }
 
 /**
- * Preloads TypeScript execution dependencies.
- * Loads the TypeScript compiler module and resolves the worker script URL in parallel.
- * This should be called as early as possible when a post with executable TypeScript blocks is detected.
+ * Wraps JavaScript code to add stdout/stderr console hooks.
  *
- * @returns Promise that resolves when all dependencies are loaded
+ * @param jsCode - The JavaScript code containing the run() function
+ * @returns The wrapped function code as a string
  */
-export async function preloadTypeScriptDependencies(): Promise<void> {
-  await Promise.all([loadTypeScript(), getWorkerScriptUrl()]);
+function wrapJsCodeToRunWithHooks(jsCode: string): string {
+  if (!jsCode.match(/^(function run\(stdout, stderr\) \{[\s\S]*?\})$/)) {
+    throw new Error("Invalid wrapped JavaScript code: missing run() function");
+  }
+
+  return `
+    ${jsCode}
+    
+    // Console hooks
+    const originalLog = console.log;
+    const originalError = console.error;
+    const originalWarn = console.warn;
+    const originalInfo = console.info;
+
+    // Helper functions
+    const stringifyArgs = (args) => args.map((arg) => String(arg)).join(" ");
+    const isNonNullObject = (args) => {
+      let isSingleArg = args.length === 1;
+      let isObject = typeof args[0] === "object" && args[0] !== null;
+      return isSingleArg && isObject;
+    };
+
+    console.log = (...args) => {
+      originalLog.apply(console, args);
+      // If single argument and it's an object/array, pass it through for proper JSON formatting
+      // Otherwise, join multiple arguments as strings
+      if (isNonNullObject(args)) {
+        stdout(args[0]);
+      } else {
+        const output = args.map((arg) => String(arg)).join(" ");
+        stdout(output);
+      }
+    };
+
+    console.error = (...args) => {
+      originalError.apply(console, args);
+      const output = \`[ERROR] \${stringifyArgs(args)}\`;
+      stderr(output);
+    };
+
+    console.warn = (...args) => {
+      originalWarn.apply(console, args);
+      const output = \`[WARN] \${stringifyArgs(args)}\`;
+      stdout(output);
+    };
+
+    console.info = (...args) => {
+      originalInfo.apply(console, args);
+      const output = \`[INFO] \${stringifyArgs(args)}\`;
+      stdout(output);
+    };
+
+    // Provide a render function for HTML output
+    const render = (html) => {
+      stdout({ html });
+    };
+
+    // Execute the run function with hooks
+    return (async () => {
+      await run(stdout, stderr);
+    })();
+  `;
 }
 
 /**
@@ -261,8 +166,21 @@ export async function initializeTypeScriptRunner(container: HTMLElement): Promis
       runButton.textContent = "Run";
     }
 
-    const tsCode = JSON.parse(codeScript.textContent || "");
+    // The code is already processed at build time (stripped of types and wrapped in run())
+    // We just need to execute it lazily when the button is clicked
+    const jsCode = JSON.parse(codeScript.textContent || "");
+
+    let hasExecuted = false;
+
     runButton.addEventListener("click", async () => {
+      // Prevent execution if already executed
+      if (hasExecuted) {
+        return;
+      }
+
+      // Mark as executed immediately to prevent multiple clicks
+      hasExecuted = true;
+
       // Disable button during execution
       runButton.disabled = true;
       runButton.textContent = "Running...";
@@ -272,58 +190,131 @@ export async function initializeTypeScriptRunner(container: HTMLElement): Promis
       outputContent.innerHTML = "";
 
       try {
-        const { jsCode, diagnostics } = await compileTypeScript(tsCode);
-
-        // Show compilation diagnostics if any
-        if (diagnostics.length > 0) {
-          const diagnosticsDiv = document.createElement("div");
-          diagnosticsDiv.className = "ts-diagnostics";
-          diagnosticsDiv.innerHTML = `<strong>Compilation warnings/errors:</strong><pre>${diagnostics.join("\n")}</pre>`;
-          outputContent.appendChild(diagnosticsDiv);
-        }
-
-        await executeInWorker(
-          jsCode,
-          (data) => {
-            // Handle output
-            const outputDiv = document.createElement("div");
-            outputDiv.className = "ts-output-item";
-
-            if (typeof data === "string") {
-              // Plain text output
-              outputDiv.textContent = data;
-            } else if (data && typeof data === "object" && "html" in data) {
-              // HTML output from render() function
-              outputDiv.innerHTML = data.html as string;
-            } else {
-              // JSON output for other types
-              outputDiv.textContent = JSON.stringify(data, null, 2);
-            }
-
-            outputContent.appendChild(outputDiv);
-          },
-          (errorMessage) => {
-            const errorDiv = document.createElement("div");
-            errorDiv.className = "ts-error";
-            errorDiv.textContent = errorMessage;
-            outputContent.appendChild(errorDiv);
-          },
-          () => {
-            runButton.disabled = false;
-            runButton.textContent = "Run";
-          },
-        );
+        await executeCode(jsCode, appendOutput(outputContent), appendError(outputContent), () => {
+          // Keep button disabled after execution
+          runButton.disabled = true;
+          runButton.textContent = "Executed";
+        });
       } catch (error) {
         // Handle compilation or execution errors
-        const errorDiv = document.createElement("div");
-        errorDiv.className = "ts-error";
-        errorDiv.textContent = error instanceof Error ? error.message : "Unknown error occurred";
+        const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+        appendError(outputContent)(errorMessage);
 
-        outputContent.appendChild(errorDiv);
-
+        // Allow re-execution
         runButton.disabled = false;
         runButton.textContent = "Run";
       }
     });
   });
 }
+
+/**
+ * Executes JavaScript code directly with stdout/stderr hooks.
+ *
+ * @param jsCode - The JavaScript code to execute
+ * @param onOutput - Callback for output messages
+ * @param onError - Callback for errors
+ * @param onDone - Callback when execution completes
+ * @returns Promise that resolves when execution completes
+ */
+async function executeCode(
+  jsCode: string,
+  onOutput: (data: unknown) => void,
+  onError: (message: string) => void,
+  onDone: () => void,
+): Promise<void> {
+  const tenSecTimeout = 10000;
+  const wrappedCode = wrapJsCodeToRunWithHooks(jsCode);
+
+  let timeout: ReturnType<typeof setTimeout> | null = null;
+  const clearTimeoutIfSet = (): void => {
+    if (timeout) {
+      clearTimeout(timeout);
+      timeout = null;
+    }
+  };
+  const clearTimeoutOnError = (message: string): void => {
+    clearTimeoutIfSet();
+    onError(message);
+  };
+
+  try {
+    timeout = setTimeout(() => {
+      onError("Execution timeout: Code took too long to execute");
+      onDone();
+    }, tenSecTimeout);
+
+    const execute = new Function("stdout", "stderr", wrappedCode);
+    await execute(onOutput, clearTimeoutOnError);
+
+    clearTimeoutIfSet();
+    onDone();
+  } catch (error) {
+    clearTimeoutIfSet();
+    onError(error instanceof Error ? error.message : String(error));
+    onDone();
+  }
+}
+
+/**
+ * Sets the content of an output div element based on the data type.
+ * Handles string output, HTML output (from render() function), and other types (as JSON).
+ *
+ * @param data - The output data to display
+ * @param outputDiv - The div element to set content on
+ */
+function setOutputDivContent(data: unknown, outputDiv: HTMLDivElement): void {
+  if (typeof data === "string") {
+    // Plain text output
+    outputDiv.textContent = data;
+  } else if (data && typeof data === "object" && "html" in data) {
+    // HTML output from render() function
+    outputDiv.innerHTML = data.html as string;
+  } else {
+    // JSON output for other types
+    try {
+      // Replacer function to handle BigInt values
+      const replacer = (_key: string, value: unknown): unknown => {
+        if (typeof value === "bigint") {
+          return `${value}n`;
+        }
+        return value;
+      };
+      outputDiv.textContent = JSON.stringify(data, replacer, 2);
+    } catch (error) {
+      // Fallback for circular references or other serialization errors
+      outputDiv.textContent = String(data);
+    }
+  }
+}
+
+/**
+ * Creates and appends an output element to the output container based on the data type.
+ * Handles string output, HTML output (from render() function), and other types (as JSON).
+ *
+ * @param data - The output data to display
+ * @param outputContent - The container element to append the output to
+ */
+const appendOutput =
+  (outputContent: HTMLElement) =>
+  (data: unknown): void => {
+    const outputDiv = document.createElement("div");
+    outputDiv.className = "ts-output-item";
+    setOutputDivContent(data, outputDiv);
+    outputContent.appendChild(outputDiv);
+  };
+
+/**
+ * Creates and appends an error element to the output container.
+ *
+ * @param errorMessage - The error message to display
+ * @param outputContent - The container element to append the error to
+ */
+const appendError =
+  (outputContent: HTMLElement) =>
+  (errorMessage: string): void => {
+    const errorDiv = document.createElement("div");
+    errorDiv.className = "ts-error";
+    errorDiv.textContent = errorMessage;
+    outputContent.appendChild(errorDiv);
+  };

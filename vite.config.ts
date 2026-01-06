@@ -4,6 +4,11 @@ import { readFileSync, writeFileSync, copyFileSync, mkdirSync, readdirSync, exis
 import { join } from "path";
 import { basePathScript } from "./src/utils";
 
+// Directories
+const DIST_DIR = "dist";
+const POSTS_DIR = "posts";
+const WIP_POSTS_DIR = "wip";
+
 /** Determine base path for GitHub Pages deployment
  *
  * For project repositories, GitHub Pages serves from /repo-name/
@@ -46,7 +51,30 @@ export function copyDir(src: string, dest: string): void {
 }
 
 /**
+ * Replaces absolute internal paths in HTML with base path prefixed paths
+ * Skips external URLs (protocol-relative // or http/https)
+ *
+ * @param html - HTML content to process
+ * @param basePath - Base path to prepend to internal paths
+ * @returns HTML with base path injected into internal paths
+ */
+export function basePathPrefixPaths(html: string, basePath: string): string {
+  // Replace absolute internal paths (href="/path" or src="/path")
+  return html.replace(/(href|src)="\/([^"]*)"/g, (match, attr, path) => {
+    if (path.startsWith("/") || path.startsWith("http")) {
+      return match;
+    }
+
+    return `${attr}="${basePath}${path}"`;
+  });
+}
+
+/**
  * Processes 404.html to inject base path for GitHub Pages SPA routing
+ *
+ * - Injects the base path as a global variable right after opening <head> tag
+ * - Updates `pathSegmentsToKeep` in the redirect script
+ * - Prefixes paths with the base path if needed
  *
  * @param src404 - Path to source 404.html file
  * @param dist404 - Path to destination 404.html file
@@ -54,29 +82,14 @@ export function copyDir(src: string, dest: string): void {
  */
 export function process404Html(src404: string, dist404: string, basePath: string): void {
   let html = readFileSync(src404, "utf-8");
-
-  // Inject base path as a global variable right after opening <head> tag
   html = html.replace("<head>", `<head>${basePathScript(basePath)}`);
 
   // Count non-empty segments in the base path (e.g. "/blog/" = 1 segment)
   const pathSegmentsToKeep = basePath.split("/").filter((segment) => segment.length > 0).length;
-
-  // Update pathSegmentsToKeep in the redirect script
   html = html.replace(/var pathSegmentsToKeep = \d+;/, `var pathSegmentsToKeep = ${pathSegmentsToKeep};`);
 
-  // Only replace paths if base path is not root
-  // Ensures assets load correctly with the base path
   if (basePath !== "/") {
-    // Replace absolute internal paths (href="/path" or src="/path")
-    // but skip external URLs (starting with // or http)
-    html = html.replace(/(href|src)="\/([^"]*)"/g, (match, attr, path) => {
-      // Don't modify external URLs (protocol-relative // or http/https)
-      if (path.startsWith("/") || path.startsWith("http")) {
-        return match;
-      }
-
-      return `${attr}="${basePath}${path}"`;
-    });
+    html = basePathPrefixPaths(html, basePath);
   }
 
   writeFileSync(dist404, html);
@@ -89,30 +102,28 @@ export function process404Html(src404: string, dist404: string, basePath: string
  * @param blogsDir - The directory containing blog markdown files
  * @returns The manifest object with files array, or null if generation failed
  */
-export function generateBlogManifest(blogsDir: string): { files: string[] } | null {
+export function generateBlogManifest(blogsDir: string, excludeDir?: string): { files: string[] } | null {
   const manifestPath = join(blogsDir, "manifest.json");
 
-  // Check if manifest already exists
   if (existsSync(manifestPath)) {
     try {
-      // Verify it's valid JSON and return it
-      const existingManifest = JSON.parse(readFileSync(manifestPath, "utf-8"));
-      return existingManifest;
+      const validJson = JSON.parse(readFileSync(manifestPath, "utf-8"));
+      return validJson;
     } catch (error) {
-      // If existing manifest is invalid, regenerate it
-      console.warn("Existing manifest is invalid, regenerating:", error);
+      console.warn("Failed to parse manifest, regenerating:", error);
     }
   }
 
   try {
     const entries = readdirSync(blogsDir, { withFileTypes: true });
-    const markdownFiles = entries
+    const posts = entries
       .filter((entry) => entry.isFile() && entry.name.endsWith(".md"))
+      .filter((entry) => !entry.isDirectory() || entry.name !== excludeDir)
       .map((entry) => entry.name)
       .sort();
 
     const manifest = {
-      files: markdownFiles,
+      files: posts,
     };
 
     writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
@@ -126,7 +137,7 @@ export function generateBlogManifest(blogsDir: string): { files: string[] } | nu
 export default defineConfig({
   base: basePath,
   build: {
-    chunkSizeWarningLimit: 3600, // 3.6 MB
+    chunkSizeWarningLimit: 1500, // 1.5 MB
   },
   test: {
     globals: true,
@@ -221,25 +232,27 @@ export default defineConfig({
     //
     {
       name: "inject-base-path",
+      /**
+       * Inject base path as a global variable so client code can access it
+       */
       transformIndexHtml: {
         order: "pre",
         handler(html) {
-          // Inject base path as a global variable so client code can access it
-          // Insert right after the opening <head> tag to ensure it's available before any module scripts
           return html.replace("<head>", `<head>${basePathScript(basePath)}`);
         },
       },
     },
     {
-      name: "copy-blog-files",
+      name: "copy-posts",
+      /**
+       * Copy blog post files to dist directory
+       */
       closeBundle() {
-        // Copy blog post files to dist directory so they're available at runtime
-        const srcBlogsDir = join(process.cwd(), "posts");
-        const distBlogsDir = join(process.cwd(), "dist", "posts");
+        const srcBlogsDir = join(process.cwd(), POSTS_DIR);
+        const distBlogsDir = join(process.cwd(), DIST_DIR, POSTS_DIR);
 
         try {
           copyDir(srcBlogsDir, distBlogsDir);
-          console.debug("Blog files copied to dist directory");
         } catch (error) {
           console.warn("Failed to copy blog files:", error);
         }
@@ -248,36 +261,32 @@ export default defineConfig({
     {
       name: "generate-blog-manifest",
       buildStart() {
-        // Generate manifest in source directory for development
-        generateBlogManifest(join(process.cwd(), "posts"));
+        generateBlogManifest(join(process.cwd(), POSTS_DIR), WIP_POSTS_DIR);
       },
+      /**
+       * Generate manifest file and write to dist directory
+       */
       closeBundle() {
-        // Generate a manifest file listing all markdown files in the blogs directory
-        const srcBlogsDir = join(process.cwd(), "posts");
-        const distBlogsDir = join(process.cwd(), "dist", "posts");
-
-        // Generate manifest from source directory
-        const manifest = generateBlogManifest(srcBlogsDir);
+        const srcPostsDir = join(process.cwd(), POSTS_DIR);
+        const manifest = generateBlogManifest(srcPostsDir, WIP_POSTS_DIR);
 
         if (manifest) {
-          // Write manifest to dist directory
-          mkdirSync(distBlogsDir, { recursive: true });
+          const distPostsDir = join(process.cwd(), DIST_DIR, POSTS_DIR);
+          const manifestPath = join(distPostsDir, "manifest.json");
 
-          const manifestPath = join(distBlogsDir, "manifest.json");
+          mkdirSync(distPostsDir, { recursive: true });
           writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
-
-          console.debug("Blog manifest generated");
         }
       },
     },
     {
       name: "process-404",
+      /**
+       * Process 404.html for GitHub Pages SPA routing
+       */
       closeBundle() {
-        // Process 404.html to inject base path for GitHub Pages SPA routing
-        // When GitHub Pages serves 404.html, the URL is still the original path
-        // So we make 404.html load the SPA, which will read the pathname and route accordingly
         const src404 = join(process.cwd(), "404.html");
-        const dist404 = join(process.cwd(), "dist", "404.html");
+        const dist404 = join(process.cwd(), DIST_DIR, "404.html");
 
         try {
           process404Html(src404, dist404, basePath);
