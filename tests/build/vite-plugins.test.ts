@@ -23,19 +23,24 @@ describe("Vite Plugins", () => {
     // Clean up any existing files in blogsDir
     if (existsSync(blogsDir)) {
       const files = readdirSync(blogsDir, { withFileTypes: true });
+
       for (const file of files) {
         const filePath = join(blogsDir, file.name);
+
         if (file.isDirectory()) {
           // Recursively remove directory contents
           const subFiles = readdirSync(filePath, { withFileTypes: true });
+
           for (const subFile of subFiles) {
             const subFilePath = join(filePath, subFile.name);
+
             if (subFile.isDirectory()) {
               rmdirSync(subFilePath);
             } else {
               unlinkSync(subFilePath);
             }
           }
+
           rmdirSync(filePath);
         } else {
           unlinkSync(filePath);
@@ -49,16 +54,17 @@ describe("Vite Plugins", () => {
     if (existsSync(testDir)) {
       try {
         const files = readdirSync(testDir, { recursive: true, withFileTypes: true });
+
         for (const file of files.reverse()) {
-          // When using recursive: true, we need to construct the path differently
-          // The file.name contains the relative path from testDir
           const filePath = join(testDir, file.name);
+
           if (file.isDirectory()) {
             rmdirSync(filePath);
           } else {
             unlinkSync(filePath);
           }
         }
+
         rmdirSync(testDir);
       } catch (error) {
         // Ignore cleanup errors
@@ -67,24 +73,24 @@ describe("Vite Plugins", () => {
   });
 
   describe("manifest generation", () => {
-    it("should generate manifest with all markdown files", () => {
-      // Create test markdown files
+    it("should generate manifest with all posts", () => {
+      // Create posts
       writeFileSync(join(blogsDir, "post-1.md"), "# Post 1");
       writeFileSync(join(blogsDir, "post-2.md"), "# Post 2");
       writeFileSync(join(blogsDir, "post-3.md"), "# Post 3");
       writeFileSync(join(blogsDir, "not-a-blog.txt"), "Not a blog");
 
-      // Generate manifest using the actual function
-      const manifest = generateBlogManifest(blogsDir);
-
       // Verify manifest
+      const manifest = generateBlogManifest(blogsDir);
       expect(manifest).not.toBeNull();
       expect(manifest?.files).toEqual(["post-1.md", "post-2.md", "post-3.md"]);
       expect(manifest?.files).not.toContain("not-a-blog.txt");
 
-      // Verify manifest file was created
+      // Verify path
       const manifestPath = join(blogsDir, "manifest.json");
       expect(existsSync(manifestPath)).toBe(true);
+
+      // Verify content
       const manifestContent = JSON.parse(readFileSync(manifestPath, "utf-8"));
       expect(manifestContent.files).toEqual(["post-1.md", "post-2.md", "post-3.md"]);
     });
@@ -95,13 +101,11 @@ describe("Vite Plugins", () => {
       writeFileSync(join(blogsDir, "m-post.md"), "# M Post");
 
       const manifest = generateBlogManifest(blogsDir);
-
       expect(manifest?.files).toEqual(["a-post.md", "m-post.md", "z-post.md"]);
     });
 
     it("should handle empty blogs directory", () => {
       const manifest = generateBlogManifest(blogsDir);
-
       expect(manifest?.files).toEqual([]);
     });
 
@@ -110,7 +114,6 @@ describe("Vite Plugins", () => {
       writeFileSync(join(blogsDir, "post-1.md"), "# Post 1");
 
       const manifest = generateBlogManifest(blogsDir);
-
       expect(manifest?.files).toEqual(["post-1.md"]);
       expect(manifest?.files).not.toContain("subdir");
     });
@@ -159,7 +162,7 @@ describe("Vite Plugins", () => {
     });
   });
 
-  describe("404.html processing", () => {
+  describe("404 processing", () => {
     it("should inject base path into 404.html", () => {
       const basePath = getBasePath();
       const src404 = join(testDir, "404.html");
@@ -216,8 +219,8 @@ describe("Vite Plugins", () => {
     });
   });
 
-  describe("file copying", () => {
-    it("should copy markdown files to dist directory", () => {
+  describe("blog post file management", () => {
+    it("should copy posts to dist directory", () => {
       const srcDir = blogsDir;
       const distDir = join(testDir, "dist", "blogs");
 

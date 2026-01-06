@@ -11,6 +11,7 @@ import { markedHighlight } from "marked-highlight";
 import hljs from "highlight.js";
 import { createHighlightConfig, createTypeScriptExecutableBlock } from "../../src/blog";
 import { findUnnestedCodeBlocks } from "../helpers/markdown";
+import { wrapJsCodeRun } from "../../src/typescript-runner";
 
 // Setup marked with TypeScript runner support (using actual implementation from blog.ts)
 async function setupMarkedWithTypeScriptRunner() {
@@ -242,9 +243,10 @@ describe("Code Blocks Rendering Integration Test", () => {
 
         const extractedCode = JSON.parse(scriptTag!.textContent || "");
 
-        // The code stored should be unescaped (entities converted back to characters)
-        // and HTML tags should be stripped by unescapeHtml
-        expect(extractedCode).toBe(testCase.expectedAfterUnescape);
+        // The code stored should be wrapped in a run() function at build time
+        // and unescaped (entities converted back to characters)
+        // HTML tags should be stripped by unescapeHtml
+        expect(extractedCode).toBe(wrapJsCodeRun(testCase.expectedAfterUnescape));
       }
     });
 
@@ -278,11 +280,9 @@ ${typescriptRunCodeBlock(code3)}
       expect(scriptTags.length).toBe(3);
 
       const extractedCodes = Array.from(scriptTags).map((tag) => JSON.parse(tag.textContent || ""));
-      expect(extractedCodes[0]).toBe(code1);
-      expect(extractedCodes[1]).toBe(code2);
-
-      // HTML tags are stripped by unescapeHtml
-      expect(extractedCodes[2]).toBe(expectedCode3);
+      expect(extractedCodes[0]).toBe(wrapJsCodeRun(code1));
+      expect(extractedCodes[1]).toBe(wrapJsCodeRun(code2));
+      expect(extractedCodes[2]).toBe(wrapJsCodeRun(expectedCode3));
     });
   });
 });

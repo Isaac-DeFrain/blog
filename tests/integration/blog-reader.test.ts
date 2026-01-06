@@ -13,6 +13,7 @@ import {
   waitForBlogList,
 } from "../helpers/dom";
 import { createMockManifest, createMockMarkdown } from "../helpers/mocks";
+import { resolveWithTimeout } from "../../src/utils";
 
 // Mock the blog module - we'll need to import it dynamically
 // Since BlogReader is instantiated on module load, we need to handle this carefully
@@ -231,7 +232,7 @@ describe("BlogReader Integration", () => {
       const { BlogReader } = await import("../../src/blog");
       new BlogReader();
       // Wait longer for async error handling
-      await new Promise((resolve) => setTimeout(resolve, 200));
+      await new Promise(resolveWithTimeout(200));
 
       expect(consoleErrorSpy).toHaveBeenCalled();
       consoleErrorSpy.mockRestore();
@@ -254,7 +255,7 @@ describe("BlogReader Integration", () => {
       const { BlogReader } = await import("../../src/blog");
       new BlogReader();
       // Wait longer for async operations including post loading
-      await new Promise((resolve) => setTimeout(resolve, 300));
+      await new Promise(resolveWithTimeout(300));
 
       expect(consoleErrorSpy).toHaveBeenCalled();
       consoleErrorSpy.mockRestore();
@@ -279,7 +280,7 @@ describe("BlogReader Integration", () => {
       const { BlogReader } = await import("../../src/blog");
       new BlogReader();
       // Wait longer for all posts to load
-      await new Promise((resolve) => setTimeout(resolve, 400));
+      await new Promise(resolveWithTimeout(400));
 
       const blogList = document.getElementById("blog-list");
       const items = Array.from(blogList?.children || []) as HTMLElement[];
@@ -309,7 +310,7 @@ describe("BlogReader Integration", () => {
 
       const { BlogReader } = await import("../../src/blog");
       new BlogReader();
-      await new Promise((resolve) => setTimeout(resolve, 200));
+      await new Promise(resolveWithTimeout(200));
 
       const blogContent = document.getElementById("blog-content");
       const link = blogContent?.querySelector("a");
@@ -317,7 +318,7 @@ describe("BlogReader Integration", () => {
         const clickEvent = new MouseEvent("click", { bubbles: true, cancelable: true });
         link.dispatchEvent(clickEvent);
 
-        await new Promise((resolve) => setTimeout(resolve, 100));
+        await new Promise(resolveWithTimeout(100));
 
         // Should have called pushState for SPA routing
         expect(mockPushState).toHaveBeenCalled();
@@ -342,7 +343,7 @@ describe("BlogReader Integration", () => {
 
       const { BlogReader } = await import("../../src/blog");
       new BlogReader();
-      await new Promise((resolve) => setTimeout(resolve, 200));
+      await new Promise(resolveWithTimeout(200));
 
       const blogContent = document.getElementById("blog-content");
       const link = blogContent?.querySelector("a[href='https://example.com']");
@@ -350,7 +351,7 @@ describe("BlogReader Integration", () => {
         const clickEvent = new MouseEvent("click", { bubbles: true, cancelable: true });
         link.dispatchEvent(clickEvent);
 
-        await new Promise((resolve) => setTimeout(resolve, 50));
+        await new Promise(resolveWithTimeout(50));
 
         // Should not have called pushState for external links
         // (pushState might be called for other reasons, so we just check the link exists)
@@ -376,7 +377,7 @@ describe("BlogReader Integration", () => {
 
       const { BlogReader } = await import("../../src/blog");
       new BlogReader();
-      await new Promise((resolve) => setTimeout(resolve, 200));
+      await new Promise(resolveWithTimeout(200));
 
       const blogContent = document.getElementById("blog-content");
       const link = blogContent?.querySelector("a[href='#section-1']");
@@ -386,7 +387,7 @@ describe("BlogReader Integration", () => {
         const clickEvent = new MouseEvent("click", { bubbles: true, cancelable: true });
         link.dispatchEvent(clickEvent);
 
-        await new Promise((resolve) => setTimeout(resolve, 100));
+        await new Promise(resolveWithTimeout(100));
 
         expect(mockPushState).toHaveBeenCalled();
         scrollIntoViewSpy.mockRestore();
@@ -419,7 +420,7 @@ describe("BlogReader Integration", () => {
 
       const { BlogReader } = await import("../../src/blog");
       new BlogReader();
-      await new Promise((resolve) => setTimeout(resolve, 200));
+      await new Promise(resolveWithTimeout(200));
 
       // Click on a topic button
       const topicsBar = document.getElementById("topics-bar");
@@ -428,7 +429,7 @@ describe("BlogReader Integration", () => {
 
       if (testingButton) {
         testingButton.click();
-        await new Promise((resolve) => setTimeout(resolve, 100));
+        await new Promise(resolveWithTimeout(100));
 
         // Sidebar should show only filtered posts
         const blogList = document.getElementById("blog-list");
@@ -463,10 +464,198 @@ describe("BlogReader Integration", () => {
       const { BlogReader } = await import("../../src/blog");
       new BlogReader();
       // Wait longer for content to load, MathJax import, and typesetting
-      await new Promise((resolve) => setTimeout(resolve, 400));
+      await new Promise(resolveWithTimeout(400));
 
       // MathJax should have been called
       expect(mockTypesetPromise).toHaveBeenCalled();
+    });
+
+    it("should detect and render display math ($$)", async () => {
+      const manifest = createMockManifest(["post-1.md"]);
+      const markdown = createMockMarkdown({
+        name: "Post 1",
+        date: "2024-01-15",
+        content: "Display math: $$E = mc^2$$",
+      });
+
+      const urlHandlers = new Map<string | RegExp, () => Response | Promise<Response>>();
+      urlHandlers.set(/manifest\.json/, () => createMockResponse(manifest));
+      urlHandlers.set(/post-1\.md/, () => createMockTextResponse(markdown));
+
+      global.fetch = createUrlBasedFetchMock(urlHandlers) as typeof fetch;
+
+      const mockTypesetPromise = vi.fn().mockResolvedValue(undefined);
+      (window as any).MathJax = {
+        typesetPromise: mockTypesetPromise,
+      };
+
+      const { BlogReader } = await import("../../src/blog");
+      new BlogReader();
+      await waitForBlogList(1, { timeout: 2000 });
+      await waitForBlogContent({ timeout: 2000 });
+      await new Promise(resolveWithTimeout(400));
+
+      expect(mockTypesetPromise).toHaveBeenCalled();
+    });
+
+    it("should detect and render LaTeX delimiters", async () => {
+      const manifest = createMockManifest(["post-1.md"]);
+      const markdown = createMockMarkdown({
+        name: "Post 1",
+        date: "2024-01-15",
+        content: "Inline: \\(E = mc^2\\) Display: \\[E = mc^2\\]",
+      });
+
+      const urlHandlers = new Map<string | RegExp, () => Response | Promise<Response>>();
+      urlHandlers.set(/manifest\.json/, () => createMockResponse(manifest));
+      urlHandlers.set(/post-1\.md/, () => createMockTextResponse(markdown));
+
+      global.fetch = createUrlBasedFetchMock(urlHandlers) as typeof fetch;
+
+      const mockTypesetPromise = vi.fn().mockResolvedValue(undefined);
+      (window as any).MathJax = {
+        typesetPromise: mockTypesetPromise,
+      };
+
+      const { BlogReader } = await import("../../src/blog");
+      new BlogReader();
+      await waitForBlogList(1, { timeout: 2000 });
+      await waitForBlogContent({ timeout: 2000 });
+      await new Promise(resolveWithTimeout(400));
+
+      expect(mockTypesetPromise).toHaveBeenCalled();
+    });
+  });
+
+  describe("Mermaid Integration", () => {
+    it("should detect and render Mermaid diagrams", async () => {
+      const manifest = createMockManifest(["post-1.md"]);
+      const markdown = createMockMarkdown({
+        name: "Post 1",
+        date: "2024-01-15",
+        content: "```mermaid\ngraph TD\nA-->B\n```",
+      });
+
+      const urlHandlers = new Map<string | RegExp, () => Response | Promise<Response>>();
+      urlHandlers.set(/manifest\.json/, () => createMockResponse(manifest));
+      urlHandlers.set(/post-1\.md/, () => createMockTextResponse(markdown));
+
+      global.fetch = createUrlBasedFetchMock(urlHandlers) as typeof fetch;
+
+      const mockRender = vi.fn().mockResolvedValue(undefined);
+      (window as any).mermaid = {
+        initialize: vi.fn(),
+        run: mockRender,
+      };
+
+      (window as any).MathJax = {
+        typesetPromise: vi.fn().mockResolvedValue(undefined),
+      };
+
+      const { BlogReader } = await import("../../src/blog");
+      new BlogReader();
+      await waitForBlogList(1, { timeout: 2000 });
+      await waitForBlogContent({ timeout: 2000 });
+      await new Promise(resolveWithTimeout(400));
+
+      // Mermaid should have been called
+      expect(mockRender).toHaveBeenCalled();
+    });
+  });
+
+  describe("Graphviz Integration", () => {
+    it("should detect and render Graphviz diagrams", async () => {
+      const manifest = createMockManifest(["post-1.md"]);
+      const markdown = createMockMarkdown({
+        name: "Post 1",
+        date: "2024-01-15",
+        content: "```dot\ndigraph { A -> B }\n```",
+      });
+
+      const urlHandlers = new Map<string | RegExp, () => Response | Promise<Response>>();
+      urlHandlers.set(/manifest\.json/, () => createMockResponse(manifest));
+      urlHandlers.set(/post-1\.md/, () => createMockTextResponse(markdown));
+
+      global.fetch = createUrlBasedFetchMock(urlHandlers) as typeof fetch;
+
+      (window as any).MathJax = {
+        typesetPromise: vi.fn().mockResolvedValue(undefined),
+      };
+
+      const { BlogReader } = await import("../../src/blog");
+      new BlogReader();
+      await waitForBlogList(1, { timeout: 2000 });
+      await waitForBlogContent({ timeout: 2000 });
+      await new Promise(resolveWithTimeout(400));
+
+      // Graphviz should have been rendered (check for graphviz class)
+      const blogContent = document.getElementById("blog-content");
+      const graphvizElement = blogContent?.querySelector(".graphviz");
+      expect(graphvizElement).toBeDefined();
+    });
+
+    it("should detect and render Graphviz diagrams with graphviz language", async () => {
+      const manifest = createMockManifest(["post-1.md"]);
+      const markdown = createMockMarkdown({
+        name: "Post 1",
+        date: "2024-01-15",
+        content: "```graphviz\ndigraph { A -> B }\n```",
+      });
+
+      const urlHandlers = new Map<string | RegExp, () => Response | Promise<Response>>();
+      urlHandlers.set(/manifest\.json/, () => createMockResponse(manifest));
+      urlHandlers.set(/post-1\.md/, () => createMockTextResponse(markdown));
+
+      global.fetch = createUrlBasedFetchMock(urlHandlers) as typeof fetch;
+
+      (window as any).MathJax = {
+        typesetPromise: vi.fn().mockResolvedValue(undefined),
+      };
+
+      const { BlogReader } = await import("../../src/blog");
+      new BlogReader();
+      await waitForBlogList(1, { timeout: 2000 });
+      await waitForBlogContent({ timeout: 2000 });
+      await new Promise(resolveWithTimeout(400));
+
+      // Graphviz should have been rendered
+      const blogContent = document.getElementById("blog-content");
+      const graphvizElement = blogContent?.querySelector(".graphviz");
+      expect(graphvizElement).toBeDefined();
+    });
+  });
+
+  describe("TypeScript Executable Blocks", () => {
+    it("should render TypeScript executable blocks", async () => {
+      const manifest = createMockManifest(["post-1.md"]);
+      const markdown = createMockMarkdown({
+        name: "Post 1",
+        date: "2024-01-15",
+        content: "```typescript:run\nconst x = 1;\nconsole.log(x);\n```",
+      });
+
+      const urlHandlers = new Map<string | RegExp, () => Response | Promise<Response>>();
+      urlHandlers.set(/manifest\.json/, () => createMockResponse(manifest));
+      urlHandlers.set(/post-1\.md/, () => createMockTextResponse(markdown));
+
+      global.fetch = createUrlBasedFetchMock(urlHandlers) as typeof fetch;
+
+      (window as any).MathJax = {
+        typesetPromise: vi.fn().mockResolvedValue(undefined),
+      };
+
+      const { BlogReader } = await import("../../src/blog");
+      new BlogReader();
+      await waitForBlogList(1, { timeout: 2000 });
+      await waitForBlogContent({ timeout: 2000 });
+      await new Promise(resolveWithTimeout(400));
+
+      // TypeScript executable block should have been rendered
+      const blogContent = document.getElementById("blog-content");
+      const tsBlock = blogContent?.querySelector(".ts-executable-block");
+      expect(tsBlock).toBeDefined();
+      expect(tsBlock?.querySelector(".ts-run-button")).toBeDefined();
+      expect(tsBlock?.querySelector('script[type="application/json"]')).toBeDefined();
     });
   });
 

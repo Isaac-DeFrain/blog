@@ -7,6 +7,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { Sidebar, type PostClickCallback } from "../../src/sidebar";
 import { setupDOM, cleanupDOM } from "../helpers/dom";
 import { createMockBlogPost, createMockBlogPosts } from "../helpers/mocks";
+import { resolveWithTimeout } from "../../src/utils";
 
 describe("Sidebar", () => {
   let sidebar: Sidebar;
@@ -140,7 +141,7 @@ describe("Sidebar", () => {
       firstItem.dispatchEvent(clickEvent);
 
       // Wait for async callback
-      await new Promise((resolve) => setTimeout(resolve, 0));
+      await new Promise(resolveWithTimeout(0));
 
       expect(mockOnPostClick).toHaveBeenCalledWith("post-1");
     });
@@ -155,7 +156,7 @@ describe("Sidebar", () => {
       const clickEvent = new MouseEvent("click", { bubbles: true, cancelable: true });
 
       firstItem.dispatchEvent(clickEvent);
-      await new Promise((resolve) => setTimeout(resolve, 0));
+      await new Promise(resolveWithTimeout(0));
 
       // Note: preventDefault and stopPropagation are called in the event handler
       // but we can't easily test them since the event is already dispatched
@@ -175,7 +176,7 @@ describe("Sidebar", () => {
       const clickEvent = new MouseEvent("click", { bubbles: true });
       firstItem.dispatchEvent(clickEvent);
 
-      await new Promise((resolve) => setTimeout(resolve, 10));
+      await new Promise(resolveWithTimeout(10));
 
       expect(consoleErrorSpy).toHaveBeenCalledWith("Error loading blog post:", expect.any(Error));
       consoleErrorSpy.mockRestore();

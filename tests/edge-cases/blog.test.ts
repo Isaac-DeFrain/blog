@@ -19,7 +19,7 @@ import {
   setupMathJaxMock,
   setupMermaidMock,
 } from "../helpers/mocks";
-import { li } from "../../src/utils";
+import { li, resolveWithTimeout } from "../../src/utils";
 
 const TIMEOUT = 2000;
 
@@ -252,7 +252,7 @@ describe("Blog Reader Edge Cases", () => {
       const { BlogReader } = await import("../../src/blog");
       new BlogReader();
 
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await new Promise(resolveWithTimeout(100));
       expect(consoleErrorSpy).toHaveBeenCalled();
 
       consoleErrorSpy.mockRestore();
@@ -268,7 +268,7 @@ describe("Blog Reader Edge Cases", () => {
       const { BlogReader } = await import("../../src/blog");
       new BlogReader();
 
-      await new Promise((resolve) => setTimeout(resolve, 200));
+      await new Promise(resolveWithTimeout(200));
 
       expect(consoleErrorSpy).toHaveBeenCalled();
       const blogContent = document.getElementById("blog-content");
@@ -293,7 +293,7 @@ describe("Blog Reader Edge Cases", () => {
       const { BlogReader } = await import("../../src/blog");
       new BlogReader();
 
-      await new Promise((resolve) => setTimeout(resolve, 200));
+      await new Promise(resolveWithTimeout(200));
 
       expect(consoleErrorSpy).toHaveBeenCalled();
       consoleErrorSpy.mockRestore();
@@ -361,7 +361,7 @@ describe("Blog Reader Edge Cases", () => {
       // Access private method via type assertion (testing only)
       await (reader as any).loadBlogPost("non-existent-post");
 
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await new Promise(resolveWithTimeout(100));
 
       expect(consoleErrorSpy).toHaveBeenCalled();
       const blogContent = document.getElementById("blog-content");
@@ -405,7 +405,7 @@ describe("Blog Reader Edge Cases", () => {
       new BlogReader();
 
       await waitForBlogList(1, { timeout: 2000 });
-      await new Promise((resolve) => setTimeout(resolve, 300));
+      await new Promise(resolveWithTimeout(300));
 
       expect(consoleErrorSpy).toHaveBeenCalled();
       const blogContent = document.getElementById("blog-content");
@@ -482,7 +482,7 @@ describe("Blog Reader Edge Cases", () => {
       link.href = "/post-1";
       link.click();
 
-      await new Promise((resolve) => setTimeout(resolve, 50));
+      await new Promise(resolveWithTimeout(50));
     });
 
     it("should handle link without href", async () => {
@@ -515,7 +515,7 @@ describe("Blog Reader Edge Cases", () => {
       const clickEvent = new MouseEvent("click", { bubbles: true, cancelable: true });
       link.dispatchEvent(clickEvent);
 
-      await new Promise((resolve) => setTimeout(resolve, 50));
+      await new Promise(resolveWithTimeout(50));
     });
 
     it("should handle link outside blog content area", async () => {
@@ -551,7 +551,7 @@ describe("Blog Reader Edge Cases", () => {
       const clickEvent = new MouseEvent("click", { bubbles: true, cancelable: true });
       link.dispatchEvent(clickEvent);
 
-      await new Promise((resolve) => setTimeout(resolve, 50));
+      await new Promise(resolveWithTimeout(50));
 
       // Should not have called pushState again (link outside blog content should not be intercepted)
       expect(mockPushState).toHaveBeenCalledTimes(initialCallCount);
@@ -633,6 +633,96 @@ describe("Blog Reader Edge Cases", () => {
 
         await waitForBlogContent({ timeout: 2000 });
         expect(mockPushState).toHaveBeenCalled();
+      }
+    });
+
+    it("should handle link with pathname matching base path exactly", async () => {
+      setBasePath("/blog/");
+
+      const manifest = createMockManifest(["post-1.md"]);
+      const markdown = createMockMarkdown({
+        name: "Post 1",
+        date: "2024-01-15",
+        content: "[Link to section](#section-1)",
+      });
+
+      const urlHandlers = new Map<string | RegExp, () => Response | Promise<Response>>();
+      urlHandlers.set(/manifest\.json/, () => createMockResponse(manifest));
+      urlHandlers.set(/post-1\.md/, () => createMockTextResponse(markdown));
+
+      global.fetch = createUrlBasedFetchMock(urlHandlers) as typeof fetch;
+      setupMathJaxMock();
+
+      Object.defineProperty(window, "location", {
+        value: {
+          pathname: "/blog/post-1",
+          origin: "http://localhost",
+          href: "http://localhost/blog/post-1",
+        },
+        writable: true,
+      });
+
+      const { BlogReader } = await import("../../src/blog");
+      new BlogReader();
+
+      await waitForBlogList(1, { timeout: 2000 });
+      await waitForBlogContent({ timeout: 2000 });
+
+      const blogContent = document.getElementById("blog-content");
+      const link = blogContent?.querySelector("a[href='#section-1']");
+      if (link) {
+        const scrollIntoViewSpy = vi.spyOn(HTMLElement.prototype, "scrollIntoView").mockImplementation(() => {});
+        const clickEvent = new MouseEvent("click", { bubbles: true, cancelable: true });
+        link.dispatchEvent(clickEvent);
+
+        await new Promise(resolveWithTimeout(100));
+        expect(mockPushState).toHaveBeenCalled();
+        scrollIntoViewSpy.mockRestore();
+      }
+    });
+
+    it("should handle link with pathname matching root path", async () => {
+      setBasePath("/");
+
+      const manifest = createMockManifest(["post-1.md"]);
+      const markdown = createMockMarkdown({
+        name: "Post 1",
+        date: "2024-01-15",
+        content: "[Link to section](#section-1)",
+      });
+
+      const urlHandlers = new Map<string | RegExp, () => Response | Promise<Response>>();
+      urlHandlers.set(/manifest\.json/, () => createMockResponse(manifest));
+      urlHandlers.set(/post-1\.md/, () => createMockTextResponse(markdown));
+
+      global.fetch = createUrlBasedFetchMock(urlHandlers) as typeof fetch;
+      setupMathJaxMock();
+
+      Object.defineProperty(window, "location", {
+        value: {
+          pathname: "/post-1",
+          origin: "http://localhost",
+          href: "http://localhost/post-1",
+        },
+        writable: true,
+      });
+
+      const { BlogReader } = await import("../../src/blog");
+      new BlogReader();
+
+      await waitForBlogList(1, { timeout: 2000 });
+      await waitForBlogContent({ timeout: 2000 });
+
+      const blogContent = document.getElementById("blog-content");
+      const link = blogContent?.querySelector("a[href='#section-1']");
+      if (link) {
+        const scrollIntoViewSpy = vi.spyOn(HTMLElement.prototype, "scrollIntoView").mockImplementation(() => {});
+        const clickEvent = new MouseEvent("click", { bubbles: true, cancelable: true });
+        link.dispatchEvent(clickEvent);
+
+        await new Promise(resolveWithTimeout(100));
+        expect(mockPushState).toHaveBeenCalled();
+        scrollIntoViewSpy.mockRestore();
       }
     });
   });
@@ -791,7 +881,7 @@ describe("Blog Reader Edge Cases", () => {
       (reader as any).scrollToHash("");
       (reader as any).scrollToHash("#");
 
-      await new Promise((resolve) => setTimeout(resolve, 50));
+      await new Promise(resolveWithTimeout(50));
       expect(scrollIntoViewSpy).not.toHaveBeenCalled();
 
       scrollIntoViewSpy.mockRestore();
@@ -820,7 +910,7 @@ describe("Blog Reader Edge Cases", () => {
 
       // Test scrollToHash with non-existent id
       (reader as any).scrollToHash("#non-existent");
-      await new Promise((resolve) => setTimeout(resolve, 50));
+      await new Promise(resolveWithTimeout(50));
       expect(scrollIntoViewSpy).not.toHaveBeenCalled();
 
       scrollIntoViewSpy.mockRestore();
@@ -852,7 +942,7 @@ describe("Blog Reader Edge Cases", () => {
       // Test scrollToHash with anchor name
       (reader as any).scrollToHash("#section-1");
 
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await new Promise(resolveWithTimeout(100));
 
       scrollIntoViewSpy.mockRestore();
     });
@@ -871,7 +961,7 @@ describe("Blog Reader Edge Cases", () => {
       const { BlogReader } = await import("../../src/blog");
       new BlogReader();
 
-      await new Promise((resolve) => setTimeout(resolve, 200));
+      await new Promise(resolveWithTimeout(200));
 
       const blogContent = document.getElementById("blog-content");
       expect(blogContent?.textContent).toContain("No posts available");
@@ -951,7 +1041,7 @@ describe("Blog Reader Edge Cases", () => {
       const testingButton = Array.from(buttons).find((btn) => btn.textContent === "testing") as HTMLButtonElement;
       if (testingButton) {
         testingButton.click();
-        await new Promise((resolve) => setTimeout(resolve, 100));
+        await new Promise(resolveWithTimeout(100));
       }
 
       // Load a post - should preserve topic filter
@@ -998,7 +1088,7 @@ describe("Blog Reader Edge Cases", () => {
       await waitForBlogContent({ timeout: 2000 });
 
       // Wait for hash scrolling
-      await new Promise((resolve) => setTimeout(resolve, 200));
+      await new Promise(resolveWithTimeout(200));
 
       const scrollIntoViewSpy = vi.spyOn(HTMLElement.prototype, "scrollIntoView");
       // Hash scrolling should have been attempted
@@ -1039,7 +1129,7 @@ describe("Blog Reader Edge Cases", () => {
       // Test scrollToHash with element found by ID
       (reader as any).scrollToHash("#test-section");
 
-      await new Promise((resolve) => setTimeout(resolve, 50));
+      await new Promise(resolveWithTimeout(50));
 
       expect(scrollIntoViewSpy).toHaveBeenCalled();
       scrollIntoViewSpy.mockRestore();
@@ -1274,7 +1364,7 @@ describe("Blog Reader Edge Cases", () => {
 
       if (testingButton) {
         testingButton.click();
-        await new Promise((resolve) => setTimeout(resolve, 100));
+        await new Promise(resolveWithTimeout(100));
       }
 
       // Clear posts to trigger reload
@@ -1287,6 +1377,119 @@ describe("Blog Reader Edge Cases", () => {
       // Topic filter should still be active
       const blogContent = document.getElementById("blog-content");
       expect(blogContent?.textContent).toMatch(/Post 1|January 15/);
+    });
+
+    it("should preserve topic filter when handlePostClick is called with multiple posts", async () => {
+      const manifest = createMockManifest(["post-1.md", "post-2.md", "post-3.md"]);
+      const markdown1 = createMockMarkdown({
+        name: "Post 1",
+        date: "2024-01-10",
+        topics: ["testing"],
+      });
+      const markdown2 = createMockMarkdown({
+        name: "Post 2",
+        date: "2024-01-20",
+        topics: ["testing"],
+      });
+      const markdown3 = createMockMarkdown({
+        name: "Post 3",
+        date: "2024-01-15",
+        topics: ["development"],
+      });
+
+      const urlHandlers = new Map<string | RegExp, () => Response | Promise<Response>>();
+      urlHandlers.set(/manifest\.json/, () => createMockResponse(manifest));
+      urlHandlers.set(/post-1\.md/, () => createMockTextResponse(markdown1));
+      urlHandlers.set(/post-2\.md/, () => createMockTextResponse(markdown2));
+      urlHandlers.set(/post-3\.md/, () => createMockTextResponse(markdown3));
+
+      global.fetch = createUrlBasedFetchMock(urlHandlers) as typeof fetch;
+      setupMathJaxMock(true);
+      setupMermaidMock();
+
+      const { BlogReader } = await import("../../src/blog");
+      const reader = new BlogReader();
+
+      await waitForBlogList(3, { timeout: 2000 });
+      await waitForBlogContent({ timeout: 2000 });
+
+      // Set a topic filter to "testing"
+      const topicsBar = document.getElementById("topics-bar");
+      const buttons = topicsBar?.querySelectorAll(".topic-button") || [];
+      const testingButton = Array.from(buttons).find((btn) => btn.textContent === "testing") as HTMLButtonElement;
+
+      if (testingButton) {
+        testingButton.click();
+        await new Promise(resolveWithTimeout(100));
+      }
+
+      // Verify filter is active (should have 2 posts)
+      const blogList = document.getElementById("blog-list");
+      expect(blogList?.children.length).toBe(2);
+
+      // Load a different post - should preserve topic filter and sort correctly
+      await (reader as any).handlePostClick("post-2");
+
+      await waitForBlogContent({ timeout: 5000 });
+
+      // Topic filter should still be active and posts should be sorted
+      expect(blogList?.children.length).toBe(2);
+      const blogContent = document.getElementById("blog-content");
+      expect(blogContent?.textContent).toMatch(/Post 2|January 20/);
+    });
+  });
+
+  describe("Code renderer edge cases", () => {
+    it("should handle code block with no language", async () => {
+      const manifest = createMockManifest(["post-1.md"]);
+      const markdown = createMockMarkdown({
+        name: "Post 1",
+        date: "2024-01-15",
+        content: "```\nplain code\n```",
+      });
+
+      const urlHandlers = new Map<string | RegExp, () => Response | Promise<Response>>();
+      urlHandlers.set(/manifest\.json/, () => createMockResponse(manifest));
+      urlHandlers.set(/post-1\.md/, () => createMockTextResponse(markdown));
+
+      global.fetch = createUrlBasedFetchMock(urlHandlers) as typeof fetch;
+      setupMathJaxMock();
+
+      const { BlogReader } = await import("../../src/blog");
+      new BlogReader();
+
+      await waitForBlogList(1, { timeout: 2000 });
+      await waitForBlogContent({ timeout: 2000 });
+
+      // Code block should be rendered (not as special block)
+      const blogContent = document.getElementById("blog-content");
+      expect(blogContent?.textContent).toContain("plain code");
+    });
+
+    it("should handle code block with unknown language", async () => {
+      const manifest = createMockManifest(["post-1.md"]);
+      const markdown = createMockMarkdown({
+        name: "Post 1",
+        date: "2024-01-15",
+        content: "```unknown-lang\nsome code\n```",
+      });
+
+      const urlHandlers = new Map<string | RegExp, () => Response | Promise<Response>>();
+      urlHandlers.set(/manifest\.json/, () => createMockResponse(manifest));
+      urlHandlers.set(/post-1\.md/, () => createMockTextResponse(markdown));
+
+      global.fetch = createUrlBasedFetchMock(urlHandlers) as typeof fetch;
+      setupMathJaxMock();
+
+      const { BlogReader } = await import("../../src/blog");
+      new BlogReader();
+
+      await waitForBlogList(1, { timeout: 2000 });
+      await waitForBlogContent({ timeout: 2000 });
+
+      // Code block should be rendered
+      const blogContent = document.getElementById("blog-content");
+      expect(blogContent?.textContent).toContain("some code");
     });
   });
 });

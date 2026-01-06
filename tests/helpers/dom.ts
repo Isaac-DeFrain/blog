@@ -172,7 +172,7 @@ export function createUrlBasedFetchMock(
  * Waits for a condition to become true, checking at regular intervals.
  * Useful for waiting for async operations to complete.
  */
-export async function waitFor(
+export async function waitForFiveSeconds(
   condition: () => boolean,
   options: { timeout?: number; interval?: number } = {},
 ): Promise<void> {
@@ -207,7 +207,7 @@ export async function waitForFetchCalls(
   expectedCount: number,
   options: { timeout?: number; interval?: number } = {},
 ): Promise<void> {
-  await waitFor(() => mockFetch.mock.calls.length >= expectedCount, options);
+  await waitForFiveSeconds(() => mockFetch.mock.calls.length >= expectedCount, options);
 }
 
 /**
@@ -217,7 +217,7 @@ export async function waitForBlogList(
   minItems: number = 1,
   options: { timeout?: number; interval?: number } = {},
 ): Promise<void> {
-  await waitFor(() => {
+  await waitForFiveSeconds(() => {
     const blogList = document.getElementById("blog-list");
     return (blogList?.children.length || 0) >= minItems;
   }, options);
@@ -227,7 +227,7 @@ export async function waitForBlogList(
  * Waits for blog content to be loaded (not loading state).
  */
 export async function waitForBlogContent(options: { timeout?: number; interval?: number } = {}): Promise<void> {
-  await waitFor(() => {
+  await waitForFiveSeconds(() => {
     const blogContent = document.getElementById("blog-content");
     if (!blogContent) return false;
     const text = blogContent.textContent || "";

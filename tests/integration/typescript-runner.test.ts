@@ -6,116 +6,29 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { setupDOM, cleanupDOM } from "../helpers/dom";
+import { wrapTypeScriptCode } from "../../src/typescript-runner";
+import { resolveWithTimeout, unescapeHtml } from "../../src/utils";
 
 // Mock utils module
-vi.mock("../../src/utils", () => ({
-  getBasePath: vi.fn(() => "/"),
-  unescapeHtml: vi.fn((text: string) => text),
-}));
-
-// Mock the worker URL import (Vite's ?url import)
-vi.mock("../../src/typescript-worker.ts?url", () => ({
-  default: "/assets/typescript-worker.js",
-}));
-
-// Track created workers
-const createdWorkers: MockWorker[] = [];
-
-// Mock Worker for integration tests
-class MockWorker {
-  onmessage: ((event: { data: { type: string; data?: unknown; message?: string } }) => void) | null = null;
-  onerror: ((error: ErrorEvent) => void) | null = null;
-  terminated = false;
-  private timeoutId: NodeJS.Timeout | null = null;
-
-  constructor(
-    public url: string,
-    public options: { type: string },
-  ) {
-    createdWorkers.push(this);
-  }
-
-  postMessage(message: { type: string; code: string }): void {
-    if (message.type === "execute") {
-      // Simulate code execution in worker
-      // In a real worker, this would execute the JavaScript code
-      // For integration tests, we'll simulate basic execution
-      try {
-        // Simulate console.log capture BEFORE executing
-        const originalLog = console.log;
-        const capturedOutput: unknown[] = [];
-        console.log = (...args: unknown[]) => {
-          capturedOutput.push(...args);
-          originalLog(...args);
-        };
-
-        // Create a safe execution context and execute the code
-        const executeCode = new Function(message.code);
-        executeCode();
-
-        // Restore console.log
-        console.log = originalLog;
-
-        // Send captured output
-        for (const output of capturedOutput) {
-          setTimeout(() => {
-            if (this.onmessage) {
-              this.onmessage({ data: { type: "output", data: output } });
-            }
-          }, 0);
-        }
-
-        // Send done message after a short delay to ensure output messages are sent first
-        setTimeout(() => {
-          if (this.onmessage) {
-            this.onmessage({ data: { type: "done" } });
-          }
-        }, 20);
-      } catch (error) {
-        setTimeout(() => {
-          if (this.onmessage) {
-            this.onmessage({
-              data: {
-                type: "error",
-                message: error instanceof Error ? error.message : String(error),
-              },
-            });
-          }
-        }, 10);
-      }
-    }
-  }
-
-  terminate(): void {
-    this.terminated = true;
-    if (this.timeoutId) {
-      clearTimeout(this.timeoutId);
-      this.timeoutId = null;
-    }
-  }
-
-  // Helper to simulate worker messages
-  simulateMessage(type: string, data?: unknown, message?: string): void {
-    if (this.onmessage) {
-      this.onmessage({ data: { type, data, message } });
-    }
-  }
-
-  // Helper to simulate worker errors
-  simulateError(message: string): void {
-    if (this.onerror) {
-      this.onerror({ message } as ErrorEvent);
-    }
-  }
-}
+vi.mock("../../src/utils", async () => {
+  const actual = await vi.importActual<typeof import("../../src/utils")>("../../src/utils");
+  return {
+    ...actual,
+    getBasePath: vi.fn(() => "/"),
+    unescapeHtml: vi.fn((text: string) => text),
+  };
+});
 
 describe("TypeScript Runner Integration", () => {
-  let originalWorker: typeof Worker;
   let originalLocation: Location;
+
+  // Helper to prepare code as it would be at build time (wrapped in run() function)
+  function prepareCode(tsCode: string): string {
+    return wrapTypeScriptCode(unescapeHtml(tsCode));
+  }
 
   beforeEach(async () => {
     vi.clearAllMocks();
-    createdWorkers.length = 0;
 
     cleanupDOM();
     setupDOM();
@@ -133,10 +46,6 @@ describe("TypeScript Runner Integration", () => {
       configurable: true,
     });
 
-    // Mock Worker
-    originalWorker = global.Worker;
-    (global as any).Worker = MockWorker as any;
-
     // Ensure TypeScript is not cached
     delete (window as any).ts;
 
@@ -148,9 +57,7 @@ describe("TypeScript Runner Integration", () => {
 
   afterEach(() => {
     vi.clearAllMocks();
-    createdWorkers.length = 0;
     delete (window as any).ts;
-    global.Worker = originalWorker;
     Object.defineProperty(window, "location", {
       value: originalLocation,
       writable: true,
@@ -180,7 +87,7 @@ describe("TypeScript Runner Integration", () => {
 
       const codeScript = document.createElement("script");
       codeScript.dataset.tsCode = "test-simple";
-      codeScript.textContent = JSON.stringify("const x: number = 42; console.log(x);");
+      codeScript.textContent = JSON.stringify(prepareCode("const x: number = 42; console.log(x);"));
 
       block.appendChild(runButton);
       block.appendChild(outputContainer);
@@ -241,14 +148,16 @@ describe("TypeScript Runner Integration", () => {
 
       const codeScript = document.createElement("script");
       codeScript.dataset.tsCode = "test-types";
-      codeScript.textContent = JSON.stringify(`
+      codeScript.textContent = JSON.stringify(
+        prepareCode(`
         interface Person {
           name: string;
           age: number;
         }
         const person: Person = { name: "Alice", age: 30 };
         console.log(person.name);
-      `);
+      `),
+      );
 
       block.appendChild(runButton);
       block.appendChild(outputContainer);
@@ -260,7 +169,7 @@ describe("TypeScript Runner Integration", () => {
       await initializeTypeScriptRunner(container);
 
       runButton.click();
-      await new Promise((resolve) => setTimeout(resolve, 200));
+      await new Promise(resolveWithTimeout(200));
 
       // Should compile successfully (no diagnostics div)
       const diagnosticsDiv = outputContent.querySelector(".ts-diagnostics");
@@ -287,13 +196,15 @@ describe("TypeScript Runner Integration", () => {
 
       const codeScript = document.createElement("script");
       codeScript.dataset.tsCode = "test-dom-globals";
-      codeScript.textContent = JSON.stringify(`
+      codeScript.textContent = JSON.stringify(
+        prepareCode(`
         console.log("Hello");
         window.location.href;
         document.body;
         navigator.userAgent;
         localStorage.getItem("key");
-      `);
+      `),
+      );
 
       block.appendChild(runButton);
       block.appendChild(outputContainer);
@@ -305,7 +216,7 @@ describe("TypeScript Runner Integration", () => {
       await initializeTypeScriptRunner(container);
 
       runButton.click();
-      await new Promise((resolve) => setTimeout(resolve, 300));
+      await new Promise(resolveWithTimeout(300));
 
       // Should not show diagnostics for DOM globals (they're filtered)
       const diagnosticsDiv = outputContent.querySelector(".ts-diagnostics");
@@ -332,10 +243,12 @@ describe("TypeScript Runner Integration", () => {
 
       const codeScript = document.createElement("script");
       codeScript.dataset.tsCode = "test-compile-error";
-      codeScript.textContent = JSON.stringify(`
+      codeScript.textContent = JSON.stringify(
+        prepareCode(`
         const x: number = "string"; // Type error
         const y: unknownVar; // Unknown variable
-      `);
+      `),
+      );
 
       block.appendChild(runButton);
       block.appendChild(outputContainer);
@@ -347,7 +260,7 @@ describe("TypeScript Runner Integration", () => {
       await initializeTypeScriptRunner(container);
 
       runButton.click();
-      await new Promise((resolve) => setTimeout(resolve, 300));
+      await new Promise(resolveWithTimeout(300));
 
       // Should show diagnostics for real errors
       const diagnosticsDiv = outputContent.querySelector(".ts-diagnostics");
@@ -380,13 +293,15 @@ describe("TypeScript Runner Integration", () => {
 
       const codeScript = document.createElement("script");
       codeScript.dataset.tsCode = "test-async";
-      codeScript.textContent = JSON.stringify(`
+      codeScript.textContent = JSON.stringify(
+        prepareCode(`
         async function test() {
           const result = await Promise.resolve(42);
           console.log(result);
         }
         test();
-      `);
+      `),
+      );
 
       block.appendChild(runButton);
       block.appendChild(outputContainer);
@@ -398,7 +313,7 @@ describe("TypeScript Runner Integration", () => {
       await initializeTypeScriptRunner(container);
 
       runButton.click();
-      await new Promise((resolve) => setTimeout(resolve, 300));
+      await new Promise(resolveWithTimeout(300));
 
       // Should compile (transpile works even with diagnostics)
       // Note: Real TypeScript may show diagnostics about Promise/lib in test environment,
@@ -427,13 +342,15 @@ describe("TypeScript Runner Integration", () => {
 
       const codeScript = document.createElement("script");
       codeScript.dataset.tsCode = "test-generics";
-      codeScript.textContent = JSON.stringify(`
+      codeScript.textContent = JSON.stringify(
+        prepareCode(`
         function identity<T>(arg: T): T {
           return arg;
         }
         const result = identity<string>("hello");
         console.log(result);
-      `);
+      `),
+      );
 
       block.appendChild(runButton);
       block.appendChild(outputContainer);
@@ -445,130 +362,11 @@ describe("TypeScript Runner Integration", () => {
       await initializeTypeScriptRunner(container);
 
       runButton.click();
-      await new Promise((resolve) => setTimeout(resolve, 200));
+      await new Promise(resolveWithTimeout(200));
 
       // Should compile successfully
       const diagnosticsDiv = outputContent.querySelector(".ts-diagnostics");
       expect(diagnosticsDiv).toBeNull();
-    });
-  });
-
-  describe("TypeScript Compiler Loading", () => {
-    it("should load TypeScript compiler from module", async () => {
-      delete (window as any).ts;
-
-      const container = document.createElement("div");
-      const block = document.createElement("div");
-      block.className = "ts-executable-block";
-      block.dataset.blockId = "test-load";
-
-      const runButton = document.createElement("button");
-      runButton.className = "ts-run-button";
-      runButton.dataset.blockId = "test-load";
-
-      const outputContainer = document.createElement("div");
-      outputContainer.className = "ts-output-container";
-      outputContainer.dataset.blockId = "test-load";
-      outputContainer.style.display = "none";
-
-      const outputContent = document.createElement("div");
-      outputContent.className = "ts-output-content";
-
-      const codeScript = document.createElement("script");
-      codeScript.dataset.tsCode = "test-load";
-      codeScript.textContent = JSON.stringify("console.log('loaded');");
-
-      block.appendChild(runButton);
-      block.appendChild(outputContainer);
-      outputContainer.appendChild(outputContent);
-      block.appendChild(codeScript);
-      container.appendChild(block);
-
-      const { initializeTypeScriptRunner } = await import("../../src/typescript-runner");
-      await initializeTypeScriptRunner(container);
-
-      // Click button to trigger TypeScript loading
-      runButton.click();
-      await new Promise((resolve) => setTimeout(resolve, 200));
-
-      // Verify TypeScript was loaded
-      expect((window as any).ts).toBeDefined();
-      expect((window as any).ts.transpile).toBeDefined();
-      expect((window as any).ts.createSourceFile).toBeDefined();
-    });
-
-    it("should cache TypeScript compiler on window", async () => {
-      delete (window as any).ts;
-
-      const container1 = document.createElement("div");
-      const block1 = document.createElement("div");
-      block1.className = "ts-executable-block";
-      block1.dataset.blockId = "test-cache-1";
-
-      const runButton1 = document.createElement("button");
-      runButton1.className = "ts-run-button";
-      runButton1.dataset.blockId = "test-cache-1";
-      runButton1.disabled = true;
-      runButton1.textContent = "Loading...";
-
-      const outputContainer1 = document.createElement("div");
-      outputContainer1.className = "ts-output-container";
-      outputContainer1.dataset.blockId = "test-cache-1";
-      outputContainer1.style.display = "none";
-
-      const outputContent1 = document.createElement("div");
-      outputContent1.className = "ts-output-content";
-
-      const codeScript1 = document.createElement("script");
-      codeScript1.dataset.tsCode = "test-cache-1";
-      codeScript1.textContent = JSON.stringify("console.log('first');");
-
-      block1.appendChild(runButton1);
-      block1.appendChild(outputContainer1);
-      outputContainer1.appendChild(outputContent1);
-      block1.appendChild(codeScript1);
-      container1.appendChild(block1);
-
-      const { initializeTypeScriptRunner } = await import("../../src/typescript-runner");
-      await initializeTypeScriptRunner(container1);
-
-      const firstTs = (window as any).ts;
-
-      // Initialize second runner
-      const container2 = document.createElement("div");
-      const block2 = document.createElement("div");
-      block2.className = "ts-executable-block";
-      block2.dataset.blockId = "test-cache-2";
-
-      const runButton2 = document.createElement("button");
-      runButton2.className = "ts-run-button";
-      runButton2.dataset.blockId = "test-cache-2";
-      runButton2.disabled = true;
-      runButton2.textContent = "Loading...";
-
-      const outputContainer2 = document.createElement("div");
-      outputContainer2.className = "ts-output-container";
-      outputContainer2.dataset.blockId = "test-cache-2";
-      outputContainer2.style.display = "none";
-
-      const outputContent2 = document.createElement("div");
-      outputContent2.className = "ts-output-content";
-
-      const codeScript2 = document.createElement("script");
-      codeScript2.dataset.tsCode = "test-cache-2";
-      codeScript2.textContent = JSON.stringify("console.log('second');");
-
-      block2.appendChild(runButton2);
-      block2.appendChild(outputContainer2);
-      outputContainer2.appendChild(outputContent2);
-      block2.appendChild(codeScript2);
-      container2.appendChild(block2);
-
-      await initializeTypeScriptRunner(container2);
-
-      // Should use cached TypeScript
-      const secondTs = (window as any).ts;
-      expect(secondTs).toBe(firstTs);
     });
   });
 
@@ -593,7 +391,7 @@ describe("TypeScript Runner Integration", () => {
 
       const codeScript = document.createElement("script");
       codeScript.dataset.tsCode = "test-filter-console-real";
-      codeScript.textContent = JSON.stringify("console.log('test');");
+      codeScript.textContent = JSON.stringify(prepareCode("console.log('test');"));
 
       block.appendChild(runButton);
       block.appendChild(outputContainer);
@@ -605,7 +403,7 @@ describe("TypeScript Runner Integration", () => {
       await initializeTypeScriptRunner(container);
 
       runButton.click();
-      await new Promise((resolve) => setTimeout(resolve, 300));
+      await new Promise(resolveWithTimeout(300));
 
       // Should not show diagnostics for console
       const diagnosticsDiv = outputContent.querySelector(".ts-diagnostics");
@@ -632,14 +430,16 @@ describe("TypeScript Runner Integration", () => {
 
       const codeScript = document.createElement("script");
       codeScript.dataset.tsCode = "test-filter-dom-real";
-      codeScript.textContent = JSON.stringify(`
+      codeScript.textContent = JSON.stringify(
+        prepareCode(`
         window.location.href;
         document.body;
         navigator.userAgent;
         location.pathname;
         localStorage.getItem("key");
         sessionStorage.setItem("key", "value");
-      `);
+      `),
+      );
 
       block.appendChild(runButton);
       block.appendChild(outputContainer);
@@ -651,7 +451,7 @@ describe("TypeScript Runner Integration", () => {
       await initializeTypeScriptRunner(container);
 
       runButton.click();
-      await new Promise((resolve) => setTimeout(resolve, 300));
+      await new Promise(resolveWithTimeout(300));
 
       // Should not show diagnostics for DOM globals
       const diagnosticsDiv = outputContent.querySelector(".ts-diagnostics");

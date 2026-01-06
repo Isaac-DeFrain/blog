@@ -4,6 +4,7 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { typesetMath } from "../../src/mathjax";
+import { resolveWithTimeout } from "../../src/utils";
 
 // Mock window.MathJax (loaded from CDN)
 const mockTypesetPromise = vi.fn().mockResolvedValue(undefined);
@@ -86,7 +87,7 @@ describe("typesetMath", () => {
 
     const element = document.createElement("div");
     // Set a timeout to prevent infinite waiting in test
-    const timeoutPromise = new Promise((resolve) => setTimeout(resolve, 100));
+    const timeoutPromise = new Promise(resolveWithTimeout(100));
     const typesetPromise = typesetMath(element);
     
     await Promise.race([typesetPromise, timeoutPromise]);

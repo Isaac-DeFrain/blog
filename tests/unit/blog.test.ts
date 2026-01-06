@@ -3,7 +3,7 @@
  * highlight configuration, and code highlighting functionality.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { createHighlightConfig } from "../../src/blog";
+import { createHighlightConfig, createTypeScriptExecutableBlock } from "../../src/blog";
 import { parseFrontmatter } from "../../src/utils";
 import type { HLJSApi } from "highlight.js";
 
@@ -304,5 +304,111 @@ describe("createHighlightConfig", () => {
 
     // Should call highlight.js for markdown without nested code blocks
     expect(mockHljs.highlight).toHaveBeenCalledWith(plainMarkdown, { language: "markdown" });
+  });
+
+  it("should skip highlighting for plaintext code blocks with nested code block syntax", () => {
+    const config = createHighlightConfig(mockHljs);
+    const codeWithNestedBlock = "```typescript\nconst x = 1;\n```";
+
+    vi.clearAllMocks();
+    const result = config.highlight(codeWithNestedBlock, "plaintext");
+
+    // Should not call highlight.js for plaintext with nested code blocks
+    expect(mockHljs.highlight).not.toHaveBeenCalled();
+    expect(result).toBe(codeWithNestedBlock);
+  });
+
+  it("should skip highlighting for txt code blocks with nested code block syntax", () => {
+    const config = createHighlightConfig(mockHljs);
+    const codeWithNestedBlock = "```typescript\nconst x = 1;\n```";
+
+    vi.clearAllMocks();
+    const result = config.highlight(codeWithNestedBlock, "txt");
+
+    // Should not call highlight.js for txt with nested code blocks
+    expect(mockHljs.highlight).not.toHaveBeenCalled();
+    expect(result).toBe(codeWithNestedBlock);
+  });
+});
+
+describe("createTypeScriptExecutableBlock", () => {
+  let mockHljs: HLJSApi;
+  let highlightConfig: ReturnType<typeof createHighlightConfig>;
+
+  beforeEach(() => {
+    const knownLanguages: KnownLanguage[] = ["typescript", "javascript", "python", "markdown", "dot", "graphviz"];
+
+    mockHljs = {
+      getLanguage: vi.fn((lang: string) => {
+        return knownLanguages.includes(lang as KnownLanguage) ? { name: lang } : null;
+      }),
+      highlight: vi.fn((code: string, options: { language: string }) => {
+        return {
+          value: `<span class="hljs">${code}</span>`,
+          language: options.language,
+        };
+      }),
+    } as unknown as HLJSApi;
+
+    highlightConfig = createHighlightConfig(mockHljs);
+  });
+
+  it("should create TypeScript executable block with correct structure", () => {
+    const tsCode = "const x = 1;";
+    const blockId = "test-block-1";
+    const result = createTypeScriptExecutableBlock(tsCode, blockId, highlightConfig);
+
+    expect(result).toContain(`data-block-id="${blockId}"`);
+    expect(result).toContain('class="ts-executable-block"');
+    expect(result).toContain('class="ts-run-button"');
+    expect(result).toContain('class="ts-output-container"');
+    expect(result).toContain('class="ts-code-display"');
+    expect(result).toContain('class="typescript"');
+    expect(result).toContain('type="application/json"');
+    expect(result).toContain(`data-ts-code="${blockId}"`);
+  });
+
+  it("should include highlighted code in the output", () => {
+    const tsCode = "const x = 1;";
+    const blockId = "test-block-2";
+    const result = createTypeScriptExecutableBlock(tsCode, blockId, highlightConfig);
+
+    expect(mockHljs.highlight).toHaveBeenCalledWith(tsCode, { language: "typescript" });
+    expect(result).toContain('<span class="hljs">');
+  });
+
+  it("should handle code with HTML entities", () => {
+    const tsCode = "const x = 1 & 2;";
+    const blockId = "test-block-3";
+    const result = createTypeScriptExecutableBlock(tsCode, blockId, highlightConfig);
+
+    expect(result).toContain(blockId);
+    expect(mockHljs.highlight).toHaveBeenCalled();
+  });
+
+  it("should generate unique block IDs", () => {
+    const tsCode = "const x = 1;";
+    const blockId1 = "test-block-4";
+    const blockId2 = "test-block-5";
+
+    const result1 = createTypeScriptExecutableBlock(tsCode, blockId1, highlightConfig);
+    const result2 = createTypeScriptExecutableBlock(tsCode, blockId2, highlightConfig);
+
+    expect(result1).toContain(blockId1);
+    expect(result2).toContain(blockId2);
+    expect(result1).not.toContain(blockId2);
+    expect(result2).not.toContain(blockId1);
+  });
+
+  it("should include processed code in script tag", () => {
+    const tsCode = "const x: number = 1;";
+    const blockId = "test-block-6";
+    const result = createTypeScriptExecutableBlock(tsCode, blockId, highlightConfig);
+
+    // The processed code should be in a JSON script tag
+    expect(result).toContain('type="application/json"');
+    expect(result).toContain('data-ts-code="test-block-6"');
+    // The processed code should be JSON stringified
+    expect(result).toMatch(/<script[^>]*>.*?<\/script>/s);
   });
 });
