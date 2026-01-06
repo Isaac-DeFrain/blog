@@ -441,66 +441,6 @@ describe("typescript-runner", () => {
       expect(errorDiv?.textContent?.length).toBeGreaterThan(0);
     });
 
-    it.skip("should handle execution timeout", async () => {
-      // Note: This test is skipped because testing the timeout mechanism requires
-      // code that runs longer than 10 seconds without blocking the event loop.
-      // A busy loop blocks the event loop, preventing setTimeout from firing.
-      // Testing this properly would require making the run() function async to support await,
-      // or using a different timeout testing strategy.
-      const container = document.createElement("div");
-      const block = document.createElement("div");
-      block.className = "ts-executable-block";
-      block.dataset.blockId = "test-timeout";
-
-      const runButton = document.createElement("button");
-      runButton.className = "ts-run-button";
-      runButton.dataset.blockId = "test-timeout";
-
-      const outputContainer = document.createElement("div");
-      outputContainer.className = "ts-output-container";
-      outputContainer.dataset.blockId = "test-timeout";
-      outputContainer.style.display = "none";
-
-      const outputContent = document.createElement("div");
-      outputContent.className = "ts-output-content";
-
-      // Create code that runs longer than 10 seconds (timeout is 10000ms)
-      // Use a busy loop instead of await to avoid async function issues
-      const codeScript = document.createElement("script");
-      codeScript.dataset.tsCode = "test-timeout";
-      codeScript.textContent = JSON.stringify(
-        prepareCode(`
-          const start = Date.now();
-          while (Date.now() - start < 15000) {
-            // Busy wait
-          }
-        `),
-      );
-
-      block.appendChild(runButton);
-      block.appendChild(outputContainer);
-      outputContainer.appendChild(outputContent);
-      block.appendChild(codeScript);
-      container.appendChild(block);
-
-      const { initializeTypeScriptRunner } = await import("../../src/typescript-runner");
-      await initializeTypeScriptRunner(container);
-
-      runButton.click();
-
-      // Wait for timeout to trigger (should be around 10 seconds)
-      // Use a polling approach to check for the error
-      let errorDiv: Element | null = null;
-      while (!errorDiv) {
-        errorDiv = outputContent.querySelector(".ts-error");
-        await new Promise(resolveWithTimeout(100));
-      }
-
-      // Verify timeout error was displayed
-      expect(errorDiv).toBeDefined();
-      expect(errorDiv?.textContent).toContain("Execution timeout");
-    }, 15000); // 15 second timeout for this test
-
     it("should keep button disabled after execution completes", async () => {
       const container = document.createElement("div");
       const block = document.createElement("div");

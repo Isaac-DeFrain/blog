@@ -96,14 +96,14 @@ export function process404Html(src404: string, dist404: string, basePath: string
 }
 
 /**
- * Generates a manifest file listing all markdown files in the blogs directory
+ * Generates a manifest file listing all markdown files in the posts directory
  * Only generates if the manifest doesn't already exist
  *
- * @param blogsDir - The directory containing blog markdown files
+ * @param postsDir - The directory containing post markdown files
  * @returns The manifest object with files array, or null if generation failed
  */
-export function generateBlogManifest(blogsDir: string, excludeDir?: string): { files: string[] } | null {
-  const manifestPath = join(blogsDir, "manifest.json");
+export function generateBlogManifest(postsDir: string, excludeDir?: string): { files: string[] } | null {
+  const manifestPath = join(postsDir, "manifest.json");
 
   if (existsSync(manifestPath)) {
     try {
@@ -115,10 +115,10 @@ export function generateBlogManifest(blogsDir: string, excludeDir?: string): { f
   }
 
   try {
-    const entries = readdirSync(blogsDir, { withFileTypes: true });
+    const entries = readdirSync(postsDir, { withFileTypes: true, recursive: true });
     const posts = entries
       .filter((entry) => entry.isFile() && entry.name.endsWith(".md"))
-      .filter((entry) => !entry.isDirectory() || entry.name !== excludeDir)
+      .filter((entry) => entry.parentPath.split("/").slice(-1)[0] !== excludeDir)
       .map((entry) => entry.name)
       .sort();
 
