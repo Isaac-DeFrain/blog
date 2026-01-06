@@ -1,6 +1,6 @@
 /// <reference types="vitest/config" />
 import { defineConfig } from "vite";
-import { readFileSync, writeFileSync, copyFileSync, mkdirSync, readdirSync, existsSync, statSync } from "fs";
+import { readFileSync, writeFileSync, copyFileSync, mkdirSync, readdirSync, existsSync, statSync, Dirent } from "fs";
 import { join } from "path";
 import { basePathScript } from "./src/utils";
 
@@ -96,11 +96,15 @@ export function process404Html(src404: string, dist404: string, basePath: string
 }
 
 /**
- * Generates a manifest file listing all markdown files in the posts directory
- * Only generates if the manifest doesn't already exist
+ * Generates a manifest file listing all markdown files found recursively in the posts directory
  *
- * @param postsDir - The directory containing post markdown files
- * @returns The manifest object with files array, or null if generation failed
+ * By default, returns existing manifest if present. Can be forced to regenerate via the
+ * `regenerate` parameter. Excludes markdown files from the specified `excludeDir` if provided.
+ *
+ * @param postsDir - The directory to recursively search for markdown files
+ * @param excludeDir - Optional directory name to exclude from the manifest (e.g. "wip")
+ * @param regenerate - If true, forces regeneration even if manifest exists
+ * @returns The manifest object with sorted files array, or null if generation failed
  */
 export function generateBlogManifest(postsDir: string, excludeDir?: string): { files: string[] } | null {
   const manifestPath = join(postsDir, "manifest.json");
@@ -115,16 +119,16 @@ export function generateBlogManifest(postsDir: string, excludeDir?: string): { f
   }
 
   try {
+    const isIncluded = (entry: Dirent) => {
+      const parentDir = entry.parentPath.split("/").slice(-1)[0];
+      return entry.isFile() && entry.name.endsWith(".md") && parentDir !== excludeDir;
+    };
     const entries = readdirSync(postsDir, { withFileTypes: true, recursive: true });
     const posts = entries
-      .filter((entry) => entry.isFile() && entry.name.endsWith(".md"))
-      .filter((entry) => entry.parentPath.split("/").slice(-1)[0] !== excludeDir)
+      .filter(isIncluded)
       .map((entry) => entry.name)
       .sort();
-
-    const manifest = {
-      files: posts,
-    };
+    const manifest = { files: posts };
 
     writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
     return manifest;
@@ -161,8 +165,10 @@ export default defineConfig({
     //
     {
       name: "serve-posts",
+      /**
+       * Serve posts during development
+       */
       configureServer(server) {
-        // Serve posts directory files during development
         return () => {
           server.middlewares.use((req, res, next) => {
             const url = req.url || "";
@@ -201,8 +207,10 @@ export default defineConfig({
     },
     {
       name: "spa-fallback",
+      /**
+       * Serve index.html for all routes (SPA routing)
+       */
       configureServer(server) {
-        // Serve index.html for all routes (SPA routing)
         return () => {
           server.middlewares.use((req, res, next) => {
             const url = req.url || "";
