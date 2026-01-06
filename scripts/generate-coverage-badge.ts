@@ -18,7 +18,7 @@ interface FileCoverage {
 
 type CoverageData = Record<string, FileCoverage>;
 
-function calculateCoveragePercentage(data: CoverageData): number {
+function calculateStatementCoverage(data: CoverageData): number {
   let totalStatements = 0;
   let coveredStatements = 0;
 
@@ -28,17 +28,20 @@ function calculateCoveragePercentage(data: CoverageData): number {
     coveredStatements += Object.values(statements).filter((count) => count > 0).length;
   }
 
-  if (totalStatements === 0) return 0;
-  return Math.round((coveredStatements / totalStatements) * 100);
+  const statementCoveragePercentage = () => {
+    if (totalStatements === 0) return 0;
+    return (coveredStatements / totalStatements) * 100;
+  };
+  const statementCoverage = statementCoveragePercentage();
+  console.log(`Statement coverage: ${Number(statementCoverage.toFixed(2))}%`);
+
+  return Number(statementCoverage.toFixed(2));
 }
 
 function getCoveragePercentage(): number {
   const coveragePath = join(process.cwd(), "coverage", "coverage-final.json");
   const coverageData = JSON.parse(readFileSync(coveragePath, "utf-8")) as CoverageData;
-
-  // Calculate statements coverage as the primary metric
-  const percentage = calculateCoveragePercentage(coverageData);
-  return percentage;
+  return calculateStatementCoverage(coverageData);
 }
 
 function getBadgeColor(percentage: number): string {
@@ -54,6 +57,7 @@ async function fetchBadgeSVG(percentage: number): Promise<string> {
   const color = getBadgeColor(percentage);
   const url = `https://img.shields.io/badge/coverage-${percentage}%25-${color}`;
   const response = await fetch(url);
+
   if (!response.ok) {
     throw new Error(`Failed to fetch badge: ${response.statusText}`);
   }
@@ -65,6 +69,7 @@ async function main() {
     const percentage = getCoveragePercentage();
     const badgeSVG = await fetchBadgeSVG(percentage);
     const badgePath = join(process.cwd(), "coverage-badge.svg");
+
     writeFileSync(badgePath, badgeSVG);
     console.log(`Coverage badge generated: ${percentage}%`);
   } catch (error) {
@@ -74,4 +79,3 @@ async function main() {
 }
 
 main();
-
