@@ -1,12 +1,6 @@
-import { li, parseDateAsPacificTime, escapeHtml } from "./utils";
-
-export interface BlogPost {
-  id: string;
-  name: string;
-  date: string;
-  file: string;
-  topics: string[];
-}
+import { createListItemElement, formatPostDate, escapeHtml } from "./utils";
+import type { BlogPost } from "./types";
+import { CSS_CLASSES } from "./constants";
 
 export type PostClickCallback = (postId: string) => Promise<void>;
 
@@ -64,7 +58,7 @@ export class Sidebar {
     if (!this.blogList) return;
 
     if (this.posts.length === 0) {
-      this.blogList.innerHTML = li("loading", "No posts available");
+      this.blogList.innerHTML = createListItemElement(CSS_CLASSES.LOADING, "No posts available");
       return;
     }
 
@@ -82,8 +76,8 @@ export class Sidebar {
       h3.innerHTML = escapeHtml(post.name);
 
       const date = document.createElement("div");
-      date.className = "date";
-      date.textContent = this.formatDate(post.date);
+      date.className = CSS_CLASSES.DATE;
+      date.textContent = formatPostDate(post.date);
 
       li.appendChild(h3);
       li.appendChild(date);
@@ -134,25 +128,5 @@ export class Sidebar {
         block: "nearest",
       });
     }
-  }
-
-  /**
-   * Formats a date string into a human-readable format.
-   *
-   * Converts ISO date strings (e.g. "2024-01-15") into a localized format
-   * like "January 15, 2024" using US English locale. The date is interpreted
-   * as Pacific Time.
-   *
-   * @param dateString - ISO format date string (YYYY-MM-DD)
-   * @returns Formatted date string in "Month Day, Year" format
-   */
-  private formatDate(dateString: string): string {
-    const date = parseDateAsPacificTime(dateString);
-    return date.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      timeZone: "America/Los_Angeles",
-    });
   }
 }

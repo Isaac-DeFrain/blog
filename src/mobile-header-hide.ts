@@ -5,6 +5,8 @@
  * when the user scrolls past the sidebar and becomes idle.
  */
 
+import { TIMEOUTS, BREAKPOINTS, THRESHOLDS, CSS_CLASSES, SELECTORS } from "./constants";
+
 /**
  * MobileHeaderHide manages the auto-hide behavior for header and topics bar on mobile.
  * Hides the header and topics bar when:
@@ -24,9 +26,9 @@ export class MobileHeaderHide {
   private lastScrollY: number = 0;
   private scrollUpCount: number = 0;
 
-  private readonly IDLE_DELAY_MS = 2000; // 2 seconds of inactivity
-  private readonly MOBILE_BREAKPOINT = 768;
-  private readonly SCROLL_THRESHOLD = 100; // Number of scroll ups required to show header
+  private readonly IDLE_DELAY_MS = TIMEOUTS.IDLE_DELAY;
+  private readonly MOBILE_BREAKPOINT = BREAKPOINTS.MOBILE;
+  private readonly SCROLL_THRESHOLD = THRESHOLDS.SCROLL_UP_COUNT;
 
   private boundHandlers: {
     scroll?: () => void;
@@ -35,8 +37,8 @@ export class MobileHeaderHide {
   } = {};
 
   constructor() {
-    this.header = document.querySelector(".header");
-    this.topicsContainer = document.querySelector(".topics-container");
+    this.header = document.querySelector(SELECTORS.HEADER);
+    this.topicsContainer = document.querySelector(SELECTORS.TOPICS_CONTAINER);
     this.mobileMediaQuery = window.matchMedia(`(max-width: ${this.MOBILE_BREAKPOINT}px)`);
 
     // Only set up if we're on mobile
@@ -205,7 +207,7 @@ export class MobileHeaderHide {
 
     // Schedule hide after idle period
     this.idleTimeout = window.setTimeout(() => {
-      const sidebar = document.querySelector(".sidebar");
+      const sidebar = document.querySelector(SELECTORS.SIDEBAR);
       if (!sidebar) return;
 
       const sidebarRect = sidebar.getBoundingClientRect();
@@ -223,8 +225,8 @@ export class MobileHeaderHide {
   private hide(): void {
     if (this.isHidden || !this.header || !this.topicsContainer) return;
 
-    this.header.classList.add("header-hidden");
-    this.topicsContainer.classList.add("topics-hidden");
+    this.header.classList.add(CSS_CLASSES.HEADER_HIDDEN);
+    this.topicsContainer.classList.add(CSS_CLASSES.TOPICS_HIDDEN);
     this.isHidden = true;
   }
 
@@ -234,8 +236,8 @@ export class MobileHeaderHide {
   private show(): void {
     if (!this.isHidden || !this.header || !this.topicsContainer) return;
 
-    this.header.classList.remove("header-hidden");
-    this.topicsContainer.classList.remove("topics-hidden");
+    this.header.classList.remove(CSS_CLASSES.HEADER_HIDDEN);
+    this.topicsContainer.classList.remove(CSS_CLASSES.TOPICS_HIDDEN);
     this.isHidden = false;
     this.scrollUpCount = 0; // Reset counter when showing
   }

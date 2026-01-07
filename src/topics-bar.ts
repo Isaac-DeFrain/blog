@@ -1,12 +1,5 @@
-import { parseDateAsPacificTime } from "./utils";
-
-export interface BlogPost {
-  id: string;
-  name: string;
-  date: string;
-  file: string;
-  topics: string[];
-}
+import type { BlogPost } from "./types";
+import { filterAndSortPosts } from "./utils/posts";
 
 export type TopicFilterCallback = (filteredPosts: BlogPost[]) => void;
 
@@ -66,17 +59,8 @@ export class TopicsBar {
 
     // Filter posts and notify callback, similar to button click behavior
     if (!skipCallback) {
-      if (topic === null) {
-        const filteredPosts = [...this.allPosts];
-        this.onFilterChange(filteredPosts);
-      } else {
-        const filteredPosts = this.allPosts
-          .filter((post) => post.topics.some((t) => t.toLowerCase() === topic.toLowerCase()))
-          .sort((a, b) => {
-            return parseDateAsPacificTime(b.date).getTime() - parseDateAsPacificTime(a.date).getTime();
-          });
-        this.onFilterChange(filteredPosts);
-      }
+      const filteredPosts = filterAndSortPosts(this.allPosts, topic);
+      this.onFilterChange(filteredPosts);
     }
   }
 
@@ -129,7 +113,7 @@ export class TopicsBar {
     allButton.textContent = "all";
     allButton.addEventListener("click", () => {
       this.selectedTopic = null;
-      const filteredPosts = [...this.allPosts];
+      const filteredPosts = filterAndSortPosts(this.allPosts, null);
       this.render();
       this.onFilterChange(filteredPosts);
     });
@@ -147,11 +131,7 @@ export class TopicsBar {
       button.textContent = topic.toLowerCase();
       button.addEventListener("click", () => {
         this.selectedTopic = topic;
-        const filteredPosts = this.allPosts
-          .filter((post) => post.topics.some((t) => t.toLowerCase() === topic.toLowerCase()))
-          .sort((a, b) => {
-            return parseDateAsPacificTime(b.date).getTime() - parseDateAsPacificTime(a.date).getTime();
-          });
+        const filteredPosts = filterAndSortPosts(this.allPosts, topic);
 
         this.render();
         this.onFilterChange(filteredPosts);
