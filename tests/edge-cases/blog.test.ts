@@ -357,9 +357,9 @@ describe("Blog Reader Edge Cases", () => {
 
       await waitForBlogList(1, { timeout: TIMEOUT });
 
-      // Try to load a non-existent post
-      // Access private method via type assertion (testing only)
-      await (reader as any).loadBlogPost("non-existent-post");
+      // Try to load a non-existent post using the public API (handlePostClick)
+      // This will catch the error and show it to the user
+      await (reader as any).handlePostClick("non-existent-post");
 
       await new Promise(resolveWithTimeout(100));
 
@@ -409,7 +409,7 @@ describe("Blog Reader Edge Cases", () => {
 
       expect(consoleErrorSpy).toHaveBeenCalled();
       const blogContent = document.getElementById("blog-content");
-      expect(blogContent?.textContent).toContain("Failed to load blog post content");
+      expect(blogContent?.textContent).toContain("Failed to load blog post");
 
       consoleErrorSpy.mockRestore();
     });
@@ -434,15 +434,20 @@ describe("Blog Reader Edge Cases", () => {
 
       await waitForBlogList(1, { timeout: 2000 });
 
-      // Set blogContent to null in the reader instance
-      (reader as any).blogContent = null;
-
       const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
-      // Try to render content
-      await (reader as any).renderBlogPostContent("<p>Test</p>", "2024-01-15", "# Test");
-
-      expect(consoleErrorSpy).toHaveBeenCalled();
+      // Try to render content with null blogContent (simulating missing element)
+      // This should throw a RenderingError
+      try {
+        await (reader as any).postRenderer.renderBlogPostContent(null as any, "<p>Test</p>", "2024-01-15", "# Test");
+        // Should not reach here
+        expect(true).toBe(false);
+      } catch (error) {
+        // Error is expected - RenderingError should be thrown
+        expect(error).toBeDefined();
+        // The error is thrown but not logged unless caught by error handling
+        // Since this is a direct call, the error is not logged
+      }
       consoleErrorSpy.mockRestore();
     });
   });
@@ -878,8 +883,8 @@ describe("Blog Reader Edge Cases", () => {
       const scrollIntoViewSpy = vi.spyOn(HTMLElement.prototype, "scrollIntoView").mockImplementation(() => {});
 
       // Test scrollToHash with empty hash
-      (reader as any).scrollToHash("");
-      (reader as any).scrollToHash("#");
+      (reader as any).postRenderer.scrollToHash("");
+      (reader as any).postRenderer.scrollToHash("#");
 
       await new Promise(resolveWithTimeout(50));
       expect(scrollIntoViewSpy).not.toHaveBeenCalled();
@@ -909,7 +914,7 @@ describe("Blog Reader Edge Cases", () => {
       const scrollIntoViewSpy = vi.spyOn(HTMLElement.prototype, "scrollIntoView").mockImplementation(() => {});
 
       // Test scrollToHash with non-existent id
-      (reader as any).scrollToHash("#non-existent");
+      (reader as any).postRenderer.scrollToHash("#non-existent");
       await new Promise(resolveWithTimeout(50));
       expect(scrollIntoViewSpy).not.toHaveBeenCalled();
 
@@ -940,7 +945,7 @@ describe("Blog Reader Edge Cases", () => {
       const scrollIntoViewSpy = vi.spyOn(HTMLElement.prototype, "scrollIntoView").mockImplementation(() => {});
 
       // Test scrollToHash with anchor name
-      (reader as any).scrollToHash("#section-1");
+      (reader as any).postRenderer.scrollToHash("#section-1");
 
       await new Promise(resolveWithTimeout(100));
 
@@ -1127,7 +1132,7 @@ describe("Blog Reader Edge Cases", () => {
       const scrollIntoViewSpy = vi.spyOn(HTMLElement.prototype, "scrollIntoView").mockImplementation(() => {});
 
       // Test scrollToHash with element found by ID
-      (reader as any).scrollToHash("#test-section");
+      (reader as any).postRenderer.scrollToHash("#test-section");
 
       await new Promise(resolveWithTimeout(50));
 

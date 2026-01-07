@@ -9,12 +9,13 @@ import { join } from "path";
 import { Marked } from "marked";
 import { markedHighlight } from "marked-highlight";
 import hljs from "highlight.js";
-import { createHighlightConfig, createTypeScriptExecutableBlock } from "../../src/blog";
+import { createHighlightConfig } from "../../src/blog";
+import { PostRenderer } from "../../src/blog/PostRenderer";
 import { findUnnestedCodeBlocks } from "../helpers/markdown";
-import { wrapJsCodeRun } from "../../src/typescript-runner";
+import { wrapJsCodeRun } from "../../src/typescript-runner/index";
 
-// Setup marked with TypeScript runner support (using actual implementation from blog.ts)
-async function setupMarkedWithTypeScriptRunner() {
+// Setup marked with TypeScript executable block support
+async function setupMarkedWithTypeScriptExecutableBlock() {
   const { marked } = await import("marked");
   const { markedHighlight } = await import("marked-highlight");
   const hljsModule = await import("highlight.js");
@@ -35,8 +36,9 @@ async function setupMarkedWithTypeScriptRunner() {
         }
 
         if (lang === "typescript:run") {
+          const renderer = new PostRenderer();
           const blockId = `ts-run-test-${Math.random().toString(36).substring(2, 11)}`;
-          return createTypeScriptExecutableBlock(text, blockId, highlightConfig);
+          return renderer.createTypeScriptExecutableBlock(text, blockId, highlightConfig);
         }
 
         return false;
@@ -156,48 +158,31 @@ describe("Code Blocks Rendering Integration Test", () => {
         container.innerHTML = html;
 
         // Count regular code blocks (<pre><code>)
-        const regularCodeBlocks = container.querySelectorAll("pre > code").length;
-
         // Count mermaid blocks (rendered as <pre class="mermaid">)
-        const mermaidBlocks = container.querySelectorAll("pre.mermaid").length;
-
         // Count graphviz blocks (rendered as <pre class="graphviz">)
-        const graphvizBlocks = container.querySelectorAll("pre.graphviz").length;
-
         // Count typescript:run blocks (rendered as <pre><code> inside .ts-code-display)
-        const tsRunBlocks = container.querySelectorAll(".ts-code-display pre code").length;
+        const regularCodeBlocksNum = container.querySelectorAll("pre > code").length;
+        const mermaidBlocksNum = container.querySelectorAll("pre.mermaid").length;
+        const graphvizBlocksNum = container.querySelectorAll("pre.graphviz").length;
+        const tsRunBlocksNum = container.querySelectorAll(".ts-code-display pre code").length;
 
-        const totalRenderedBlocks = regularCodeBlocks + mermaidBlocks + graphvizBlocks + tsRunBlocks;
-
-        // Find all code blocks (both 3-backtick and 4-backtick)
-        const codeBlocks: { lang: string | null; start: number; end: number }[] = [];
-
-        // Add all 3-backtick blocks (excluding those nested in 4-backtick plaintext blocks)
+        const totalRenderedBlocksNum = regularCodeBlocksNum + mermaidBlocksNum + graphvizBlocksNum + tsRunBlocksNum;
         const unnestedCodeBlocks = findUnnestedCodeBlocks(markdownWithoutFrontmatter);
-        for (const block of unnestedCodeBlocks) {
-          codeBlocks.push({
-            lang: block.lang,
-            start: block.start,
-            end: block.end,
-          });
+        // Rendered blocks should be less than or equal to unnested blocks (some blocks might be skipped)
+        // But we should have at least some blocks rendered if there are any
+        if (unnestedCodeBlocks.length > 0) {
+          expect(totalRenderedBlocksNum).toBeGreaterThan(0);
         }
 
-        if (codeBlocks.length === 0) {
-          continue;
-        }
-
-        // The rendered blocks should match or exceed top-level blocks
-        // (some blocks like typescript:run create additional <pre><code> structures)
-        // Note: Some code blocks may not be rendered if they're in special formats
-        // or handled differently, so we accept the actual rendered count
-        expect(totalRenderedBlocks).toBeGreaterThan(0);
+        // Verify all unnested blocks are rendered
+        expect(totalRenderedBlocksNum).toBeGreaterThanOrEqual(unnestedCodeBlocks.length);
       }
     });
   });
 
   describe("typescript:run code blocks", () => {
     it("should handle HTML-encoded text from markedHighlight", async () => {
-      const markedWithTS = await setupMarkedWithTypeScriptRunner();
+      const markedWithTS = await setupMarkedWithTypeScriptExecutableBlock();
 
       // Test that HTML-encoded text is properly unescaped before storing.
       // Note: unescapeHtml strips HTML tags, so tags in the code will be removed
@@ -242,16 +227,12 @@ describe("Code Blocks Rendering Integration Test", () => {
         expect(scriptTag).not.toBeNull();
 
         const extractedCode = JSON.parse(scriptTag!.textContent || "");
-
-        // The code stored should be wrapped in a run() function at build time
-        // and unescaped (entities converted back to characters)
-        // HTML tags should be stripped by unescapeHtml
         expect(extractedCode).toBe(wrapJsCodeRun(testCase.expectedAfterUnescape));
       }
     });
 
     it("should handle multiple typescript:run blocks in the same markdown", async () => {
-      const markedWithTS = await setupMarkedWithTypeScriptRunner();
+      const markedWithTS = await setupMarkedWithTypeScriptExecutableBlock();
 
       const code1 = "const x = 1;";
       const code2 = 'const y = "test";';

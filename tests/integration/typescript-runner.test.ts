@@ -6,7 +6,7 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { setupDOM, cleanupDOM } from "../helpers/dom";
-import { wrapTypeScriptCode } from "../../src/typescript-runner";
+import { wrapTypeScriptCode } from "../../src/typescript-runner/index";
 import { resolveWithTimeout, unescapeHtml } from "../../src/utils";
 
 // Mock utils module
@@ -95,7 +95,7 @@ describe("TypeScript Runner Integration", () => {
       block.appendChild(codeScript);
       container.appendChild(block);
 
-      const { initializeTypeScriptRunner } = await import("../../src/typescript-runner");
+      const { initializeTypeScriptRunner } = await import("../../src/typescript-runner/index");
       await initializeTypeScriptRunner(container);
 
       // Verify button is enabled
@@ -165,7 +165,7 @@ describe("TypeScript Runner Integration", () => {
       block.appendChild(codeScript);
       container.appendChild(block);
 
-      const { initializeTypeScriptRunner } = await import("../../src/typescript-runner");
+      const { initializeTypeScriptRunner } = await import("../../src/typescript-runner/index");
       await initializeTypeScriptRunner(container);
 
       runButton.click();
@@ -212,7 +212,7 @@ describe("TypeScript Runner Integration", () => {
       block.appendChild(codeScript);
       container.appendChild(block);
 
-      const { initializeTypeScriptRunner } = await import("../../src/typescript-runner");
+      const { initializeTypeScriptRunner } = await import("../../src/typescript-runner/index");
       await initializeTypeScriptRunner(container);
 
       runButton.click();
@@ -256,7 +256,7 @@ describe("TypeScript Runner Integration", () => {
       block.appendChild(codeScript);
       container.appendChild(block);
 
-      const { initializeTypeScriptRunner } = await import("../../src/typescript-runner");
+      const { initializeTypeScriptRunner } = await import("../../src/typescript-runner/index");
       await initializeTypeScriptRunner(container);
 
       runButton.click();
@@ -309,7 +309,7 @@ describe("TypeScript Runner Integration", () => {
       block.appendChild(codeScript);
       container.appendChild(block);
 
-      const { initializeTypeScriptRunner } = await import("../../src/typescript-runner");
+      const { initializeTypeScriptRunner } = await import("../../src/typescript-runner/index");
       await initializeTypeScriptRunner(container);
 
       runButton.click();
@@ -358,7 +358,7 @@ describe("TypeScript Runner Integration", () => {
       block.appendChild(codeScript);
       container.appendChild(block);
 
-      const { initializeTypeScriptRunner } = await import("../../src/typescript-runner");
+      const { initializeTypeScriptRunner } = await import("../../src/typescript-runner/index");
       await initializeTypeScriptRunner(container);
 
       runButton.click();
@@ -399,7 +399,7 @@ describe("TypeScript Runner Integration", () => {
       block.appendChild(codeScript);
       container.appendChild(block);
 
-      const { initializeTypeScriptRunner } = await import("../../src/typescript-runner");
+      const { initializeTypeScriptRunner } = await import("../../src/typescript-runner/index");
       await initializeTypeScriptRunner(container);
 
       runButton.click();
@@ -447,7 +447,7 @@ describe("TypeScript Runner Integration", () => {
       block.appendChild(codeScript);
       container.appendChild(block);
 
-      const { initializeTypeScriptRunner } = await import("../../src/typescript-runner");
+      const { initializeTypeScriptRunner } = await import("../../src/typescript-runner/index");
       await initializeTypeScriptRunner(container);
 
       runButton.click();
