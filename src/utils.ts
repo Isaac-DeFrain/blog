@@ -1,12 +1,38 @@
 // Utility functions for creating HTML elements
 
-export const div = <T>(className: T, content: T): string => {
+/**
+ * Creates an HTML div element string with a class and content.
+ *
+ * @param className - CSS class name(s) for the div
+ * @param content - HTML content for the div
+ * @returns HTML string for the div element
+ */
+export function createDivElement(className: string, content: string): string {
   return `<div class="${className}">${content}</div>`;
-};
+}
 
-export const li = <T>(className: T, content: T): string => {
+/**
+ * Creates an HTML li element string with a class and content.
+ *
+ * @param className - CSS class name(s) for the li
+ * @param content - HTML content for the li
+ * @returns HTML string for the li element
+ */
+export function createListItemElement(className: string, content: string): string {
   return `<li class="${className}">${content}</li>`;
-};
+}
+
+/**
+ * @deprecated Use createDivElement instead
+ * Legacy alias for createDivElement
+ */
+export const div = createDivElement;
+
+/**
+ * @deprecated Use createListItemElement instead
+ * Legacy alias for createListItemElement
+ */
+export const li = createListItemElement;
 
 /**
  * Gets the base path for the application.
@@ -15,7 +41,6 @@ export const li = <T>(className: T, content: T): string => {
  * @returns The base path (e.g. "/blog/" or "/")
  */
 export function getBasePath(): string {
-  // @ts-expect-error - Injected by build process
   return window.__BASE_PATH__ || "/";
 }
 
@@ -102,6 +127,17 @@ export function formatDateAsPacificTime(dateString: string): string {
     day: "numeric",
     timeZone: "America/Los_Angeles",
   });
+}
+
+/**
+ * Formats a blog post date into a human-readable format.
+ * Alias for formatDateAsPacificTime for consistency.
+ *
+ * @param dateString - ISO format date string (YYYY-MM-DD)
+ * @returns Formatted date string in "Month Day, Year" format
+ */
+export function formatPostDate(dateString: string): string {
+  return formatDateAsPacificTime(dateString);
 }
 
 /**
