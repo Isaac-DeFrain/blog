@@ -3,7 +3,7 @@
  */
 
 import { vi } from "vitest";
-import type { BlogPost } from "../../src/topics-bar";
+import type { BlogPost } from "../../src/types";
 
 /**
  * Creates a mock blog post

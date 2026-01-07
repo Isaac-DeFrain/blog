@@ -11,7 +11,7 @@ export const CODE_BLOCK_REGEX = /```(\w+)?\n([\s\S]*?)```/g;
 /**
  * Regex pattern to match 4-backtick plaintext code blocks.
  */
-export const FOUR_TICK_PLAINTEXT_REGEX = /````[plaintext|txt]\n([\s\S]*?)````/g;
+export const FOUR_TICK_PLAINTEXT_REGEX = /````(?:plaintext|txt)\n([\s\S]*?)````/g;
 
 /**
  * Represents a code block found in markdown with its position and content.
@@ -21,6 +21,40 @@ export interface CodeBlock {
   code: string;
   start: number;
   end: number;
+}
+
+/**
+ * Finds all code blocks in markdown content, including both 3-backtick code blocks and 4-backtick plaintext blocks.
+ * @param markdown - The markdown content to search
+ * @returns Array of all code blocks found with their language, content, and position information
+ */
+export function findAllCodeBlocks(markdown: string): CodeBlock[] {
+  const codeBlocks: CodeBlock[] = [];
+
+  // Find all 3-backtick code blocks
+  CODE_BLOCK_REGEX.lastIndex = 0;
+  let match: RegExpExecArray | null;
+  while ((match = CODE_BLOCK_REGEX.exec(markdown)) !== null) {
+    codeBlocks.push({
+      lang: match[1] || null,
+      code: match[2],
+      start: match.index,
+      end: match.index + match[0].length,
+    });
+  }
+
+  // Find all 4-backtick plaintext blocks
+  FOUR_TICK_PLAINTEXT_REGEX.lastIndex = 0;
+  while ((match = FOUR_TICK_PLAINTEXT_REGEX.exec(markdown)) !== null) {
+    codeBlocks.push({
+      lang: "plaintext",
+      code: match[1] || "",
+      start: match.index,
+      end: match.index + match[0].length,
+    });
+  }
+
+  return codeBlocks;
 }
 
 /**
