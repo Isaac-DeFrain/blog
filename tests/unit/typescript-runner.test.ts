@@ -2,8 +2,13 @@
  * Unit tests for TypeScript runner module.
  * Tests TypeScript type stripping, code execution, and initialization.
  */
+
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { wrapTypeScriptCode, stripTypeScriptTypes } from "../../src/typescript-runner";
+import {
+  wrapTypeScriptCode,
+  stripTypeScriptTypes,
+  initializeTypeScriptRunner,
+} from "../../src/typescript-runner/index";
 import { resolveWithTimeout } from "../../src/utils";
 
 // Mock utils module
@@ -89,7 +94,6 @@ describe("typescript-runner", () => {
       block.appendChild(codeScript);
       container.appendChild(block);
 
-      const { initializeTypeScriptRunner } = await import("../../src/typescript-runner");
       await initializeTypeScriptRunner(container);
 
       runButton.click();
@@ -130,7 +134,6 @@ describe("typescript-runner", () => {
       block.appendChild(codeScript);
       container.appendChild(block);
 
-      const { initializeTypeScriptRunner } = await import("../../src/typescript-runner");
       await initializeTypeScriptRunner(container);
 
       runButton.click();
@@ -172,7 +175,6 @@ describe("typescript-runner", () => {
       block.appendChild(codeScript);
       container.appendChild(block);
 
-      const { initializeTypeScriptRunner } = await import("../../src/typescript-runner");
       await initializeTypeScriptRunner(container);
 
       runButton.click();
@@ -214,7 +216,6 @@ describe("typescript-runner", () => {
       block.appendChild(codeScript);
       container.appendChild(block);
 
-      const { initializeTypeScriptRunner } = await import("../../src/typescript-runner");
       await initializeTypeScriptRunner(container);
 
       runButton.click();
@@ -259,7 +260,6 @@ describe("typescript-runner", () => {
       block.appendChild(codeScript);
       container.appendChild(block);
 
-      const { initializeTypeScriptRunner } = await import("../../src/typescript-runner");
       await initializeTypeScriptRunner(container);
 
       runButton.click();
@@ -298,7 +298,6 @@ describe("typescript-runner", () => {
       block.appendChild(codeScript);
       container.appendChild(block);
 
-      const { initializeTypeScriptRunner } = await import("../../src/typescript-runner");
       await initializeTypeScriptRunner(container);
 
       runButton.click();
@@ -339,7 +338,6 @@ describe("typescript-runner", () => {
       block.appendChild(codeScript);
       container.appendChild(block);
 
-      const { initializeTypeScriptRunner } = await import("../../src/typescript-runner");
       await initializeTypeScriptRunner(container);
 
       runButton.click();
@@ -381,7 +379,6 @@ describe("typescript-runner", () => {
       block.appendChild(codeScript);
       container.appendChild(block);
 
-      const { initializeTypeScriptRunner } = await import("../../src/typescript-runner");
       await initializeTypeScriptRunner(container);
 
       runButton.click();
@@ -426,7 +423,6 @@ describe("typescript-runner", () => {
       block.appendChild(codeScript);
       container.appendChild(block);
 
-      const { initializeTypeScriptRunner } = await import("../../src/typescript-runner");
       await initializeTypeScriptRunner(container);
 
       runButton.click();
@@ -469,7 +465,6 @@ describe("typescript-runner", () => {
       block.appendChild(codeScript);
       container.appendChild(block);
 
-      const { initializeTypeScriptRunner } = await import("../../src/typescript-runner");
       await initializeTypeScriptRunner(container);
 
       expect(runButton.disabled).toBe(false);
@@ -517,7 +512,6 @@ describe("typescript-runner", () => {
       block.appendChild(codeScript);
       container.appendChild(block);
 
-      const { initializeTypeScriptRunner } = await import("../../src/typescript-runner");
       await initializeTypeScriptRunner(container);
 
       // First click
@@ -570,7 +564,6 @@ describe("typescript-runner", () => {
       block.appendChild(codeScript);
       container.appendChild(block);
 
-      const { initializeTypeScriptRunner } = await import("../../src/typescript-runner");
       await initializeTypeScriptRunner(container);
 
       // Verify button is enabled and ready to use
@@ -586,7 +579,6 @@ describe("typescript-runner", () => {
 
       container.appendChild(block);
 
-      const { initializeTypeScriptRunner } = await import("../../src/typescript-runner");
       await initializeTypeScriptRunner(container);
 
       // Should not throw
@@ -601,7 +593,6 @@ describe("typescript-runner", () => {
 
       container.appendChild(block);
 
-      const { initializeTypeScriptRunner } = await import("../../src/typescript-runner");
       await initializeTypeScriptRunner(container);
 
       // Should not throw
@@ -621,7 +612,6 @@ describe("typescript-runner", () => {
       block.appendChild(runButton);
       container.appendChild(block);
 
-      const { initializeTypeScriptRunner } = await import("../../src/typescript-runner");
       await initializeTypeScriptRunner(container);
 
       // Should not throw
@@ -650,7 +640,6 @@ describe("typescript-runner", () => {
       outputContainer.appendChild(outputContent);
       container.appendChild(block);
 
-      const { initializeTypeScriptRunner } = await import("../../src/typescript-runner");
       await initializeTypeScriptRunner(container);
 
       // Should not throw
@@ -688,7 +677,6 @@ describe("typescript-runner", () => {
         container.appendChild(block);
       }
 
-      const { initializeTypeScriptRunner } = await import("../../src/typescript-runner");
       await initializeTypeScriptRunner(container);
 
       // Verify all buttons have handlers
@@ -725,7 +713,6 @@ describe("typescript-runner", () => {
       block.appendChild(codeScript);
       container.appendChild(block);
 
-      const { initializeTypeScriptRunner } = await import("../../src/typescript-runner");
       await initializeTypeScriptRunner(container);
 
       // Verify initial state
@@ -781,7 +768,6 @@ describe("typescript-runner", () => {
       block.appendChild(codeScript);
       container.appendChild(block);
 
-      const { initializeTypeScriptRunner } = await import("../../src/typescript-runner");
       await initializeTypeScriptRunner(container);
 
       // Should not throw
@@ -791,7 +777,6 @@ describe("typescript-runner", () => {
     it("should handle empty container", async () => {
       const container = document.createElement("div");
 
-      const { initializeTypeScriptRunner } = await import("../../src/typescript-runner");
       await initializeTypeScriptRunner(container);
 
       // Should not throw
@@ -825,8 +810,6 @@ describe("typescript-runner", () => {
       outputContainer.appendChild(outputContent);
       block.appendChild(codeScript);
       container.appendChild(block);
-
-      const { initializeTypeScriptRunner } = await import("../../src/typescript-runner");
 
       // Invalid JSON causes JSON.parse to throw during initialization
       // This is expected behavior - the code doesn't handle invalid JSON gracefully
@@ -862,7 +845,6 @@ describe("typescript-runner", () => {
       block.appendChild(codeScript);
       container.appendChild(block);
 
-      const { initializeTypeScriptRunner } = await import("../../src/typescript-runner");
       await initializeTypeScriptRunner(container);
 
       // Button text should be set to "Run"
@@ -898,7 +880,6 @@ describe("typescript-runner", () => {
       block.appendChild(codeScript);
       container.appendChild(block);
 
-      const { initializeTypeScriptRunner } = await import("../../src/typescript-runner");
       await initializeTypeScriptRunner(container);
 
       // Button text should be set to "Run"
@@ -935,7 +916,6 @@ describe("typescript-runner", () => {
       block.appendChild(codeScript);
       container.appendChild(block);
 
-      const { initializeTypeScriptRunner } = await import("../../src/typescript-runner");
       await initializeTypeScriptRunner(container);
 
       runButton.click();
@@ -977,7 +957,6 @@ describe("typescript-runner", () => {
       block.appendChild(codeScript);
       container.appendChild(block);
 
-      const { initializeTypeScriptRunner } = await import("../../src/typescript-runner");
       await initializeTypeScriptRunner(container);
 
       runButton.click();
@@ -1019,7 +998,6 @@ describe("typescript-runner", () => {
       block.appendChild(codeScript);
       container.appendChild(block);
 
-      const { initializeTypeScriptRunner } = await import("../../src/typescript-runner");
       await initializeTypeScriptRunner(container);
 
       runButton.click();
@@ -1061,7 +1039,6 @@ describe("typescript-runner", () => {
       block.appendChild(codeScript);
       container.appendChild(block);
 
-      const { initializeTypeScriptRunner } = await import("../../src/typescript-runner");
       await initializeTypeScriptRunner(container);
 
       runButton.click();
@@ -1102,7 +1079,6 @@ describe("typescript-runner", () => {
       block.appendChild(codeScript);
       container.appendChild(block);
 
-      const { initializeTypeScriptRunner } = await import("../../src/typescript-runner");
       await initializeTypeScriptRunner(container);
 
       runButton.click();
@@ -1150,7 +1126,6 @@ describe("typescript-runner", () => {
       block.appendChild(codeScript);
       container.appendChild(block);
 
-      const { initializeTypeScriptRunner } = await import("../../src/typescript-runner");
       await initializeTypeScriptRunner(container);
 
       runButton.click();
@@ -1190,7 +1165,6 @@ describe("typescript-runner", () => {
       block.appendChild(codeScript);
       container.appendChild(block);
 
-      const { initializeTypeScriptRunner } = await import("../../src/typescript-runner");
       await initializeTypeScriptRunner(container);
 
       runButton.click();
@@ -1231,7 +1205,6 @@ describe("typescript-runner", () => {
       block.appendChild(codeScript);
       container.appendChild(block);
 
-      const { initializeTypeScriptRunner } = await import("../../src/typescript-runner");
       await initializeTypeScriptRunner(container);
 
       runButton.click();
@@ -1281,7 +1254,6 @@ describe("typescript-runner", () => {
       block.appendChild(codeScript);
       container.appendChild(block);
 
-      const { initializeTypeScriptRunner } = await import("../../src/typescript-runner");
       await initializeTypeScriptRunner(container);
 
       runButton.click();

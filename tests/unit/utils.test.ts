@@ -3,7 +3,14 @@
  * HTML escaping, and DOM helper functions.
  */
 import { describe, it, expect } from "vitest";
-import { parseDateAsPacificTime, formatDateAsPacificTime, escapeHtml, unescapeHtml, div, li } from "../../src/utils";
+import {
+  parseDateAsPacificTime,
+  formatDateAsPacificTime,
+  escapeHtml,
+  unescapeHtml,
+  createDivElement,
+  createListItemElement,
+} from "../../src/utils";
 
 describe("parseDateAsPacificTime", () => {
   it("should parse a valid date string", () => {
@@ -188,37 +195,37 @@ describe("unescapeHtml", () => {
 
 describe("div", () => {
   it("should create a div with class and content", () => {
-    expect(div("test-class", "test content")).toBe('<div class="test-class">test content</div>');
+    expect(createDivElement("test-class", "test content")).toBe('<div class="test-class">test content</div>');
   });
 
   it("should handle empty content", () => {
-    expect(div("empty", "")).toBe('<div class="empty"></div>');
+    expect(createDivElement("empty", "")).toBe('<div class="empty"></div>');
   });
 
   it("should handle HTML content", () => {
-    expect(div("container", "<p>HTML</p>")).toBe('<div class="container"><p>HTML</p></div>');
+    expect(createDivElement("container", "<p>HTML</p>")).toBe('<div class="container"><p>HTML</p></div>');
   });
 
   it("should handle special characters in content", () => {
-    expect(div("test", 'Say "hello"')).toBe('<div class="test">Say "hello"</div>');
+    expect(createDivElement("test", 'Say "hello"')).toBe('<div class="test">Say "hello"</div>');
   });
 });
 
 describe("li", () => {
   it("should create an li with class and content", () => {
-    expect(li("list-item", "item content")).toBe('<li class="list-item">item content</li>');
+    expect(createListItemElement("list-item", "item content")).toBe('<li class="list-item">item content</li>');
   });
 
   it("should handle empty content", () => {
-    expect(li("empty", "")).toBe('<li class="empty"></li>');
+    expect(createListItemElement("empty", "")).toBe('<li class="empty"></li>');
   });
 
   it("should handle HTML content", () => {
-    expect(li("item", "<strong>Bold</strong>")).toBe('<li class="item"><strong>Bold</strong></li>');
+    expect(createListItemElement("item", "<strong>Bold</strong>")).toBe('<li class="item"><strong>Bold</strong></li>');
   });
 
   it("should handle special characters in content", () => {
-    expect(li("test", "It's working")).toBe('<li class="test">It\'s working</li>');
+    expect(createListItemElement("test", "It's working")).toBe('<li class="test">It\'s working</li>');
   });
 });
 

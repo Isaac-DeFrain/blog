@@ -3,11 +3,14 @@
  * highlight configuration, and code highlighting functionality.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { createHighlightConfig, createTypeScriptExecutableBlock } from "../../src/blog";
+import { createHighlightConfig } from "../../src/blog";
+import { PostRenderer } from "../../src/blog/PostRenderer";
 import { parseFrontmatter } from "../../src/utils";
 import type { HLJSApi } from "highlight.js";
 
 type KnownLanguage = "typescript" | "javascript" | "python" | "markdown" | "dot" | "graphviz";
+
+const renderer = new PostRenderer();
 
 describe("parseFrontmatter", () => {
   it("should parse valid frontmatter with all fields", () => {
@@ -356,7 +359,7 @@ describe("createTypeScriptExecutableBlock", () => {
   it("should create TypeScript executable block with correct structure", () => {
     const tsCode = "const x = 1;";
     const blockId = "test-block-1";
-    const result = createTypeScriptExecutableBlock(tsCode, blockId, highlightConfig);
+    const result = renderer.createTypeScriptExecutableBlock(tsCode, blockId, highlightConfig);
 
     expect(result).toContain(`data-block-id="${blockId}"`);
     expect(result).toContain('class="ts-executable-block"');
@@ -371,7 +374,7 @@ describe("createTypeScriptExecutableBlock", () => {
   it("should include highlighted code in the output", () => {
     const tsCode = "const x = 1;";
     const blockId = "test-block-2";
-    const result = createTypeScriptExecutableBlock(tsCode, blockId, highlightConfig);
+    const result = renderer.createTypeScriptExecutableBlock(tsCode, blockId, highlightConfig);
 
     expect(mockHljs.highlight).toHaveBeenCalledWith(tsCode, { language: "typescript" });
     expect(result).toContain('<span class="hljs">');
@@ -380,7 +383,7 @@ describe("createTypeScriptExecutableBlock", () => {
   it("should handle code with HTML entities", () => {
     const tsCode = "const x = 1 & 2;";
     const blockId = "test-block-3";
-    const result = createTypeScriptExecutableBlock(tsCode, blockId, highlightConfig);
+    const result = renderer.createTypeScriptExecutableBlock(tsCode, blockId, highlightConfig);
 
     expect(result).toContain(blockId);
     expect(mockHljs.highlight).toHaveBeenCalled();
@@ -391,8 +394,8 @@ describe("createTypeScriptExecutableBlock", () => {
     const blockId1 = "test-block-4";
     const blockId2 = "test-block-5";
 
-    const result1 = createTypeScriptExecutableBlock(tsCode, blockId1, highlightConfig);
-    const result2 = createTypeScriptExecutableBlock(tsCode, blockId2, highlightConfig);
+    const result1 = renderer.createTypeScriptExecutableBlock(tsCode, blockId1, highlightConfig);
+    const result2 = renderer.createTypeScriptExecutableBlock(tsCode, blockId2, highlightConfig);
 
     expect(result1).toContain(blockId1);
     expect(result2).toContain(blockId2);
@@ -403,7 +406,7 @@ describe("createTypeScriptExecutableBlock", () => {
   it("should include processed code in script tag", () => {
     const tsCode = "const x: number = 1;";
     const blockId = "test-block-6";
-    const result = createTypeScriptExecutableBlock(tsCode, blockId, highlightConfig);
+    const result = renderer.createTypeScriptExecutableBlock(tsCode, blockId, highlightConfig);
 
     // The processed code should be in a JSON script tag
     expect(result).toContain('type="application/json"');
