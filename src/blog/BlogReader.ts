@@ -1,0 +1,355 @@
+/**
+ * @module blog/BlogReader
+ *
+ * The main blog reader orchestrator which coordinates blog post loading, rendering, and navigation.
+ *
+ * This class acts as a thin orchestrator that delegates to specialized classes:
+ * - PostLoader: Loading posts from the server
+ * - PostRenderer: Rendering markdown to HTML
+ * - LinkInterceptor: Handling SPA routing
+ */
+
+import { ThemeManager } from "../theme";
+import { TopicsBar } from "../topics-bar";
+import { Sidebar } from "../sidebar";
+import type { BlogPost } from "../types";
+import { PostLoader } from "./PostLoader";
+import { PostRenderer } from "./PostRenderer";
+import { LinkInterceptor } from "./LinkInterceptor";
+import { PathResolver } from "../utils/path-resolver";
+import { filterAndSortPosts } from "../utils/posts";
+import { PostNotFoundError, PostLoadError, RenderingError } from "../errors";
+import { logError } from "../errors";
+import { getBasePath, createDivElement, escapeHtml } from "../utils";
+import { getElementByIdSafe } from "../utils/dom";
+import { ELEMENT_IDS, CSS_CLASSES, ERROR_MESSAGES, LOADING_MESSAGES } from "../constants";
+import type { HLJSApi } from "highlight.js";
+import { unescapeHtml } from "../utils";
+import { CODE_LANGUAGES, REGEX_PATTERNS } from "../constants";
+
+/**
+ * Creates highlight.js configuration for marked-highlight.
+ * @param hljs - The highlight.js API instance
+ * @returns Configuration object for markedHighlight
+ */
+export function createHighlightConfig(hljs: HLJSApi) {
+  return {
+    langPrefix: "hljs language-",
+    highlight(code: string, lang: string) {
+      // Skip highlighting for markdown nested code blocks
+      // (e.g. ````markdown blocks containing ```typescript:run blocks)
+      if (
+        [CODE_LANGUAGES.MARKDOWN, CODE_LANGUAGES.PLAINTEXT, CODE_LANGUAGES.TXT].some((l) => (l as string) === lang) &&
+        REGEX_PATTERNS.NESTED_CODE_BLOCKS.test(code)
+      ) {
+        return code;
+      }
+
+      const language = hljs.getLanguage(lang) ? lang : CODE_LANGUAGES.PLAINTEXT;
+      return hljs.highlight(unescapeHtml(code), { language }).value;
+    },
+  };
+}
+
+/**
+ * BlogReader orchestrates blog loading, rendering, and sidebar navigation.
+ */
+export class BlogReader {
+  private blogContent: HTMLElement | null;
+  private posts: BlogPost[] = [];
+  private allPosts: BlogPost[] = [];
+  private currentPostId: string | null = null;
+  private topicsBar: TopicsBar;
+  private sidebar: Sidebar;
+  private basePath: string;
+  private postLoader: PostLoader;
+  private postRenderer: PostRenderer;
+  private linkInterceptor: LinkInterceptor;
+
+  constructor() {
+    this.basePath = getBasePath();
+    new ThemeManager(ELEMENT_IDS.THEME_TOGGLE);
+
+    // Initialize blog content
+    this.blogContent = getElementByIdSafe(ELEMENT_IDS.BLOG_CONTENT);
+
+    // Initialize topics bar and sidebar with callbacks
+    this.topicsBar = new TopicsBar(ELEMENT_IDS.TOPICS_BAR, this.handleTopicFilterChange.bind(this));
+    this.sidebar = new Sidebar(ELEMENT_IDS.BLOG_LIST, this.handlePostClick.bind(this));
+
+    // Initialize specialized classes
+    this.postLoader = new PostLoader();
+    this.postRenderer = new PostRenderer();
+    this.linkInterceptor = new LinkInterceptor();
+
+    // Set up link interception for internal blog post links
+    if (this.blogContent) {
+      this.linkInterceptor.setup(
+        this.blogContent,
+        this.basePath,
+        this.allPosts,
+        this.currentPostId,
+        this.handlePostClick.bind(this),
+      );
+    }
+
+    this.init();
+
+    // Handle browser back/forward navigation
+    window.addEventListener("popstate", async (event) => {
+      try {
+        const postId = event.state?.postId || PathResolver.getPostIdFromPath(this.basePath);
+        if (postId) {
+          await this.loadBlogPost(postId);
+        } else if (this.posts.length > 0) {
+          // If no post ID in state or path, load first post
+          await this.loadBlogPost(this.posts[0].id);
+        }
+      } catch (error) {
+        logError(error, "Error handling popstate event:");
+        if (error instanceof PostNotFoundError) {
+          this.showError(ERROR_MESSAGES.POST_NOT_FOUND);
+        } else {
+          this.showError(ERROR_MESSAGES.FAILED_LOAD_POST);
+        }
+      }
+    });
+  }
+
+  /**
+   * Initializes the blog reader by loading the blog list, rendering it to the sidebar,
+   * and displaying the appropriate post based on URL pathname or first post by default.
+   *
+   * This is called automatically during construction and orchestrates the initial
+   * loading sequence for the blog application.
+   *
+   * @returns Promise that resolves when initialization is complete
+   */
+  private async init(): Promise<void> {
+    try {
+      await this.loadBlogList();
+      this.topicsBar.setPosts(this.allPosts);
+      this.sidebar.setPosts(this.posts);
+
+      // Check if URL has a post ID in the pathname
+      const pathPostId = PathResolver.getPostIdFromPath(this.basePath);
+      if (pathPostId && this.posts.some((p) => p.id === pathPostId)) {
+        await this.loadBlogPost(pathPostId);
+      } else {
+        // Otherwise load the first post if it exists
+        const mostRecentPost = this.posts[0];
+        if (mostRecentPost) {
+          await this.loadBlogPost(mostRecentPost.id);
+        } else {
+          this.showError(ERROR_MESSAGES.NO_POSTS);
+        }
+      }
+    } catch (error) {
+      logError(error, "Error initializing blog:");
+      this.showError(ERROR_MESSAGES.FAILED_LOAD_POSTS);
+    }
+  }
+
+  /**
+   * Loads the blog post list by discovering all markdown files and parsing their frontmatter.
+   *
+   * @returns Promise resolved when the blog list is loaded and sorted
+   */
+  private async loadBlogList(): Promise<void> {
+    try {
+      this.allPosts = await this.postLoader.loadBlogList(this.basePath);
+      this.posts = [...this.allPosts];
+    } catch (error) {
+      logError(error, "Error loading blog list:");
+      this.showError(ERROR_MESSAGES.FAILED_LOAD_POSTS);
+      throw error;
+    }
+  }
+
+  /**
+   * Handles topic filter changes from the TopicsBar component.
+   *
+   * Updates the filtered posts list, re-renders the sidebar, and loads a new post
+   * if the current post is not in the filtered list.
+   *
+   * @param filteredPosts - The filtered list of blog posts
+   */
+  private handleTopicFilterChange(filteredPosts: BlogPost[]): void {
+    this.posts = filteredPosts;
+    this.sidebar.setPosts(this.posts);
+
+    // Only load a new post if the current post is not in the filtered list
+    if (this.posts.length > 0) {
+      const currentPostInList = this.currentPostId ? this.posts.some((post) => post.id === this.currentPostId) : false;
+      if (!currentPostInList) {
+        this.loadBlogPost(this.posts[0].id).catch((error) => {
+          logError(error, "Error loading post after topic filter change:");
+          if (error instanceof PostNotFoundError) {
+            this.showError(ERROR_MESSAGES.POST_NOT_FOUND);
+          } else {
+            this.showError(ERROR_MESSAGES.FAILED_LOAD_POST);
+          }
+        });
+      }
+    }
+  }
+
+  /**
+   * Handles post clicks from the Sidebar component.
+   *
+   * Loads the selected blog post and updates the URL using pushState.
+   * Preserves the current topic filter when loading the post.
+   *
+   * @param postId - The ID of the post to load
+   * @param hash - Optional hash fragment (section) to scroll to after loading
+   */
+  private async handlePostClick(postId: string, hash?: string): Promise<void> {
+    // Preserve the current topic filter
+    const currentTopic = this.topicsBar.getSelectedTopic();
+
+    try {
+      await this.loadBlogPost(postId, hash);
+
+      // Restore the topic filter if it was set
+      // Use skipCallback to avoid triggering handleTopicFilterChange which might load a different post
+      if (currentTopic !== null) {
+        this.topicsBar.setSelectedTopic(currentTopic, true);
+        // Manually filter posts and update sidebar to match the restored filter
+        this.posts = filterAndSortPosts(this.allPosts, currentTopic);
+        this.sidebar.setPosts(this.posts);
+      }
+    } catch (error) {
+      logError(error, "Error loading blog post:");
+      if (error instanceof PostNotFoundError) {
+        this.showError(ERROR_MESSAGES.POST_NOT_FOUND);
+      } else {
+        this.showError(ERROR_MESSAGES.FAILED_LOAD_POST);
+      }
+    }
+  }
+
+  /**
+   * Loads and displays a specific blog post by its ID.
+   *
+   * Fetches the markdown file from the server, converts it to HTML using
+   * the marked library, and displays it with metadata.
+   * Triggers MathJax rendering for any mathematical expressions, Mermaid rendering for Mermaid diagram code blocks, and Graphviz rendering for DOT/Graphviz diagram code blocks.
+   *
+   * Updates the sidebar to highlight the active post and smoothly scrolls to the top
+   * of the page after loading.
+   *
+   * @param postId - The unique identifier of the blog post to load
+   * @param hash - Optional hash fragment to include in the URL
+   * @returns Promise that resolves when the post has been loaded and rendered
+   */
+  private async loadBlogPost(postId: string, hash?: string): Promise<void> {
+    if (!this.blogContent) {
+      throw new RenderingError(ERROR_MESSAGES.BLOG_CONTENT_NOT_FOUND);
+    }
+
+    // Ensure posts are loaded
+    if (this.allPosts.length === 0) {
+      await this.loadBlogList();
+
+      // Preserve the current topic filter when setting posts
+      const currentTopic = this.topicsBar.getSelectedTopic();
+      this.topicsBar.setPosts(this.allPosts);
+
+      if (currentTopic !== null) {
+        // Restore the topic filter without triggering the callback to avoid unnecessary post loads
+        this.topicsBar.setSelectedTopic(currentTopic, true);
+        this.posts = filterAndSortPosts(this.allPosts, currentTopic);
+      } else {
+        this.posts = [...this.allPosts];
+      }
+
+      this.sidebar.setPosts(this.posts);
+    }
+
+    // Try to find post in filtered list first, then in all posts
+    let post = this.posts.find((p) => p.id === postId);
+
+    if (!post) {
+      post = this.allPosts.find((p) => p.id === postId);
+    }
+
+    if (!post) {
+      throw new PostNotFoundError(postId, {
+        postsCount: this.posts.length,
+        allPostsCount: this.allPosts.length,
+        postIds: this.allPosts.map((p) => p.id),
+      });
+    }
+
+    this.currentPostId = postId;
+    this.sidebar.setActivePost(postId);
+
+    // Update link interceptor with current post ID
+    if (this.blogContent) {
+      this.linkInterceptor.setup(
+        this.blogContent,
+        this.basePath,
+        this.allPosts,
+        this.currentPostId,
+        this.handlePostClick.bind(this),
+      );
+    }
+
+    // Update URL immediately after validating post exists, before heavy async operations
+    // This provides instant feedback to the user while content loads
+    const url = `${this.basePath}${postId}${hash || ""}`;
+    window.history.pushState({ postId }, "", url);
+
+    // Update document title
+    document.title = `Isaac's Blog | ${post.name}`;
+    this.blogContent.innerHTML = createDivElement(CSS_CLASSES.LOADING, LOADING_MESSAGES.LOADING_POST);
+
+    try {
+      // Load post content
+      const contentMarkdown = await this.postLoader.loadPostContent(this.basePath, post.file);
+      const hljsModule = await import("highlight.js");
+
+      // Get hljs from the module (handles both default and named exports)
+      // Configure highlight.js to not escape HTML entities (code is safe from markdown)
+      // This prevents => from being encoded as =&gt;
+      // Configure marked for syntax highlighting and heading IDs
+      const hljs = hljsModule.default || hljsModule;
+      hljs.configure({ ignoreUnescapedHTML: true });
+
+      const highlightConfig = createHighlightConfig(hljs);
+
+      // Process markdown to HTML
+      // Remove frontmatter for feature detection
+      // Render the post content
+      const html = await this.postRenderer.processMarkdown(contentMarkdown, highlightConfig);
+      const markdownWithoutFrontmatter = contentMarkdown.replace(REGEX_PATTERNS.FRONTMATTER, "");
+      await this.postRenderer.renderBlogPostContent(
+        this.blogContent,
+        html,
+        post.date,
+        markdownWithoutFrontmatter,
+        hash,
+      );
+    } catch (error) {
+      if (error instanceof PostLoadError || error instanceof RenderingError) {
+        throw error;
+      }
+
+      throw new PostLoadError("Failed to load blog post content", { postId, originalError: error });
+    }
+  }
+
+  /**
+   * Displays an error message in the blog content area.
+   *
+   * Renders the error message with appropriate styling and escapes HTML
+   * to prevent XSS vulnerabilities.
+   *
+   * @param message - The error message to display to the user
+   */
+  private showError(message: string): void {
+    if (this.blogContent) {
+      this.blogContent.innerHTML = createDivElement(CSS_CLASSES.ERROR, escapeHtml(message));
+    }
+  }
+}
