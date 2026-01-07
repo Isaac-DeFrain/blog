@@ -1,19 +1,21 @@
 # [blog](https://isaac-defrain.github.io/blog/)
 
-Vanilla TypeScript blog SPA with Markdown support, MathJax rendering, and Mermaid diagrams.
+<div align="center">
+  <img src="https://github.com/Isaac-DeFrain/blog/actions/workflows/build-deploy.yml/badge.svg" />
+  <img src="./coverage-badge.svg" />
+</div>
 
-[![Build and deploy](https://github.com/Isaac-DeFrain/blog/actions/workflows/build-deploy.yml/badge.svg)](https://github.com/Isaac-DeFrain/blog/actions)
-![Coverage](./coverage-badge.svg)
+Vanilla TypeScript blog with support for GitHub Pages SPA routing, executable code blocks, code highlighting, MathJax equation rendering, GraphViz and Mermaid diagrams, and light/dark themes.
 
 ## Features
 
-- Dark mode support
-- Single Page Application (SPA)
-- Custom routing for GitHub Pages
+- Custom SPA routing for GitHub Pages
+- Executable TypeScript code blocks
 - Markdown rendering with syntax highlighting
 - MathJax support for mathematical equations
+- Graphviz diagram support
 - Mermaid diagram support
-- Executable TypeScript code blocks with live execution
+- Dark mode support
 
 ## Setup
 
@@ -51,11 +53,13 @@ Output will be in the `dist/` folder.
 
 ## Preview
 
-Preview the production build locally
+Preview the production build locally (build first)
 
 ```bash
 npm run preview
 ```
+
+The site will open at `http://localhost:4173`.
 
 ## Testing
 
