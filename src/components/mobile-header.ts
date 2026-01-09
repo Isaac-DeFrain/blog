@@ -1,23 +1,23 @@
 /**
- * @module mobile-header-hide
+ * @module components/mobile-header-hide
  *
  * Handles auto-hiding the header and topics bar on mobile devices
  * when the user scrolls past the sidebar and becomes idle.
  */
 
-import { TIMEOUTS, BREAKPOINTS, THRESHOLDS, CSS_CLASSES, SELECTORS } from "./constants";
+import { TIMEOUTS, BREAKPOINTS, THRESHOLDS, CSS_CLASSES, SELECTORS } from "../blog/constants";
 
 /**
- * MobileHeaderHide manages the auto-hide behavior for header and topics bar on mobile.
+ * MobileHeader manages the auto-hide behavior for header and topics bar on mobile.
  * Hides the header and topics bar when:
  * - User is on mobile viewport (max-width: 768px)
  * - User has scrolled past the sidebar
  * - User is only scrolling (no other mouse movement or touch events for a period)
  * Shows the header when:
  * - User scrolls back to the sidebar
- * - User has scrolled up 50 times consecutively (when hidden)
+ * - User has scrolled up 100 times consecutively (when hidden)
  */
-export class MobileHeaderHide {
+export class MobileHeader {
   private header: HTMLElement | null;
   private topicsContainer: HTMLElement | null;
   private mobileMediaQuery: MediaQueryList;
@@ -106,7 +106,7 @@ export class MobileHeaderHide {
 
   /**
    * Handles scroll events to check if user has scrolled past sidebar.
-   * Tracks scroll direction and shows header after 50 scroll ups when hidden.
+   * Tracks scroll direction and shows header after 100 scroll ups when hidden.
    */
   private handleScroll(): void {
     if (!this.mobileMediaQuery.matches) return;

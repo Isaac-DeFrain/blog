@@ -1,6 +1,7 @@
-import { createListItemElement, formatPostDate, escapeHtml } from "./utils";
-import type { BlogPost } from "./types";
-import { CSS_CLASSES } from "./constants";
+import { createListItemElement, escapeHtml } from "../utils/html";
+import { formatPostDate } from "../utils/dates";
+import type { BlogPost } from "../blog/types";
+import { CSS_CLASSES } from "../blog/constants";
 
 export type PostClickCallback = (postId: string) => Promise<void>;
 

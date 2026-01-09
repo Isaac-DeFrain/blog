@@ -1,5 +1,5 @@
-import type { BlogPost } from "./types";
-import { filterAndSortPosts } from "./utils/posts";
+import type { BlogPost } from "../blog/types";
+import { filterAndSortPosts } from "../utils/posts";
 
 export type TopicFilterCallback = (filteredPosts: BlogPost[]) => void;
 
