@@ -2,7 +2,7 @@
 import { defineConfig } from "vite";
 import { readFileSync, writeFileSync, copyFileSync, mkdirSync, readdirSync, existsSync, statSync, Dirent } from "fs";
 import { join } from "path";
-import { basePathScript } from "./src/utils";
+import { basePathScript } from "./src/utils/paths";
 
 // Directories
 const DIST_DIR = "dist";

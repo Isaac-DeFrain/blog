@@ -9,5 +9,4 @@ dist
 # Blog manifest file
 posts/manifest.json
 
-ignore/
 posts/wip/

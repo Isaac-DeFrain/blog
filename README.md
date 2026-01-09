@@ -1,7 +1,7 @@
 # [blog](https://isaac-defrain.github.io/blog/)
 
 [![Build and Deploy](https://github.com/Isaac-DeFrain/blog/actions/workflows/build-deploy.yml/badge.svg)](https://github.com/Isaac-DeFrain/blog/actions)
-[![](./coverage-badge.svg)](./scripts/generate-coverage-badge.ts)
+[![](./assets/coverage-badge.svg)](./scripts/generate-coverage-badge.ts)
 
 Vanilla TypeScript blog with support for GitHub Pages SPA routing, executable code blocks, code highlighting, MathJax equation rendering, GraphViz and Mermaid diagrams, and light/dark themes.
 

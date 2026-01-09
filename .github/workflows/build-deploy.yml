@@ -4,7 +4,7 @@ on:
   push:
     branches: ["main"]
     paths-ignore:
-      - "coverage-badge.svg"
+      - "assets/coverage-badge.svg"
 
   # Run workflow manually from Actions tab
   workflow_dispatch:
@@ -57,7 +57,7 @@ jobs:
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          git add coverage-badge.svg
+          git add assets/coverage-badge.svg
           if ! git diff --staged --quiet; then
             git commit -m "Update coverage badge"
             git push

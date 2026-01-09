@@ -6,6 +6,8 @@
 import { readFileSync, writeFileSync } from "fs";
 import { join } from "path";
 
+const ASSETS_DIR = join(process.cwd(), "assets");
+
 interface FileCoverage {
   path: string;
   statementMap: Record<string, unknown>;
@@ -33,8 +35,8 @@ function calculateStatementCoverage(data: CoverageData): number {
     return (coveredStatements / totalStatements) * 100;
   };
   const statementCoverage = statementCoveragePercentage();
-  console.log(`Statement coverage: ${Number(statementCoverage.toFixed(2))}%`);
 
+  console.log(`Statement coverage: ${Number(statementCoverage.toFixed(2))}%`);
   return Number(statementCoverage.toFixed(2));
 }
 
@@ -61,6 +63,7 @@ async function fetchBadgeSVG(percentage: number): Promise<string> {
   if (!response.ok) {
     throw new Error(`Failed to fetch badge: ${response.statusText}`);
   }
+
   return await response.text();
 }
 
@@ -68,7 +71,7 @@ async function main() {
   try {
     const percentage = getCoveragePercentage();
     const badgeSVG = await fetchBadgeSVG(percentage);
-    const badgePath = join(process.cwd(), "coverage-badge.svg");
+    const badgePath = join(ASSETS_DIR, "coverage-badge.svg");
 
     writeFileSync(badgePath, badgeSVG);
     console.log(`Coverage badge generated: ${percentage}%`);
