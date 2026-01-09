@@ -1,5 +1,5 @@
 /**
- * @module blog/BlogReader
+ * @module blog/reader
  *
  * The main blog reader orchestrator which coordinates blog post loading, rendering, and navigation.
  *
@@ -9,23 +9,22 @@
  * - LinkInterceptor: Handling SPA routing
  */
 
-import { ThemeManager } from "../theme";
-import { TopicsBar } from "../topics-bar";
-import { Sidebar } from "../sidebar";
-import type { BlogPost } from "../types";
-import { PostLoader } from "./PostLoader";
-import { PostRenderer } from "./PostRenderer";
-import { LinkInterceptor } from "./LinkInterceptor";
+import { ThemeManager } from "../utils/theme";
+import { TopicsBar } from "../components/topics-bar";
+import { Sidebar } from "../components/sidebar";
+import type { BlogPost } from "./types";
+import { PostLoader } from "./post-loader";
+import { PostRenderer } from "./post-renderer";
+import { LinkInterceptor } from "./link-interceptor";
 import { PathResolver } from "../utils/path-resolver";
 import { filterAndSortPosts } from "../utils/posts";
-import { PostNotFoundError, PostLoadError, RenderingError } from "../errors";
-import { logError } from "../errors";
-import { getBasePath, createDivElement, escapeHtml } from "../utils";
+import { PostNotFoundError, PostLoadError, RenderingError, logError } from "../utils/errors";
+import { createDivElement, escapeHtml, unescapeHtml } from "../utils/html";
+import { getBasePath } from "../utils/paths";
 import { getElementByIdSafe } from "../utils/dom";
-import { ELEMENT_IDS, CSS_CLASSES, ERROR_MESSAGES, LOADING_MESSAGES } from "../constants";
+import { ELEMENT_IDS, CSS_CLASSES, ERROR_MESSAGES, LOADING_MESSAGES } from "./constants";
 import type { HLJSApi } from "highlight.js";
-import { unescapeHtml } from "../utils";
-import { CODE_LANGUAGES, REGEX_PATTERNS } from "../constants";
+import { CODE_LANGUAGES, REGEX_PATTERNS } from "./constants";
 
 /**
  * Creates highlight.js configuration for marked-highlight.
@@ -36,8 +35,8 @@ export function createHighlightConfig(hljs: HLJSApi) {
   return {
     langPrefix: "hljs language-",
     highlight(code: string, lang: string) {
-      // Skip highlighting for markdown nested code blocks
-      // (e.g. ````markdown blocks containing ```typescript:run blocks)
+      // Skip highlighting for nested code blocks
+      // (e.g. ````txt block containing ```typescript:run block)
       if (
         [CODE_LANGUAGES.MARKDOWN, CODE_LANGUAGES.PLAINTEXT, CODE_LANGUAGES.TXT].some((l) => (l as string) === lang) &&
         REGEX_PATTERNS.NESTED_CODE_BLOCKS.test(code)
@@ -98,15 +97,18 @@ export class BlogReader {
     // Handle browser back/forward navigation
     window.addEventListener("popstate", async (event) => {
       try {
+        // Get post ID from state or path
+        // If no post ID in state or path, load first post
         const postId = event.state?.postId || PathResolver.getPostIdFromPath(this.basePath);
+
         if (postId) {
           await this.loadBlogPost(postId);
         } else if (this.posts.length > 0) {
-          // If no post ID in state or path, load first post
           await this.loadBlogPost(this.posts[0].id);
         }
       } catch (error) {
         logError(error, "Error handling popstate event:");
+
         if (error instanceof PostNotFoundError) {
           this.showError(ERROR_MESSAGES.POST_NOT_FOUND);
         } else {
@@ -132,12 +134,14 @@ export class BlogReader {
       this.sidebar.setPosts(this.posts);
 
       // Check if URL has a post ID in the pathname
+      // Otherwise load the first post if it exists
       const pathPostId = PathResolver.getPostIdFromPath(this.basePath);
+
       if (pathPostId && this.posts.some((p) => p.id === pathPostId)) {
         await this.loadBlogPost(pathPostId);
       } else {
-        // Otherwise load the first post if it exists
         const mostRecentPost = this.posts[0];
+
         if (mostRecentPost) {
           await this.loadBlogPost(mostRecentPost.id);
         } else {
@@ -233,7 +237,11 @@ export class BlogReader {
    *
    * Fetches the markdown file from the server, converts it to HTML using
    * the marked library, and displays it with metadata.
-   * Triggers MathJax rendering for any mathematical expressions, Mermaid rendering for Mermaid diagram code blocks, and Graphviz rendering for DOT/Graphviz diagram code blocks.
+   * Triggers:
+   * - MathJax rendering for any mathematical expressions
+   * - Mermaid rendering for Mermaid diagram code blocks
+   * - Graphviz rendering for DOT/Graphviz diagram code blocks
+   * - TypeScript rendering for TypeScript code blocks
    *
    * Updates the sidebar to highlight the active post and smoothly scrolls to the top
    * of the page after loading.
@@ -309,20 +317,17 @@ export class BlogReader {
       const contentMarkdown = await this.postLoader.loadPostContent(this.basePath, post.file);
       const hljsModule = await import("highlight.js");
 
-      // Get hljs from the module (handles both default and named exports)
       // Configure highlight.js to not escape HTML entities (code is safe from markdown)
       // This prevents => from being encoded as =&gt;
-      // Configure marked for syntax highlighting and heading IDs
       const hljs = hljsModule.default || hljsModule;
       hljs.configure({ ignoreUnescapedHTML: true });
-
       const highlightConfig = createHighlightConfig(hljs);
 
       // Process markdown to HTML
       // Remove frontmatter for feature detection
-      // Render the post content
       const html = await this.postRenderer.processMarkdown(contentMarkdown, highlightConfig);
       const markdownWithoutFrontmatter = contentMarkdown.replace(REGEX_PATTERNS.FRONTMATTER, "");
+
       await this.postRenderer.renderBlogPostContent(
         this.blogContent,
         html,

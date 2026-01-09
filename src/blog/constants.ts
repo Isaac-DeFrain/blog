@@ -1,7 +1,7 @@
 /**
  * @module constants
  *
- * Centralized constants for the blog application.
+ * Constants for the blog application.
  * Contains timeouts, CSS classes, DOM selectors, and regex patterns.
  */
 
@@ -173,7 +173,7 @@ export const ERROR_MESSAGES = {
   FAILED_LOAD_POST: "Failed to load blog post. Please try again.",
   FAILED_LOAD_CONTENT: "Failed to load blog post content. Please try again.",
   FAILED_LOAD_MANIFEST: "Failed to load blog manifest",
-  BLOG_CONTENT_NULL: "Blog post content is is null",
+  BLOG_CONTENT_NULL: "Blog post content is null",
   BLOG_CONTENT_NOT_FOUND: "blogContent element not found",
   EXECUTION_TIMEOUT: "Execution timeout: Code took too long to execute",
   INVALID_WRAPPED_CODE: "Invalid wrapped JavaScript code: missing run() function",
