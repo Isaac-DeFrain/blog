@@ -5,8 +5,8 @@
  * Detects presence of MathJax, Mermaid, Graphviz, and TypeScript executable blocks.
  */
 
-import { REGEX_PATTERNS } from "./constants";
-import { FOUR_TICK_PLAINTEXT_REGEX } from "../tests/helpers/markdown";
+import { REGEX_PATTERNS } from "../blog/constants";
+import { FOUR_TICK_PLAINTEXT_REGEX } from "../../tests/helpers/markdown";
 
 /**
  * Detects which content features are present in markdown content.
@@ -35,13 +35,13 @@ export class ContentFeatureDetector {
   /**
    * Checks if the markdown content contains MathJax expressions.
    *
-   * Excludes code blocks to avoid false positives (e.g., $ in code).
+   * Excludes code blocks to avoid false positives (e.g. $ in code).
    *
    * @param markdown - The markdown content to check
    * @returns True if MathJax expressions are present
    */
   static needsMathJax(markdown: string): boolean {
-    // Exclude code blocks to avoid false positives (e.g., $ in code)
+    // Exclude code blocks to avoid false positives (e.g. $ in code)
     const markdownWithoutCodeBlocks = markdown.replace(REGEX_PATTERNS.CODE_BLOCK, "");
 
     // Check for display math: $$...$$
