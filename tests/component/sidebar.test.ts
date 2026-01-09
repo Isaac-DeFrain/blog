@@ -4,10 +4,10 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { Sidebar, type PostClickCallback } from "../../src/sidebar";
+import { Sidebar, type PostClickCallback } from "../../src/components/sidebar";
 import { setupDOM, cleanupDOM } from "../helpers/dom";
 import { createMockBlogPost, createMockBlogPosts } from "../helpers/mocks";
-import { resolveWithTimeout } from "../../src/utils";
+import { resolveWithTimeout } from "../../src/utils/async";
 
 describe("Sidebar", () => {
   let sidebar: Sidebar;

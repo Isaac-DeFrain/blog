@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { ThemeManager } from "../../src/theme";
+import { ThemeManager } from "../../src/utils/theme";
 import { setupDOM, cleanupDOM } from "../helpers/dom";
 
 describe("ThemeManager", () => {

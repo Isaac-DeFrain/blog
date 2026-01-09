@@ -3,7 +3,7 @@
  * filter button rendering, and topic selection/filtering functionality.
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { TopicsBar, type TopicFilterCallback } from "../../src/topics-bar";
+import { TopicsBar, type TopicFilterCallback } from "../../src/components/topics-bar";
 import { setupDOM, cleanupDOM } from "../helpers/dom";
 import { createMockBlogPost, createMockBlogPosts } from "../helpers/mocks";
 
