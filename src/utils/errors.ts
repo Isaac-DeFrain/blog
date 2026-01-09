@@ -5,6 +5,19 @@
  */
 
 /**
+ * Error message prefixes used by custom error classes.
+ * These prefixes are prepended to error messages for consistent formatting.
+ */
+export const ERROR_PREFIXES = {
+  POST_NOT_FOUND_ERROR: "Blog post not found",
+  POST_LOAD_ERROR: "Failed to load blog post",
+  MANIFEST_LOAD_ERROR: "Failed to load blog manifest",
+  RENDERING_ERROR: "Rendering failed",
+  CODE_EXECUTION_TIMEOUT_ERROR: "Code execution timeout",
+  INVALID_CODE_ERROR: "Invalid code",
+};
+
+/**
  * Base error class for blog-related errors.
  */
 export class BlogError extends Error {
@@ -16,6 +29,10 @@ export class BlogError extends Error {
     this.name = this.constructor.name;
     Error.captureStackTrace?.(this, this.constructor);
   }
+
+  getMessagePrefix(): string {
+    return this.message.split(":")[0];
+  }
 }
 
 /**
@@ -23,25 +40,7 @@ export class BlogError extends Error {
  */
 export class PostNotFoundError extends BlogError {
   constructor(postId: string, context?: Record<string, unknown>) {
-    super(`Blog post not found: ${postId}`, { postId, ...context });
-  }
-}
-
-/**
- * Error thrown when the blog manifest fails to load.
- */
-export class ManifestLoadError extends BlogError {
-  constructor(message: string = "Failed to load blog manifest", context?: Record<string, unknown>) {
-    super(message, context);
-  }
-}
-
-/**
- * Error thrown when blog post content fails to render.
- */
-export class RenderingError extends BlogError {
-  constructor(message: string, context?: Record<string, unknown>) {
-    super(`Rendering error: ${message}`, context);
+    super(`${ERROR_PREFIXES.POST_NOT_FOUND_ERROR}: ${postId}`, { postId, ...context });
   }
 }
 
@@ -50,7 +49,25 @@ export class RenderingError extends BlogError {
  */
 export class PostLoadError extends BlogError {
   constructor(message: string, context?: Record<string, unknown>) {
-    super(`Failed to load blog post: ${message}`, context);
+    super(`${ERROR_PREFIXES.POST_LOAD_ERROR}: ${message}`, context);
+  }
+}
+
+/**
+ * Error thrown when the blog manifest fails to load.
+ */
+export class ManifestLoadError extends BlogError {
+  constructor(message?: string, context?: Record<string, unknown>) {
+    super(`${ERROR_PREFIXES.MANIFEST_LOAD_ERROR}${message ? `: ${message}` : ""}`, context);
+  }
+}
+
+/**
+ * Error thrown when blog post content fails to render.
+ */
+export class RenderingError extends BlogError {
+  constructor(message: string, context?: Record<string, unknown>) {
+    super(`${ERROR_PREFIXES.RENDERING_ERROR}: ${message}`, context);
   }
 }
 
@@ -59,7 +76,9 @@ export class PostLoadError extends BlogError {
  */
 export class CodeExecutionTimeoutError extends BlogError {
   constructor(timeoutMs: number) {
-    super(`Execution timeout: Code took too long to execute (${timeoutMs}ms)`, { timeoutMs });
+    super(`${ERROR_PREFIXES.CODE_EXECUTION_TIMEOUT_ERROR}: ${timeoutMs}ms`, {
+      timeoutMs,
+    });
   }
 }
 
@@ -68,7 +87,7 @@ export class CodeExecutionTimeoutError extends BlogError {
  */
 export class InvalidCodeError extends BlogError {
   constructor(message: string) {
-    super(`Invalid code: ${message}`);
+    super(`${ERROR_PREFIXES.INVALID_CODE_ERROR}: ${message}`);
   }
 }
 

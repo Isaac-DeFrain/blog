@@ -4,7 +4,7 @@
  * Utility functions for resolving and parsing paths in the blog application.
  */
 
-import { REGEX_PATTERNS } from "../constants";
+import { REGEX_PATTERNS } from "../blog/constants";
 
 /**
  * Resolves blog post paths and extracts post IDs from URLs.
@@ -16,7 +16,7 @@ export class PathResolver {
    * Extracts the post ID from the pathname, accounting for the base path.
    * For example, "/blog/welcome" -> "welcome" (when base path is "/blog/").
    *
-   * @param basePath - The base path of the application (e.g., "/blog/" or "/")
+   * @param basePath - The base path of the application (e.g. "/blog/" or "/")
    * @returns The post ID if found, or null if on the index page
    */
   static getPostIdFromPath(basePath: string): string | null {

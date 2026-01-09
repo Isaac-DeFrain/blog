@@ -4,8 +4,8 @@
  * Utility functions for filtering and sorting blog posts.
  */
 
-import type { BlogPost } from "../types";
-import { parseDateAsPacificTime } from "../utils";
+import type { BlogPost } from "../blog/types";
+import { parseDateAsPacificTime } from "./dates";
 
 /**
  * Filters blog posts by topic (case-insensitive).

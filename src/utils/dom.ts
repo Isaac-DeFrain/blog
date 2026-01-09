@@ -4,7 +4,7 @@
  * Safe DOM manipulation utilities with proper error handling.
  */
 
-import type { MaybeElement } from "../types";
+import type { MaybeElement } from "../blog/types";
 
 /**
  * Safely gets an element by ID, returning null if not found.
