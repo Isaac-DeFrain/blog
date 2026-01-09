@@ -2,6 +2,8 @@
  * Common utilities and types for test files
  */
 
+import type { BlogReader } from "../src/blog/reader";
+
 export interface Manifest {
   files: string[];
 }
@@ -27,6 +29,15 @@ export function isValidDate(dateString: string): boolean {
 
   const date = new Date(dateString);
   return date instanceof Date && !isNaN(date.getTime());
+}
+
+/**
+ * Initializes the blog reader
+ * @returns The blog reader instance
+ */
+export async function initializeBlogReader(): Promise<BlogReader> {
+  const { BlogReader } = await import("../src/blog/reader");
+  return new BlogReader();
 }
 
 /**

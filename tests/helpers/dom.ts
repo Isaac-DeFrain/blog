@@ -33,7 +33,7 @@ export function setupDOM(): {
 
   // Set up window.__BASE_PATH__ if not already set
   if (typeof (window as any).__BASE_PATH__ === "undefined") {
-    (window as any).__BASE_PATH__ = "/";
+    setBasePath("/");
   }
 
   return {
@@ -46,6 +46,11 @@ export function setupDOM(): {
       delete (window as any).__BASE_PATH__;
     },
   };
+}
+
+/** Sets the base path for the blog reader */
+export function setBasePath(path: string) {
+  (window as any).__BASE_PATH__ = path;
 }
 
 /**
