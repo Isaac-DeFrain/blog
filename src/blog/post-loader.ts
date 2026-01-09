@@ -1,15 +1,15 @@
 /**
- * @module blog/PostLoader
+ * @module blog/post-loader
  *
  * Handles loading blog posts from the server, including manifest fetching
  * and frontmatter parsing.
  */
 
-import type { BlogPost, BlogManifest } from "../types";
-import { ManifestLoadError, PostLoadError } from "../errors";
-import { parseFrontmatter } from "../utils";
-import { parseDateAsPacificTime } from "../utils";
-import { REGEX_PATTERNS } from "../constants";
+import type { BlogPost, BlogManifest } from "./types";
+import { ManifestLoadError, PostLoadError } from "../utils/errors";
+import { parseFrontmatter } from "../utils/frontmatter";
+import { parseDateAsPacificTime } from "../utils/dates";
+import { REGEX_PATTERNS } from "./constants";
 
 /**
  * Loads and parses blog posts from the server.
@@ -32,7 +32,7 @@ export class PostLoader {
       const manifestResponse = await fetch(`${basePath}posts/manifest.json`);
 
       if (!manifestResponse.ok) {
-        throw new ManifestLoadError("Failed to load blog manifest");
+        throw new ManifestLoadError();
       }
 
       // Load and parse each markdown file

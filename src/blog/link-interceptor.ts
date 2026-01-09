@@ -1,14 +1,14 @@
 /**
- * @module blog/LinkInterceptor
+ * @module blog/link-interceptor
  *
  * Handles SPA routing by intercepting internal blog post links
  * and using client-side navigation instead of full page reloads.
  */
 
-import type { BlogPost, PostClickCallback } from "../types";
+import type { BlogPost, PostClickCallback } from "./types";
 import { PathResolver } from "../utils/path-resolver";
 import { querySelectorSafe } from "../utils/dom";
-import { CSS_CLASSES } from "../constants";
+import { CSS_CLASSES } from "./constants";
 
 /**
  * Intercepts clicks on internal links within blog content for SPA routing.
@@ -93,8 +93,8 @@ export class LinkInterceptor {
   private scrollToHash(hash: string): void {
     if (!hash) return;
 
-    // Remove the leading # from the hash
-    const id = hash.slice(1);
+    // Remove the leading # from the hash (if present)
+    const id = hash.startsWith("#") ? hash.slice(1) : hash;
     if (!id) return;
 
     // Find the element by ID

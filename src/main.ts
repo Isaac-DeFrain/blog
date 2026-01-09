@@ -1,13 +1,14 @@
 /**
  * Main entry point for the blog application
- * Instantiates BlogReader to initialize the blog reader and
- * MobileHeaderHide to handle auto-hide behavior on mobile
+ * - `BlogReader` initializes the blog reader
+ * - `MobileHeader` handles mobile auto-hide behavior
  */
-import { BlogReader } from "./blog";
-import { MobileHeaderHide } from "./mobile-header-hide";
+
+import { BlogReader } from "./blog/reader";
+import { MobileHeader } from "./components/mobile-header";
 
 // Only instantiate BlogReader in browser environment
 if (typeof window !== "undefined") {
   new BlogReader();
-  new MobileHeaderHide();
+  new MobileHeader();
 }

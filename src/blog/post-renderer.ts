@@ -1,17 +1,20 @@
 /**
- * @module blog/PostRenderer
+ * @module blog/post-renderer
  *
  * Handles rendering blog post content, including markdown processing,
  * HTML generation, and feature-specific rendering (MathJax, Mermaid, etc.).
  */
 
-import type { HighlightConfig } from "../types";
-import { ContentFeatureDetector } from "../content-features";
-import { RenderingError } from "../errors";
-import { createDivElement, formatPostDate, escapeHtml, unescapeHtml } from "../utils";
-import { CSS_CLASSES, TIMEOUTS, REGEX_PATTERNS, BUTTON_LABELS } from "../constants";
-import { resolveWithTimeout } from "../utils";
-import { initializeTypeScriptRunner, wrapTypeScriptCode } from "../typescript-runner/index";
+import type { HighlightConfig } from "./types";
+import { ContentFeatureDetector } from "../render/content-features";
+import { RenderingError } from "../utils/errors";
+import { createDivElement, escapeHtml, unescapeHtml } from "../utils/html";
+import { formatPostDate } from "../utils/dates";
+import { resolveWithTimeout } from "../utils/async";
+import { CSS_CLASSES, TIMEOUTS, REGEX_PATTERNS, BUTTON_LABELS } from "./constants";
+import { initializeTypeScriptRunner } from "../code-executor/block-executor";
+import { TypeScriptTransformer } from "../code-executor/typescript-transformer";
+import type { marked } from "marked";
 
 /**
  * Renders blog post content to the DOM.
@@ -48,18 +51,16 @@ export class PostRenderer {
     if (!contentElement) {
       throw new RenderingError("Blog content element not found after rendering");
     }
-
-    // Conditionally import and render modules in parallel
     await this.renderContentFeatures(contentElement as HTMLElement, markdown);
 
     // Check if there's a hash fragment to scroll to
+    // Scroll to top of content if no hash
     const hashToScroll = hash || window.location.hash;
     if (hashToScroll) {
-      // Wait a bit for MathJax to finish rendering
+      // Wait a bit to finish rendering content features
       await new Promise(resolveWithTimeout(TIMEOUTS.SCROLL_DELAY));
       this.scrollToHash(hashToScroll);
     } else {
-      // Scroll to top of content if no hash
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
   }
@@ -76,19 +77,18 @@ export class PostRenderer {
     const renderPromises: Promise<void>[] = [];
 
     if (features.needsMath) {
-      renderPromises.push(import("../mathjax").then((module) => module.typesetMath(contentElement)));
+      renderPromises.push(import("../render/mathjax").then((module) => module.typesetMath(contentElement)));
     }
     if (features.needsMermaid) {
-      renderPromises.push(import("../mermaid").then((module) => module.renderMermaidDiagrams(contentElement)));
+      renderPromises.push(import("../render/mermaid").then((module) => module.renderMermaidDiagrams(contentElement)));
     }
     if (features.needsGraphviz) {
-      renderPromises.push(import("../graphviz").then((module) => module.renderGraphvizDiagrams(contentElement)));
+      renderPromises.push(import("../render/graphviz").then((module) => module.renderGraphvizDiagrams(contentElement)));
     }
     if (features.needsTypeScript) {
       renderPromises.push(Promise.resolve(initializeTypeScriptRunner(contentElement)));
     }
 
-    // Wait for all rendering to complete
     await Promise.all(renderPromises);
   }
 
@@ -105,12 +105,11 @@ export class PostRenderer {
     if (!id) return;
 
     // Find the element by ID
+    // If element not found, try to find it by name attribute (for anchors)
     const element = document.getElementById(id);
     if (element) {
-      // Scroll to the element with smooth behavior
       element.scrollIntoView({ behavior: "smooth", block: "start" });
     } else {
-      // If element not found, try to find it by name attribute (for anchors)
       const anchor = document.querySelector(`a[name="${id}"]`);
       if (anchor) {
         anchor.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -135,48 +134,16 @@ export class PostRenderer {
       marked.use({
         renderer: {
           heading({ text, depth }) {
-            // Process inline code in heading text (marked.js doesn't process inline code
-            // in headings when using a custom renderer, so we need to do it manually)
-            // parseInline is synchronous in marked.js, despite TypeScript types
-            const processedText = marked.parseInline(text) as string;
-
-            // Strip HTML tags from processed text to get plain text for ID generation
-            const plainText = processedText.replace(/<[^>]*>/g, "");
-
-            // Generate ID from heading text (similar to GitHub)
-            const id = plainText
-              .toLowerCase()
-              .replace(/[^\w\s-]/g, "") // Remove special characters
-              .replace(/\s+/g, "-") // Replace spaces with hyphens
-              .replace(/-+/g, "-") // Replace multiple hyphens with a single hyphen
-              .trim();
-
-            const tag = `h${depth}`;
-            return `<${tag} id="${id}">${processedText}</${tag}>\n`;
+            return processHeading(marked, text, depth);
           },
           code({ lang, text }) {
-            if (lang === "mermaid") {
-              return `<pre class="${CSS_CLASSES.MERMAID}">${text}</pre>`;
-            }
-
-            if (lang === "dot" || lang === "graphviz") {
-              return `<pre class="${CSS_CLASSES.GRAPHVIZ}">${text}</pre>`;
-            }
-
-            if (lang === "typescript:run") {
-              const blockId = `ts-run-${Math.random().toString(36).substring(2, 11)}`;
-              return renderer.createTypeScriptExecutableBlock(text, blockId, highlightConfig);
-            }
-
-            return false;
+            return processCodeBlock(lang, text, highlightConfig, renderer);
           },
         },
       });
 
       // Remove frontmatter before parsing markdown
       const markdownWithoutFrontmatter = markdown.replace(REGEX_PATTERNS.FRONTMATTER, "");
-
-      // Parse markdown
       const html = await marked.parse(markdownWithoutFrontmatter);
       return html;
     } catch (error) {
@@ -193,7 +160,7 @@ export class PostRenderer {
    * @returns HTML string for the executable TypeScript block
    */
   createTypeScriptExecutableBlock(typescriptCode: string, blockId: string, highlightConfig: HighlightConfig): string {
-    const processedCode = wrapTypeScriptCode(unescapeHtml(typescriptCode));
+    const processedCode = TypeScriptTransformer.wrapTypeScriptCode(unescapeHtml(typescriptCode));
     return `
     <div class="${CSS_CLASSES.TS_EXECUTABLE_BLOCK}" data-block-id="${blockId}">
       <div class="${CSS_CLASSES.TS_CODE_DISPLAY}">
@@ -209,4 +176,47 @@ export class PostRenderer {
     </div>
   `;
   }
+}
+
+function processHeading(md: typeof marked, text: string, depth: number): string {
+  // Process inline code in heading text (marked.js doesn't process inline code
+  // in headings when using a custom renderer, so we need to do it manually)
+  // parseInline is synchronous in marked.js, despite TypeScript types
+  const processedText = md.parseInline(text) as string;
+
+  // Strip HTML tags from processed text to get plain text for ID generation
+  const plainText = processedText.replace(/<[^>]*>/g, "");
+
+  // Generate ID from heading text (similar to GitHub)
+  const id = plainText
+    .toLowerCase()
+    .replace(/[^\w\s-]/g, "") // Remove special characters
+    .replace(/\s+/g, "-") // Replace spaces with hyphens
+    .replace(/-+/g, "-") // Replace multiple hyphens with a single hyphen
+    .trim();
+
+  const tag = `h${depth}`;
+  return `<${tag} id="${id}">${processedText}</${tag}>\n`;
+}
+
+function processCodeBlock(
+  lang: string | undefined,
+  text: string,
+  highlightConfig: HighlightConfig,
+  renderer: PostRenderer,
+): string | false {
+  if (lang === "mermaid") {
+    return `<pre class="${CSS_CLASSES.MERMAID}">${text}</pre>`;
+  }
+
+  if (lang === "dot" || lang === "graphviz") {
+    return `<pre class="${CSS_CLASSES.GRAPHVIZ}">${text}</pre>`;
+  }
+
+  if (lang === "typescript:run") {
+    const blockId = `ts-run-${Math.random().toString(36).substring(2, 11)}`;
+    return renderer.createTypeScriptExecutableBlock(text, blockId, highlightConfig);
+  }
+
+  return false;
 }
