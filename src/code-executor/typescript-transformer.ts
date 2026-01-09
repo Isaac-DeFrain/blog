@@ -47,8 +47,8 @@ export class TypeScriptTransformer {
    * @returns The JavaScript code with run() function
    */
   static wrapTypeScriptCode(typescriptCode: string): string {
-    const jsCode = TypeScriptTransformer.stripTypeScriptTypes(typescriptCode);
-    return TypeScriptTransformer.wrapJsCodeRun(jsCode);
+    const jsCode = this.stripTypeScriptTypes(typescriptCode);
+    return this.wrapJsCodeRun(jsCode);
   }
 
   /**

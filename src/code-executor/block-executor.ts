@@ -1,12 +1,13 @@
 /**
- * @module typescript-runner
+ * @module block-executor
  *
- * TypeScript code execution module for executable code blocks in blog posts.
+ * Execution module for executable code blocks in blog posts.
  *
  * The code is known at compilation time (it's in the blog post markdown), so we process
- * it at build time and make execution lazy by putting it behind a function call.
+ * it at build time and make execution lazy by putting it behind a function call which
+ * hooks into the console.
  *
- * Build time (in blog.ts):
+ * Build time (in post-renderer.ts):
  * - Strips TypeScript type annotations to convert to JavaScript
  * - Wraps code in a run() function
  * - Stores the pre-processed function in the HTML
@@ -17,19 +18,14 @@
  * - Executes the function lazily
  */
 
-import { CodeExecutor } from "./CodeExecutor";
-import { OutputRenderer } from "./OutputRenderer";
-import { TypeScriptTransformer } from "./TypeScriptTransformer";
+import { JsCodeExecutor } from "./js-executor";
+import { OutputRenderer } from "./output-renderer";
 import { querySelectorAllSafe } from "../utils/dom";
-import { SELECTORS, BUTTON_LABELS } from "../constants";
+import { SELECTORS, BUTTON_LABELS } from "../blog/constants";
 
-export { TypeScriptTransformer } from "./TypeScriptTransformer";
-export { CodeExecutor } from "./CodeExecutor";
-export { OutputRenderer } from "./OutputRenderer";
-
-export const stripTypeScriptTypes = TypeScriptTransformer.stripTypeScriptTypes;
-export const wrapTypeScriptCode = TypeScriptTransformer.wrapTypeScriptCode;
-export const wrapJsCodeRun = TypeScriptTransformer.wrapJsCodeRun;
+export { TypeScriptTransformer } from "./typescript-transformer";
+export { JsCodeExecutor } from "./js-executor";
+export { OutputRenderer } from "./output-renderer";
 
 /**
  * Initializes executable TypeScript code blocks in the given container.
@@ -39,10 +35,6 @@ export const wrapJsCodeRun = TypeScriptTransformer.wrapJsCodeRun;
  */
 export async function initializeTypeScriptRunner(container: HTMLElement): Promise<void> {
   const executableBlocks = querySelectorAllSafe<HTMLElement>(container, SELECTORS.TS_EXECUTABLE_BLOCK);
-
-  if (executableBlocks.length === 0) {
-    return;
-  }
 
   executableBlocks.forEach((block) => {
     const blockId = block.dataset.blockId;
@@ -65,9 +57,7 @@ export async function initializeTypeScriptRunner(container: HTMLElement): Promis
     const jsCode = JSON.parse(codeScript.textContent || "");
 
     let hasExecuted = false;
-
     runButton.addEventListener("click", async () => {
-      // Prevent execution if already executed
       if (hasExecuted) {
         return;
       }
@@ -87,7 +77,7 @@ export async function initializeTypeScriptRunner(container: HTMLElement): Promis
       const appendError = OutputRenderer.createAppendError(outputContent);
 
       try {
-        await CodeExecutor.executeCode(jsCode, appendOutput, appendError, () => {
+        await JsCodeExecutor.executeCode(jsCode, appendOutput, appendError, () => {
           // Keep button disabled after execution
           runButton.disabled = true;
           runButton.textContent = BUTTON_LABELS.EXECUTED;

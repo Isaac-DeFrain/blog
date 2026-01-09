@@ -1,16 +1,16 @@
 /**
- * @module typescript-runner/CodeExecutor
+ * @module typescript-runner/js-executor
  *
  * Executes JavaScript code with stdout/stderr hooks and timeout handling.
  */
 
-import { CodeExecutionTimeoutError, InvalidCodeError } from "../errors";
-import { TIMEOUTS, ERROR_MESSAGES } from "../constants";
+import { CodeExecutionTimeoutError, InvalidCodeError } from "../utils/errors";
+import { TIMEOUTS, ERROR_MESSAGES } from "../blog/constants";
 
 /**
  * Executes JavaScript code with hooks and error handling.
  */
-export class CodeExecutor {
+export class JsCodeExecutor {
   /**
    * Wraps JavaScript code to add stdout/stderr console hooks.
    *
@@ -97,8 +97,6 @@ export class CodeExecutor {
     onError: (message: string) => void,
     onDone: () => void,
   ): Promise<void> {
-    const wrappedJsCode = this.wrapJsCodeToRunWithHooks(jsCode);
-
     let timeout: ReturnType<typeof setTimeout> | null = null;
     const clearTimeoutIfSet = (): void => {
       if (timeout) {
@@ -112,6 +110,7 @@ export class CodeExecutor {
     };
 
     try {
+      const wrappedJsCode = this.wrapJsCodeToRunWithHooks(jsCode);
       timeout = setTimeout(() => {
         const timeoutError = new CodeExecutionTimeoutError(TIMEOUTS.CODE_EXECUTION);
         onError(timeoutError.message);

@@ -4,7 +4,7 @@
  * Renders output and errors to the DOM for TypeScript executable blocks.
  */
 
-import { CSS_CLASSES } from "../constants";
+import { CSS_CLASSES } from "../blog/constants";
 
 /**
  * Renders output and errors to the DOM.
