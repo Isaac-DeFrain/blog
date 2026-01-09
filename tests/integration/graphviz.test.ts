@@ -9,8 +9,8 @@ import { join } from "path";
 import { Marked } from "marked";
 import { markedHighlight } from "marked-highlight";
 import hljs from "highlight.js";
-import { createHighlightConfig } from "../../src/blog";
-import { renderGraphvizDiagrams } from "../../src/graphviz";
+import { createHighlightConfig } from "../../src/blog/reader";
+import { renderGraphvizDiagrams } from "../../src/render/graphviz";
 import { findUnnestedCodeBlocks } from "../helpers/markdown";
 import { createMockSVGElement } from "../helpers/mocks";
 

@@ -6,15 +6,22 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { setupDOM, cleanupDOM } from "../helpers/dom";
-import { wrapTypeScriptCode } from "../../src/typescript-runner/index";
-import { resolveWithTimeout, unescapeHtml } from "../../src/utils";
+import { TypeScriptTransformer } from "../../src/code-executor/typescript-transformer";
+import { resolveWithTimeout } from "../../src/utils/async";
+import { unescapeHtml } from "../../src/utils/html";
 
-// Mock utils module
-vi.mock("../../src/utils", async () => {
-  const actual = await vi.importActual<typeof import("../../src/utils")>("../../src/utils");
+// Mock utils modules
+vi.mock("../../src/utils/async", async () => {
+  const actual = await vi.importActual<typeof import("../../src/utils/async")>("../../src/utils/async");
   return {
     ...actual,
-    getBasePath: vi.fn(() => "/"),
+  };
+});
+
+vi.mock("../../src/utils/html", async () => {
+  const actual = await vi.importActual<typeof import("../../src/utils/html")>("../../src/utils/html");
+  return {
+    ...actual,
     unescapeHtml: vi.fn((text: string) => text),
   };
 });
@@ -24,7 +31,7 @@ describe("TypeScript Runner Integration", () => {
 
   // Helper to prepare code as it would be at build time (wrapped in run() function)
   function prepareCode(tsCode: string): string {
-    return wrapTypeScriptCode(unescapeHtml(tsCode));
+    return TypeScriptTransformer.wrapTypeScriptCode(unescapeHtml(tsCode));
   }
 
   beforeEach(async () => {
@@ -50,8 +57,7 @@ describe("TypeScript Runner Integration", () => {
     delete (window as any).ts;
 
     // Reset utils mocks
-    const utils = await import("../../src/utils");
-    vi.mocked(utils.getBasePath).mockReturnValue("/");
+    const utils = await import("../../src/utils/html");
     vi.mocked(utils.unescapeHtml).mockImplementation((text: string) => text);
   });
 
@@ -95,7 +101,7 @@ describe("TypeScript Runner Integration", () => {
       block.appendChild(codeScript);
       container.appendChild(block);
 
-      const { initializeTypeScriptRunner } = await import("../../src/typescript-runner/index");
+      const { initializeTypeScriptRunner } = await import("../../src/code-executor/block-executor");
       await initializeTypeScriptRunner(container);
 
       // Verify button is enabled
@@ -165,7 +171,7 @@ describe("TypeScript Runner Integration", () => {
       block.appendChild(codeScript);
       container.appendChild(block);
 
-      const { initializeTypeScriptRunner } = await import("../../src/typescript-runner/index");
+      const { initializeTypeScriptRunner } = await import("../../src/code-executor/block-executor");
       await initializeTypeScriptRunner(container);
 
       runButton.click();
@@ -212,7 +218,7 @@ describe("TypeScript Runner Integration", () => {
       block.appendChild(codeScript);
       container.appendChild(block);
 
-      const { initializeTypeScriptRunner } = await import("../../src/typescript-runner/index");
+      const { initializeTypeScriptRunner } = await import("../../src/code-executor/block-executor");
       await initializeTypeScriptRunner(container);
 
       runButton.click();
@@ -256,7 +262,7 @@ describe("TypeScript Runner Integration", () => {
       block.appendChild(codeScript);
       container.appendChild(block);
 
-      const { initializeTypeScriptRunner } = await import("../../src/typescript-runner/index");
+      const { initializeTypeScriptRunner } = await import("../../src/code-executor/block-executor");
       await initializeTypeScriptRunner(container);
 
       runButton.click();
@@ -309,7 +315,7 @@ describe("TypeScript Runner Integration", () => {
       block.appendChild(codeScript);
       container.appendChild(block);
 
-      const { initializeTypeScriptRunner } = await import("../../src/typescript-runner/index");
+      const { initializeTypeScriptRunner } = await import("../../src/code-executor/block-executor");
       await initializeTypeScriptRunner(container);
 
       runButton.click();
@@ -358,7 +364,7 @@ describe("TypeScript Runner Integration", () => {
       block.appendChild(codeScript);
       container.appendChild(block);
 
-      const { initializeTypeScriptRunner } = await import("../../src/typescript-runner/index");
+      const { initializeTypeScriptRunner } = await import("../../src/code-executor/block-executor");
       await initializeTypeScriptRunner(container);
 
       runButton.click();
@@ -399,7 +405,7 @@ describe("TypeScript Runner Integration", () => {
       block.appendChild(codeScript);
       container.appendChild(block);
 
-      const { initializeTypeScriptRunner } = await import("../../src/typescript-runner/index");
+      const { initializeTypeScriptRunner } = await import("../../src/code-executor/block-executor");
       await initializeTypeScriptRunner(container);
 
       runButton.click();
@@ -447,7 +453,7 @@ describe("TypeScript Runner Integration", () => {
       block.appendChild(codeScript);
       container.appendChild(block);
 
-      const { initializeTypeScriptRunner } = await import("../../src/typescript-runner/index");
+      const { initializeTypeScriptRunner } = await import("../../src/code-executor/block-executor");
       await initializeTypeScriptRunner(container);
 
       runButton.click();

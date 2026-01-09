@@ -9,13 +9,14 @@ import { join } from "path";
 import { Marked } from "marked";
 import { markedHighlight } from "marked-highlight";
 import hljs from "highlight.js";
-import { createHighlightConfig } from "../../src/blog";
-import { renderMermaidDiagrams } from "../../src/mermaid";
+import { createHighlightConfig } from "../../src/blog/reader";
+import { renderMermaidDiagrams } from "../../src/render/mermaid";
 import { findUnnestedCodeBlocks } from "../helpers/markdown";
 
 describe("Mermaid Diagram Rendering Integration Test", () => {
   const distBlogsDir = join(process.cwd(), "dist", "posts");
   const manifestPath = join(distBlogsDir, "manifest.json");
+
   let manifest: { files: string[] };
   let marked: Marked;
 
@@ -81,23 +82,20 @@ describe("Mermaid Diagram Rendering Integration Test", () => {
 
         const markdown = readFileSync(filePath, "utf-8");
         const markdownWithoutFrontmatter = markdown.replace(/^---\s*\n[\s\S]*?\n---\s*\n/, "");
-
-        // Find all top-level code blocks (excluding those nested in 4-backtick markdown blocks)
-        const allCodeBlocks = findUnnestedCodeBlocks(markdownWithoutFrontmatter);
-
-        // Filter for mermaid blocks
-        const topLevelMermaidBlocks = allCodeBlocks.filter((block) => block.lang === "mermaid");
+        const topLevelMermaidBlocks = findUnnestedCodeBlocks(markdownWithoutFrontmatter).filter(
+          (block) => block.lang === "mermaid",
+        );
 
         if (topLevelMermaidBlocks.length === 0) {
-          continue; // No top-level mermaid blocks in this file
+          continue;
         }
 
         // Render the markdown to HTML
         const html = marked.parse(markdownWithoutFrontmatter) as string;
-
-        // Verify that mermaid elements exist and have content
         const container = document.createElement("div");
         container.innerHTML = html;
+
+        // Verify that mermaid elements exist and have content
         const mermaidElements = container.querySelectorAll(".mermaid");
         expect(mermaidElements.length).toBeGreaterThanOrEqual(topLevelMermaidBlocks.length);
 

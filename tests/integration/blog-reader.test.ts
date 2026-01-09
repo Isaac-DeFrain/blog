@@ -2,7 +2,7 @@
  * Integration tests for BlogReader including SPA routing, post loading, link interception,
  * topic filtering, MathJax integration, and browser navigation handling.
  */
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi, assert } from "vitest";
 import {
   setupDOM,
   cleanupDOM,
@@ -11,36 +11,31 @@ import {
   createUrlBasedFetchMock,
   waitForBlogContent,
   waitForBlogList,
+  setBasePath,
 } from "../helpers/dom";
 import { createMockManifest, createMockMarkdown } from "../helpers/mocks";
-import { resolveWithTimeout } from "../../src/utils";
+import { resolveWithTimeout } from "../../src/utils/async";
+import { initializeBlogReader } from "../common";
 
 // Mock the blog module - we'll need to import it dynamically
 // Since BlogReader is instantiated on module load, we need to handle this carefully
+
+const TIMEOUT = { timeout: 2000 };
 
 describe("BlogReader Integration", () => {
   let originalFetch: typeof fetch;
   let originalLocation: Location;
   let originalHistory: History;
+
   let mockFetch: ReturnType<typeof vi.fn>;
   let mockPushState: ReturnType<typeof vi.fn>;
   let mockReplaceState: ReturnType<typeof vi.fn>;
 
-  // let originalConsoleError: typeof console.error;
-  // let originalConsoleWarn: typeof console.warn;
-
   beforeEach(async () => {
-    // Clear module cache first to allow fresh imports
+    // Clear module cache and reset DOM
     vi.resetModules();
-
     cleanupDOM();
     setupDOM();
-
-    // // Suppress expected console errors and warnings during tests
-    // originalConsoleError = console.error;
-    // originalConsoleWarn = console.warn;
-    // console.error = vi.fn();
-    // console.warn = vi.fn();
 
     // Mock fetch with default error response to catch unmocked calls
     // Note: Tests that need URL-based mocking will override this
@@ -82,11 +77,11 @@ describe("BlogReader Integration", () => {
       writable: true,
     });
 
-    // Set base path
-    (window as any).__BASE_PATH__ = "/";
+    setBasePath("/");
   });
 
   afterEach(() => {
+    // Reset original values
     global.fetch = originalFetch;
     window.history = originalHistory;
     Object.defineProperty(window, "location", {
@@ -94,10 +89,7 @@ describe("BlogReader Integration", () => {
       writable: true,
     });
 
-    // Restore console methods
-    // console.error = originalConsoleError;
-    // console.warn = originalConsoleWarn;
-
+    // Clean up DOM and reset mocks
     cleanupDOM();
     vi.clearAllMocks();
   });
@@ -127,12 +119,9 @@ describe("BlogReader Integration", () => {
         },
       };
 
-      // Import and instantiate BlogReader
-      const { BlogReader } = await import("../../src/blog");
-      new BlogReader();
-
       // Wait for blog list to be populated
-      await waitForBlogList(2, { timeout: 2000 });
+      await initializeBlogReader();
+      await waitForBlogList(2, TIMEOUT);
 
       // Check that posts were loaded
       const blogList = document.getElementById("blog-list");
@@ -141,7 +130,7 @@ describe("BlogReader Integration", () => {
 
     it("should handle base path in URL", async () => {
       // Set base path and location before importing
-      (window as any).__BASE_PATH__ = "/blog/";
+      setBasePath("/blog/");
       Object.defineProperty(window, "location", {
         value: {
           pathname: "/blog/post-1",
@@ -165,20 +154,13 @@ describe("BlogReader Integration", () => {
 
       // Override the mock fetch with URL-based handler
       global.fetch = createUrlBasedFetchMock(urlHandlers) as typeof fetch;
-
       (window as any).MathJax = {
         typesetPromise: vi.fn().mockResolvedValue(undefined),
       };
 
-      // Import and instantiate BlogReader
-      const { BlogReader } = await import("../../src/blog");
-      new BlogReader();
-
-      // Wait for blog list to be populated first
-      await waitForBlogList(1, { timeout: 2000 });
-
-      // Wait for blog content to be loaded (not in loading state)
-      await waitForBlogContent({ timeout: 2000 });
+      await initializeBlogReader();
+      await waitForBlogList(1, TIMEOUT);
+      await waitForBlogContent(TIMEOUT);
 
       // Should have loaded the post
       const blogContent = document.getElementById("blog-content");
@@ -201,19 +183,13 @@ describe("BlogReader Integration", () => {
       urlHandlers.set(/post-1\.md/, () => createMockTextResponse(markdown));
 
       global.fetch = createUrlBasedFetchMock(urlHandlers) as typeof fetch;
-
       (window as any).MathJax = {
         typesetPromise: vi.fn().mockResolvedValue(undefined),
       };
 
-      const { BlogReader } = await import("../../src/blog");
-      new BlogReader();
-
-      // Wait for blog list to be populated first
-      await waitForBlogList(1, { timeout: 2000 });
-
-      // Wait for blog content to be loaded (not in loading state)
-      await waitForBlogContent({ timeout: 2000 });
+      await initializeBlogReader();
+      await waitForBlogList(1, TIMEOUT);
+      await waitForBlogContent(TIMEOUT);
 
       const blogContent = document.getElementById("blog-content");
       expect(blogContent?.textContent).toContain("Test Post");
@@ -224,14 +200,11 @@ describe("BlogReader Integration", () => {
       const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
       mockFetch.mockRejectedValueOnce(new Error("Network error"));
-
       (window as any).MathJax = {
         typesetPromise: vi.fn().mockResolvedValue(undefined),
       };
 
-      const { BlogReader } = await import("../../src/blog");
-      new BlogReader();
-      // Wait longer for async error handling
+      await initializeBlogReader();
       await new Promise(resolveWithTimeout(200));
 
       expect(consoleErrorSpy).toHaveBeenCalled();
@@ -240,42 +213,21 @@ describe("BlogReader Integration", () => {
 
     it("should handle post loading errors", async () => {
       // Set up console spy before importing
-      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-
+      const consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
       const manifest = createMockManifest(["post-1.md"]);
 
       mockFetch
         .mockResolvedValueOnce(createMockResponse(manifest))
         .mockRejectedValueOnce(new Error("Failed to load post"));
-
       (window as any).MathJax = {
         typesetPromise: vi.fn().mockResolvedValue(undefined),
       };
 
-      const { BlogReader } = await import("../../src/blog");
-      new BlogReader();
-      // Wait longer for async operations including post loading
+      await initializeBlogReader();
       await new Promise(resolveWithTimeout(1000));
 
-      // Error should be logged or shown in the UI
-      // The error might occur during initial load, so check both console and DOM
-      const blogContent = document.getElementById("blog-content");
-      const errorLogged = consoleErrorSpy.mock.calls.length > 0;
-      const errorInDOM = blogContent?.textContent?.includes("Failed to load") || 
-                        blogContent?.textContent?.includes("error") ||
-                        blogContent?.classList.contains("error");
-      
-      // At least one of these should be true if an error occurred
-      // If neither is true, the error might have been handled silently or not occurred
-      if (!errorLogged && !errorInDOM) {
-        // Log for debugging
-        console.warn("No error detected - this might indicate the error was handled silently or didn't occur");
-      }
-      
-      // For now, we'll just verify that the test doesn't crash
-      // The actual error handling behavior is tested in other tests
-      expect(true).toBe(true);
-      consoleErrorSpy.mockRestore();
+      expect(consoleWarnSpy.mock.calls.length).toBe(1);
+      consoleWarnSpy.mockRestore();
     });
 
     it("should sort posts by date (newest first)", async () => {
@@ -289,20 +241,19 @@ describe("BlogReader Integration", () => {
         .mockResolvedValueOnce(createMockTextResponse(markdown1))
         .mockResolvedValueOnce(createMockTextResponse(markdown2))
         .mockResolvedValueOnce(createMockTextResponse(markdown3));
-
       (window as any).MathJax = {
         typesetPromise: vi.fn().mockResolvedValue(undefined),
       };
 
-      const { BlogReader } = await import("../../src/blog");
-      new BlogReader();
-      // Wait longer for all posts to load
+      await initializeBlogReader();
       await new Promise(resolveWithTimeout(400));
 
       const blogList = document.getElementById("blog-list");
       const items = Array.from(blogList?.children || []) as HTMLElement[];
-      // Should be sorted: Post 2 (newest), Post 3, Post 1 (oldest)
-      expect(items.length).toBeGreaterThanOrEqual(3);
+
+      assert(items[0].textContent?.startsWith("Post 2"));
+      assert(items[1].textContent?.startsWith("Post 3"));
+      assert(items[2].textContent?.startsWith("Post 1"));
     });
   });
 
@@ -325,8 +276,7 @@ describe("BlogReader Integration", () => {
         typesetPromise: vi.fn().mockResolvedValue(undefined),
       };
 
-      const { BlogReader } = await import("../../src/blog");
-      new BlogReader();
+      await initializeBlogReader();
       await new Promise(resolveWithTimeout(200));
 
       const blogContent = document.getElementById("blog-content");
@@ -358,8 +308,7 @@ describe("BlogReader Integration", () => {
         typesetPromise: vi.fn().mockResolvedValue(undefined),
       };
 
-      const { BlogReader } = await import("../../src/blog");
-      new BlogReader();
+      await initializeBlogReader();
       await new Promise(resolveWithTimeout(200));
 
       const blogContent = document.getElementById("blog-content");
@@ -392,8 +341,7 @@ describe("BlogReader Integration", () => {
         typesetPromise: vi.fn().mockResolvedValue(undefined),
       };
 
-      const { BlogReader } = await import("../../src/blog");
-      new BlogReader();
+      await initializeBlogReader();
       await new Promise(resolveWithTimeout(200));
 
       const blogContent = document.getElementById("blog-content");
@@ -435,8 +383,7 @@ describe("BlogReader Integration", () => {
         typesetPromise: vi.fn().mockResolvedValue(undefined),
       };
 
-      const { BlogReader } = await import("../../src/blog");
-      new BlogReader();
+      await initializeBlogReader();
       await new Promise(resolveWithTimeout(200));
 
       // Click on a topic button
@@ -478,8 +425,7 @@ describe("BlogReader Integration", () => {
         typesetPromise: mockTypesetPromise,
       };
 
-      const { BlogReader } = await import("../../src/blog");
-      new BlogReader();
+      await initializeBlogReader();
       // Wait longer for content to load, MathJax import, and typesetting
       await new Promise(resolveWithTimeout(400));
 
@@ -506,10 +452,9 @@ describe("BlogReader Integration", () => {
         typesetPromise: mockTypesetPromise,
       };
 
-      const { BlogReader } = await import("../../src/blog");
-      new BlogReader();
-      await waitForBlogList(1, { timeout: 2000 });
-      await waitForBlogContent({ timeout: 2000 });
+      await initializeBlogReader();
+      await waitForBlogList(1, TIMEOUT);
+      await waitForBlogContent(TIMEOUT);
       await new Promise(resolveWithTimeout(400));
 
       expect(mockTypesetPromise).toHaveBeenCalled();
@@ -534,10 +479,9 @@ describe("BlogReader Integration", () => {
         typesetPromise: mockTypesetPromise,
       };
 
-      const { BlogReader } = await import("../../src/blog");
-      new BlogReader();
-      await waitForBlogList(1, { timeout: 2000 });
-      await waitForBlogContent({ timeout: 2000 });
+      await initializeBlogReader();
+      await waitForBlogList(1, TIMEOUT);
+      await waitForBlogContent(TIMEOUT);
       await new Promise(resolveWithTimeout(400));
 
       expect(mockTypesetPromise).toHaveBeenCalled();
@@ -569,10 +513,9 @@ describe("BlogReader Integration", () => {
         typesetPromise: vi.fn().mockResolvedValue(undefined),
       };
 
-      const { BlogReader } = await import("../../src/blog");
-      new BlogReader();
-      await waitForBlogList(1, { timeout: 2000 });
-      await waitForBlogContent({ timeout: 2000 });
+      await initializeBlogReader();
+      await waitForBlogList(1, TIMEOUT);
+      await waitForBlogContent(TIMEOUT);
       await new Promise(resolveWithTimeout(400));
 
       // Mermaid should have been called
@@ -599,10 +542,9 @@ describe("BlogReader Integration", () => {
         typesetPromise: vi.fn().mockResolvedValue(undefined),
       };
 
-      const { BlogReader } = await import("../../src/blog");
-      new BlogReader();
-      await waitForBlogList(1, { timeout: 2000 });
-      await waitForBlogContent({ timeout: 2000 });
+      await initializeBlogReader();
+      await waitForBlogList(1, TIMEOUT);
+      await waitForBlogContent(TIMEOUT);
       await new Promise(resolveWithTimeout(400));
 
       // Graphviz should have been rendered (check for graphviz class)
@@ -629,10 +571,9 @@ describe("BlogReader Integration", () => {
         typesetPromise: vi.fn().mockResolvedValue(undefined),
       };
 
-      const { BlogReader } = await import("../../src/blog");
-      new BlogReader();
-      await waitForBlogList(1, { timeout: 2000 });
-      await waitForBlogContent({ timeout: 2000 });
+      await initializeBlogReader();
+      await waitForBlogList(1, TIMEOUT);
+      await waitForBlogContent(TIMEOUT);
       await new Promise(resolveWithTimeout(400));
 
       // Graphviz should have been rendered
@@ -661,10 +602,9 @@ describe("BlogReader Integration", () => {
         typesetPromise: vi.fn().mockResolvedValue(undefined),
       };
 
-      const { BlogReader } = await import("../../src/blog");
-      new BlogReader();
-      await waitForBlogList(1, { timeout: 2000 });
-      await waitForBlogContent({ timeout: 2000 });
+      await initializeBlogReader();
+      await waitForBlogList(1, TIMEOUT);
+      await waitForBlogContent(TIMEOUT);
       await new Promise(resolveWithTimeout(400));
 
       // TypeScript executable block should have been rendered
@@ -708,12 +648,10 @@ describe("BlogReader Integration", () => {
         typesetPromise: vi.fn().mockResolvedValue(undefined),
       };
 
-      const { BlogReader } = await import("../../src/blog");
-      new BlogReader();
-
-      // Wait for initial load to complete - ensure posts are loaded before triggering popstate
-      await waitForBlogList(2, { timeout: 2000 });
-      await waitForBlogContent({ timeout: 2000 });
+      // Wait for reader and initial load to complete - ensure posts are loaded before triggering popstate
+      await initializeBlogReader();
+      await waitForBlogList(2, TIMEOUT);
+      await waitForBlogContent(TIMEOUT);
 
       // Simulate browser back button
       const popstateEvent = new PopStateEvent("popstate", {
@@ -722,7 +660,7 @@ describe("BlogReader Integration", () => {
       window.dispatchEvent(popstateEvent);
 
       // Wait for popstate handler to load the post
-      await waitForBlogContent({ timeout: 2000 });
+      await waitForBlogContent(TIMEOUT);
 
       // Should have loaded post-2
       const blogContent = document.getElementById("blog-content");

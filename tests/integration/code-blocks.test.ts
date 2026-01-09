@@ -9,10 +9,10 @@ import { join } from "path";
 import { Marked } from "marked";
 import { markedHighlight } from "marked-highlight";
 import hljs from "highlight.js";
-import { createHighlightConfig } from "../../src/blog";
-import { PostRenderer } from "../../src/blog/PostRenderer";
+import { createHighlightConfig } from "../../src/blog/reader";
+import { PostRenderer } from "../../src/blog/post-renderer";
 import { findUnnestedCodeBlocks } from "../helpers/markdown";
-import { wrapJsCodeRun } from "../../src/typescript-runner/index";
+import { TypeScriptTransformer } from "../../src/code-executor/typescript-transformer";
 
 // Setup marked with TypeScript executable block support
 async function setupMarkedWithTypeScriptExecutableBlock() {
@@ -227,7 +227,7 @@ describe("Code Blocks Rendering Integration Test", () => {
         expect(scriptTag).not.toBeNull();
 
         const extractedCode = JSON.parse(scriptTag!.textContent || "");
-        expect(extractedCode).toBe(wrapJsCodeRun(testCase.expectedAfterUnescape));
+        expect(extractedCode).toBe(TypeScriptTransformer.wrapJsCodeRun(testCase.expectedAfterUnescape));
       }
     });
 
@@ -261,9 +261,9 @@ ${typescriptRunCodeBlock(code3)}
       expect(scriptTags.length).toBe(3);
 
       const extractedCodes = Array.from(scriptTags).map((tag) => JSON.parse(tag.textContent || ""));
-      expect(extractedCodes[0]).toBe(wrapJsCodeRun(code1));
-      expect(extractedCodes[1]).toBe(wrapJsCodeRun(code2));
-      expect(extractedCodes[2]).toBe(wrapJsCodeRun(expectedCode3));
+      expect(extractedCodes[0]).toBe(TypeScriptTransformer.wrapJsCodeRun(code1));
+      expect(extractedCodes[1]).toBe(TypeScriptTransformer.wrapJsCodeRun(code2));
+      expect(extractedCodes[2]).toBe(TypeScriptTransformer.wrapJsCodeRun(expectedCode3));
     });
   });
 });

@@ -6,7 +6,7 @@
 import { describe, it, expect, beforeAll, beforeEach, afterEach, vi } from "vitest";
 import { readFileSync, readdirSync, existsSync } from "fs";
 import { join } from "path";
-import { parseFrontmatter } from "../../src/utils";
+import { parseFrontmatter } from "../../src/utils/frontmatter";
 import { isValidDate } from "../common";
 
 describe("Blog Post Loading Integration Test", () => {
