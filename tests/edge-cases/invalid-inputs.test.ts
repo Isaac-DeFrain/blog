@@ -3,7 +3,9 @@
  * special characters in filenames, very long content, and Unicode edge cases.
  */
 import { describe, it, expect } from "vitest";
-import { parseDateAsPacificTime, formatDateAsPacificTime, escapeHtml, parseFrontmatter } from "../../src/utils";
+import { parseDateAsPacificTime, formatDateAsPacificTime } from "../../src/utils/dates";
+import { escapeHtml } from "../../src/utils/html";
+import { parseFrontmatter } from "../../src/utils/frontmatter";
 
 describe("Invalid Inputs", () => {
   describe("Malformed dates", () => {

@@ -2,7 +2,7 @@
  * Edge case and error handling tests for BlogReader
  * Tests uncovered branches and error paths
  */
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi, assert } from "vitest";
 import {
   setupDOM,
   cleanupDOM,
@@ -11,6 +11,7 @@ import {
   createUrlBasedFetchMock,
   waitForBlogContent,
   waitForBlogList,
+  setBasePath,
 } from "../helpers/dom";
 import {
   createMockManifest,
@@ -19,9 +20,12 @@ import {
   setupMathJaxMock,
   setupMermaidMock,
 } from "../helpers/mocks";
-import { li, resolveWithTimeout } from "../../src/utils";
+import { createListItemElement } from "../../src/utils/html";
+import { resolveWithTimeout } from "../../src/utils/async";
+import { initializeBlogReader } from "../common";
+import { ERROR_PREFIXES, RenderingError } from "../../src/utils/errors";
 
-const TIMEOUT = 2000;
+const TIMEOUT = { timeout: 2000 };
 
 // Mock Viz instance
 const mockRenderSVGElement = vi.fn((_dot: string) => {
@@ -38,11 +42,6 @@ vi.mock("@viz-js/viz", () => {
     instance: vi.fn(() => Promise.resolve(mockVizInstance)),
   };
 });
-
-/** Sets the base path for the blog reader */
-function setBasePath(path: string) {
-  (window as any).__BASE_PATH__ = path;
-}
 
 describe("Blog Reader Edge Cases", () => {
   let originalFetch: typeof fetch;
@@ -128,10 +127,9 @@ describe("Blog Reader Edge Cases", () => {
       global.fetch = createUrlBasedFetchMock(urlHandlers) as typeof fetch;
       setupMathJaxMock();
 
-      const { BlogReader } = await import("../../src/blog");
-      new BlogReader();
-
-      await Promise.all([waitForBlogList(1, { timeout: TIMEOUT }), waitForBlogContent({ timeout: TIMEOUT })]);
+      await initializeBlogReader();
+      await waitForBlogList(1, TIMEOUT);
+      await waitForBlogContent(TIMEOUT);
 
       const blogContent = document.getElementById("blog-content");
       expect(blogContent?.textContent).toContain("Post 1");
@@ -162,10 +160,9 @@ describe("Blog Reader Edge Cases", () => {
       global.fetch = createUrlBasedFetchMock(urlHandlers) as typeof fetch;
       setupMathJaxMock();
 
-      const { BlogReader } = await import("../../src/blog");
-      new BlogReader();
-
-      await Promise.all([waitForBlogList(1, { timeout: TIMEOUT }), waitForBlogContent({ timeout: TIMEOUT })]);
+      await initializeBlogReader();
+      await waitForBlogList(1, TIMEOUT);
+      await waitForBlogContent(TIMEOUT);
 
       const blogContent = document.getElementById("blog-content");
       expect(blogContent?.textContent).toContain("Post 1");
@@ -196,10 +193,9 @@ describe("Blog Reader Edge Cases", () => {
       global.fetch = createUrlBasedFetchMock(urlHandlers) as typeof fetch;
       setupMathJaxMock();
 
-      const { BlogReader } = await import("../../src/blog");
-      new BlogReader();
-
-      await Promise.all([waitForBlogList(1, { timeout: TIMEOUT }), waitForBlogContent({ timeout: TIMEOUT })]);
+      await initializeBlogReader();
+      await waitForBlogList(1, TIMEOUT);
+      await waitForBlogContent(TIMEOUT);
 
       // Should load first post when pathname is just base path
       const blogContent = document.getElementById("blog-content");
@@ -231,10 +227,9 @@ describe("Blog Reader Edge Cases", () => {
       global.fetch = createUrlBasedFetchMock(urlHandlers) as typeof fetch;
       setupMathJaxMock();
 
-      const { BlogReader } = await import("../../src/blog");
-      new BlogReader();
-
-      await Promise.all([waitForBlogList(1, { timeout: TIMEOUT }), waitForBlogContent({ timeout: TIMEOUT })]);
+      await initializeBlogReader();
+      await waitForBlogList(1, TIMEOUT);
+      await waitForBlogContent(TIMEOUT);
 
       // Should load first post when pathname doesn't match base path
       const blogContent = document.getElementById("blog-content");
@@ -245,16 +240,14 @@ describe("Blog Reader Edge Cases", () => {
   describe("Error handling", () => {
     it("should handle blogContent being null", async () => {
       cleanupDOM();
-      // Don't set up blog-content element
 
+      // Don't set up blog-content element
       const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
-      const { BlogReader } = await import("../../src/blog");
-      new BlogReader();
-
+      await initializeBlogReader();
       await new Promise(resolveWithTimeout(100));
-      expect(consoleErrorSpy).toHaveBeenCalled();
 
+      expect(consoleErrorSpy).toHaveBeenCalled();
       consoleErrorSpy.mockRestore();
     });
 
@@ -262,19 +255,16 @@ describe("Blog Reader Edge Cases", () => {
       const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
       global.fetch = vi.fn().mockRejectedValue(new Error("Network error"));
-
       setupMathJaxMock();
 
-      const { BlogReader } = await import("../../src/blog");
-      new BlogReader();
-
+      await initializeBlogReader();
       await new Promise(resolveWithTimeout(200));
 
       expect(consoleErrorSpy).toHaveBeenCalled();
       const blogContent = document.getElementById("blog-content");
+
       // When manifest fails, it shows "No posts available" or error message
       expect(blogContent?.textContent).toMatch(/Failed to load blog posts|No posts available/);
-
       consoleErrorSpy.mockRestore();
     });
 
@@ -290,9 +280,7 @@ describe("Blog Reader Edge Cases", () => {
 
       setupMathJaxMock();
 
-      const { BlogReader } = await import("../../src/blog");
-      new BlogReader();
-
+      await initializeBlogReader();
       await new Promise(resolveWithTimeout(200));
 
       expect(consoleErrorSpy).toHaveBeenCalled();
@@ -326,10 +314,9 @@ describe("Blog Reader Edge Cases", () => {
 
       setupMathJaxMock();
 
-      const { BlogReader } = await import("../../src/blog");
-      new BlogReader();
-
-      await Promise.all([waitForBlogList(1, { timeout: TIMEOUT }), waitForBlogContent({ timeout: TIMEOUT })]);
+      await initializeBlogReader();
+      await waitForBlogList(1, TIMEOUT);
+      await waitForBlogContent(TIMEOUT);
 
       // Should have warned about failed post
       expect(consoleWarnSpy).toHaveBeenCalled();
@@ -352,18 +339,15 @@ describe("Blog Reader Edge Cases", () => {
       global.fetch = createUrlBasedFetchMock(urlHandlers) as typeof fetch;
       setupMathJaxMock();
 
-      const { BlogReader } = await import("../../src/blog");
-      const reader = new BlogReader();
-
-      await waitForBlogList(1, { timeout: TIMEOUT });
+      const reader = await initializeBlogReader();
+      await waitForBlogList(1, TIMEOUT);
 
       // Try to load a non-existent post using the public API (handlePostClick)
       // This will catch the error and show it to the user
       await (reader as any).handlePostClick("non-existent-post");
-
       await new Promise(resolveWithTimeout(100));
-
       expect(consoleErrorSpy).toHaveBeenCalled();
+
       const blogContent = document.getElementById("blog-content");
       expect(blogContent?.textContent).toContain("Blog post not found");
 
@@ -381,6 +365,7 @@ describe("Blog Reader Edge Cases", () => {
 
       let callCount = 0;
       const urlHandlers = new Map<string | RegExp, () => Response | Promise<Response>>();
+
       urlHandlers.set(/manifest\.json/, () => createMockResponse(manifest));
       urlHandlers.set(/post-1\.md/, () => {
         callCount++;
@@ -398,16 +383,13 @@ describe("Blog Reader Edge Cases", () => {
       });
 
       global.fetch = createUrlBasedFetchMock(urlHandlers) as typeof fetch;
-
       setupMathJaxMock();
 
-      const { BlogReader } = await import("../../src/blog");
-      new BlogReader();
-
-      await waitForBlogList(1, { timeout: 2000 });
+      await initializeBlogReader();
+      await waitForBlogList(1, TIMEOUT);
       await new Promise(resolveWithTimeout(300));
-
       expect(consoleErrorSpy).toHaveBeenCalled();
+
       const blogContent = document.getElementById("blog-content");
       expect(blogContent?.textContent).toContain("Failed to load blog post");
 
@@ -426,29 +408,22 @@ describe("Blog Reader Edge Cases", () => {
       urlHandlers.set(/post-1\.md/, () => createMockTextResponse(markdown));
 
       global.fetch = createUrlBasedFetchMock(urlHandlers) as typeof fetch;
-
       setupMathJaxMock();
 
-      const { BlogReader } = await import("../../src/blog");
-      const reader = new BlogReader();
-
-      await waitForBlogList(1, { timeout: 2000 });
-
-      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+      const reader = await initializeBlogReader();
+      await waitForBlogList(1, TIMEOUT);
 
       // Try to render content with null blogContent (simulating missing element)
       // This should throw a RenderingError
       try {
         await (reader as any).postRenderer.renderBlogPostContent(null as any, "<p>Test</p>", "2024-01-15", "# Test");
-        // Should not reach here
-        expect(true).toBe(false);
+        assert(false, "Should not reach here");
       } catch (error) {
-        // Error is expected - RenderingError should be thrown
-        expect(error).toBeDefined();
-        // The error is thrown but not logged unless caught by error handling
-        // Since this is a direct call, the error is not logged
+        expect((error as Error).name).toBe(RenderingError.name);
+        expect((error as Error).message).toContain(
+          `${ERROR_PREFIXES.RENDERING_ERROR}: Blog post content element is null`,
+        );
       }
-      consoleErrorSpy.mockRestore();
     });
   });
 
@@ -469,14 +444,11 @@ describe("Blog Reader Edge Cases", () => {
       urlHandlers.set(/post-1\.md/, () => createMockTextResponse(markdown));
 
       global.fetch = createUrlBasedFetchMock(urlHandlers) as typeof fetch;
-
       setupMathJaxMock();
 
-      const { BlogReader } = await import("../../src/blog");
-      new BlogReader();
-
-      await waitForBlogList(1, { timeout: 2000 });
-      await waitForBlogContent({ timeout: 2000 });
+      await initializeBlogReader();
+      await waitForBlogList(1, TIMEOUT);
+      await waitForBlogContent(TIMEOUT);
 
       // Remove blogContent after setup
       const blogContent = document.getElementById("blog-content");
@@ -503,14 +475,11 @@ describe("Blog Reader Edge Cases", () => {
       urlHandlers.set(/post-1\.md/, () => createMockTextResponse(markdown));
 
       global.fetch = createUrlBasedFetchMock(urlHandlers) as typeof fetch;
-
       setupMathJaxMock();
 
-      const { BlogReader } = await import("../../src/blog");
-      new BlogReader();
-
-      await waitForBlogList(1, { timeout: 2000 });
-      await waitForBlogContent({ timeout: 2000 });
+      await initializeBlogReader();
+      await waitForBlogList(1, TIMEOUT);
+      await waitForBlogContent(TIMEOUT);
 
       // Create a link without href
       const blogContent = document.getElementById("blog-content");
@@ -536,14 +505,11 @@ describe("Blog Reader Edge Cases", () => {
       urlHandlers.set(/post-1\.md/, () => createMockTextResponse(markdown));
 
       global.fetch = createUrlBasedFetchMock(urlHandlers) as typeof fetch;
-
       setupMathJaxMock();
 
-      const { BlogReader } = await import("../../src/blog");
-      new BlogReader();
-
-      await waitForBlogList(1, { timeout: 2000 });
-      await waitForBlogContent({ timeout: 2000 });
+      await initializeBlogReader();
+      await waitForBlogList(1, TIMEOUT);
+      await waitForBlogContent(TIMEOUT);
 
       // Get the call count after initial load (pushState is called when loading the initial post)
       const initialCallCount = mockPushState.mock.calls.length;
@@ -581,13 +547,11 @@ describe("Blog Reader Edge Cases", () => {
       urlHandlers.set(/post-2\.md/, () => createMockTextResponse(markdown2));
 
       global.fetch = createUrlBasedFetchMock(urlHandlers) as typeof fetch;
-
       setupMathJaxMock();
 
-      const { BlogReader } = await import("../../src/blog");
-      new BlogReader();
-
-      await Promise.all([waitForBlogList(2, { timeout: 2000 }), waitForBlogContent({ timeout: 2000 })]);
+      await initializeBlogReader();
+      await waitForBlogList(2, TIMEOUT);
+      await waitForBlogContent(TIMEOUT);
 
       const blogContent = document.getElementById("blog-content");
       const link = blogContent?.querySelector("a[href*='post-2']");
@@ -595,7 +559,7 @@ describe("Blog Reader Edge Cases", () => {
         const clickEvent = new MouseEvent("click", { bubbles: true, cancelable: true });
         link.dispatchEvent(clickEvent);
 
-        await waitForBlogContent({ timeout: 2000 });
+        await waitForBlogContent(TIMEOUT);
 
         expect(mockPushState).toHaveBeenCalled();
         expect(blogContent?.textContent).toContain("Post 2");
@@ -625,10 +589,9 @@ describe("Blog Reader Edge Cases", () => {
       global.fetch = createUrlBasedFetchMock(urlHandlers) as typeof fetch;
       setupMathJaxMock();
 
-      const { BlogReader } = await import("../../src/blog");
-      new BlogReader();
-
-      await Promise.all([waitForBlogList(2, { timeout: 2000 }), waitForBlogContent({ timeout: 2000 })]);
+      await initializeBlogReader();
+      await waitForBlogList(2, TIMEOUT);
+      await waitForBlogContent(TIMEOUT);
 
       const blogContent = document.getElementById("blog-content");
       const link = blogContent?.querySelector("a");
@@ -636,7 +599,7 @@ describe("Blog Reader Edge Cases", () => {
         const clickEvent = new MouseEvent("click", { bubbles: true, cancelable: true });
         link.dispatchEvent(clickEvent);
 
-        await waitForBlogContent({ timeout: 2000 });
+        await waitForBlogContent(TIMEOUT);
         expect(mockPushState).toHaveBeenCalled();
       }
     });
@@ -667,11 +630,9 @@ describe("Blog Reader Edge Cases", () => {
         writable: true,
       });
 
-      const { BlogReader } = await import("../../src/blog");
-      new BlogReader();
-
-      await waitForBlogList(1, { timeout: 2000 });
-      await waitForBlogContent({ timeout: 2000 });
+      await initializeBlogReader();
+      await waitForBlogList(1, TIMEOUT);
+      await waitForBlogContent(TIMEOUT);
 
       const blogContent = document.getElementById("blog-content");
       const link = blogContent?.querySelector("a[href='#section-1']");
@@ -712,11 +673,9 @@ describe("Blog Reader Edge Cases", () => {
         writable: true,
       });
 
-      const { BlogReader } = await import("../../src/blog");
-      new BlogReader();
-
-      await waitForBlogList(1, { timeout: 2000 });
-      await waitForBlogContent({ timeout: 2000 });
+      await initializeBlogReader();
+      await waitForBlogList(1, TIMEOUT);
+      await waitForBlogContent(TIMEOUT);
 
       const blogContent = document.getElementById("blog-content");
       const link = blogContent?.querySelector("a[href='#section-1']");
@@ -727,6 +686,7 @@ describe("Blog Reader Edge Cases", () => {
 
         await new Promise(resolveWithTimeout(100));
         expect(mockPushState).toHaveBeenCalled();
+
         scrollIntoViewSpy.mockRestore();
       }
     });
@@ -752,13 +712,11 @@ describe("Blog Reader Edge Cases", () => {
       urlHandlers.set(/post-2\.md/, () => createMockTextResponse(markdown2));
 
       global.fetch = createUrlBasedFetchMock(urlHandlers) as typeof fetch;
-
       setupMathJaxMock();
 
-      const { BlogReader } = await import("../../src/blog");
-      new BlogReader();
-
-      await Promise.all([waitForBlogList(2, { timeout: 2000 }), waitForBlogContent({ timeout: 2000 })]);
+      await initializeBlogReader();
+      await waitForBlogList(2, TIMEOUT);
+      await waitForBlogContent(TIMEOUT);
 
       // Filter to only development posts (Post 2)
       const topicsBar = document.getElementById("topics-bar");
@@ -767,11 +725,10 @@ describe("Blog Reader Edge Cases", () => {
 
       if (devButton) {
         devButton.click();
-        await waitForBlogContent({ timeout: 2000 });
+        await waitForBlogContent(TIMEOUT);
 
         // Should have loaded Post 2 (check for date or content)
         const blogContent = document.getElementById("blog-content");
-        // The content might show the date or post name
         expect(blogContent?.textContent).toMatch(/Post 2|January 20/);
       }
     });
@@ -792,10 +749,9 @@ describe("Blog Reader Edge Cases", () => {
       global.fetch = createUrlBasedFetchMock(urlHandlers) as typeof fetch;
       setupMathJaxMock();
 
-      const { BlogReader } = await import("../../src/blog");
-      const reader = new BlogReader();
-
-      await Promise.all([waitForBlogList(1, { timeout: 2000 }), waitForBlogContent({ timeout: 2000 })]);
+      const reader = await initializeBlogReader();
+      await waitForBlogList(1, TIMEOUT);
+      await waitForBlogContent(TIMEOUT);
 
       // Initial state should have one post
       const blogList = document.getElementById("blog-list");
@@ -806,7 +762,7 @@ describe("Blog Reader Edge Cases", () => {
 
       // Sidebar should show "No posts available" message when filtered to no matches
       expect(blogList?.children.length).toBe(1);
-      expect(blogList?.innerHTML).toContain(li("loading", "No posts available"));
+      expect(blogList?.innerHTML).toContain(createListItemElement("loading", "No posts available"));
       expect(blogList?.textContent).toContain("No posts available");
 
       // Blog content should remain unchanged
@@ -831,11 +787,9 @@ describe("Blog Reader Edge Cases", () => {
       global.fetch = createUrlBasedFetchMock(urlHandlers) as typeof fetch;
       setupMathJaxMock();
 
-      const { BlogReader } = await import("../../src/blog");
-      new BlogReader();
-
-      await waitForBlogList(1, { timeout: 2000 });
-      await waitForBlogContent({ timeout: 2000 });
+      await initializeBlogReader();
+      await waitForBlogList(1, TIMEOUT);
+      await waitForBlogContent(TIMEOUT);
 
       // Simulate popstate with no postId
       Object.defineProperty(window, "location", {
@@ -851,8 +805,7 @@ describe("Blog Reader Edge Cases", () => {
         state: null,
       });
       window.dispatchEvent(popstateEvent);
-
-      await waitForBlogContent({ timeout: 2000 });
+      await waitForBlogContent(TIMEOUT);
 
       // Should have loaded first post
       const blogContent = document.getElementById("blog-content");
@@ -876,19 +829,16 @@ describe("Blog Reader Edge Cases", () => {
       global.fetch = createUrlBasedFetchMock(urlHandlers) as typeof fetch;
       setupMathJaxMock();
 
-      const { BlogReader } = await import("../../src/blog");
-      const reader = new BlogReader();
-      await waitForBlogList(1, { timeout: 2000 });
-
-      const scrollIntoViewSpy = vi.spyOn(HTMLElement.prototype, "scrollIntoView").mockImplementation(() => {});
+      const reader = await initializeBlogReader();
+      await waitForBlogList(1, TIMEOUT);
 
       // Test scrollToHash with empty hash
+      const scrollIntoViewSpy = vi.spyOn(HTMLElement.prototype, "scrollIntoView").mockImplementation(() => {});
       (reader as any).postRenderer.scrollToHash("");
       (reader as any).postRenderer.scrollToHash("#");
-
       await new Promise(resolveWithTimeout(50));
-      expect(scrollIntoViewSpy).not.toHaveBeenCalled();
 
+      expect(scrollIntoViewSpy).not.toHaveBeenCalled();
       scrollIntoViewSpy.mockRestore();
     });
 
@@ -907,17 +857,15 @@ describe("Blog Reader Edge Cases", () => {
       global.fetch = createUrlBasedFetchMock(urlHandlers) as typeof fetch;
       setupMathJaxMock();
 
-      const { BlogReader } = await import("../../src/blog");
-      const reader = new BlogReader();
-      await waitForBlogList(1, { timeout: 2000 });
-
-      const scrollIntoViewSpy = vi.spyOn(HTMLElement.prototype, "scrollIntoView").mockImplementation(() => {});
+      const reader = await initializeBlogReader();
+      await waitForBlogList(1, TIMEOUT);
 
       // Test scrollToHash with non-existent id
+      const scrollIntoViewSpy = vi.spyOn(HTMLElement.prototype, "scrollIntoView").mockImplementation(() => {});
       (reader as any).postRenderer.scrollToHash("#non-existent");
       await new Promise(resolveWithTimeout(50));
-      expect(scrollIntoViewSpy).not.toHaveBeenCalled();
 
+      expect(scrollIntoViewSpy).not.toHaveBeenCalled();
       scrollIntoViewSpy.mockRestore();
     });
 
@@ -936,19 +884,16 @@ describe("Blog Reader Edge Cases", () => {
       global.fetch = createUrlBasedFetchMock(urlHandlers) as typeof fetch;
       setupMathJaxMock();
 
-      const { BlogReader } = await import("../../src/blog");
-      const reader = new BlogReader();
-
-      await waitForBlogList(1, { timeout: 2000 });
-      await waitForBlogContent({ timeout: 2000 });
-
-      const scrollIntoViewSpy = vi.spyOn(HTMLElement.prototype, "scrollIntoView").mockImplementation(() => {});
+      const reader = await initializeBlogReader();
+      await waitForBlogList(1, TIMEOUT);
+      await waitForBlogContent(TIMEOUT);
 
       // Test scrollToHash with anchor name
+      const scrollIntoViewSpy = vi.spyOn(HTMLElement.prototype, "scrollIntoView").mockImplementation(() => {});
       (reader as any).postRenderer.scrollToHash("#section-1");
-
       await new Promise(resolveWithTimeout(100));
 
+      expect(scrollIntoViewSpy).toHaveBeenCalled();
       scrollIntoViewSpy.mockRestore();
     });
   });
@@ -963,9 +908,7 @@ describe("Blog Reader Edge Cases", () => {
       global.fetch = createUrlBasedFetchMock(urlHandlers) as typeof fetch;
       setupMathJaxMock();
 
-      const { BlogReader } = await import("../../src/blog");
-      new BlogReader();
-
+      await initializeBlogReader();
       await new Promise(resolveWithTimeout(200));
 
       const blogContent = document.getElementById("blog-content");
@@ -996,15 +939,12 @@ describe("Blog Reader Edge Cases", () => {
       setupMathJaxMock(true);
       setupMermaidMock();
 
-      const { BlogReader } = await import("../../src/blog");
-      const reader = new BlogReader();
-
-      await waitForBlogList(2, { timeout: 2000 });
-      await waitForBlogContent({ timeout: 2000 });
+      const reader = await initializeBlogReader();
+      await waitForBlogList(2, TIMEOUT);
+      await waitForBlogContent(TIMEOUT);
 
       // Test handlePostClick with hash
       await (reader as any).handlePostClick("post-2", "#section");
-
       await waitForBlogContent({ timeout: 5000 });
 
       expect(mockPushState).toHaveBeenCalled();
@@ -1034,11 +974,9 @@ describe("Blog Reader Edge Cases", () => {
       setupMathJaxMock(true);
       setupMermaidMock();
 
-      const { BlogReader } = await import("../../src/blog");
-      const reader = new BlogReader();
-
-      await waitForBlogList(2, { timeout: 2000 });
-      await waitForBlogContent({ timeout: 2000 });
+      const reader = await initializeBlogReader();
+      await waitForBlogList(2, TIMEOUT);
+      await waitForBlogContent(TIMEOUT);
 
       // Set a topic filter
       const topicsBar = document.getElementById("topics-bar");
@@ -1051,10 +989,7 @@ describe("Blog Reader Edge Cases", () => {
 
       // Load a post - should preserve topic filter
       await (reader as any).handlePostClick("post-2");
-
       await waitForBlogContent({ timeout: 5000 });
-
-      // Topic filter should still be active
       expect(mockPushState).toHaveBeenCalled();
     });
   });
@@ -1086,18 +1021,14 @@ describe("Blog Reader Edge Cases", () => {
         writable: true,
       });
 
-      const { BlogReader } = await import("../../src/blog");
-      new BlogReader();
-
-      await waitForBlogList(1, { timeout: 2000 });
-      await waitForBlogContent({ timeout: 2000 });
-
-      // Wait for hash scrolling
-      await new Promise(resolveWithTimeout(200));
+      await initializeBlogReader();
+      await waitForBlogList(1, TIMEOUT);
 
       const scrollIntoViewSpy = vi.spyOn(HTMLElement.prototype, "scrollIntoView");
-      // Hash scrolling should have been attempted
-      // (The element might not exist, but the code path should be covered)
+      await waitForBlogContent(TIMEOUT);
+      await new Promise(resolveWithTimeout(200));
+
+      expect(scrollIntoViewSpy).toHaveBeenCalled();
       scrollIntoViewSpy.mockRestore();
     });
 
@@ -1116,7 +1047,7 @@ describe("Blog Reader Edge Cases", () => {
       global.fetch = createUrlBasedFetchMock(urlHandlers) as typeof fetch;
       setupMathJaxMock();
 
-      const { BlogReader } = await import("../../src/blog");
+      const { BlogReader } = await import("../../src/blog/reader");
       const reader = new BlogReader();
 
       await waitForBlogList(1, { timeout: 2000 });
@@ -1165,7 +1096,7 @@ describe("Blog Reader Edge Cases", () => {
       global.fetch = createUrlBasedFetchMock(urlHandlers) as typeof fetch;
       setupMathJaxMock();
 
-      const { BlogReader } = await import("../../src/blog");
+      const { BlogReader } = await import("../../src/blog/reader");
       new BlogReader();
 
       await waitForBlogList(2, { timeout: 2000 });
@@ -1205,7 +1136,7 @@ describe("Blog Reader Edge Cases", () => {
       global.fetch = createUrlBasedFetchMock(urlHandlers) as typeof fetch;
       setupMathJaxMock();
 
-      const { BlogReader } = await import("../../src/blog");
+      const { BlogReader } = await import("../../src/blog/reader");
       new BlogReader();
 
       await waitForBlogList(2, { timeout: 2000 });
@@ -1241,7 +1172,7 @@ describe("Blog Reader Edge Cases", () => {
       global.fetch = createUrlBasedFetchMock(urlHandlers) as typeof fetch;
       setupMathJaxMock();
 
-      const { BlogReader } = await import("../../src/blog");
+      const { BlogReader } = await import("../../src/blog/reader");
       new BlogReader();
 
       await waitForBlogList(1, { timeout: 2000 });
@@ -1279,7 +1210,7 @@ describe("Blog Reader Edge Cases", () => {
       global.fetch = createUrlBasedFetchMock(urlHandlers) as typeof fetch;
       setupMathJaxMock();
 
-      const { BlogReader } = await import("../../src/blog");
+      const { BlogReader } = await import("../../src/blog/reader");
       new BlogReader();
 
       await waitForBlogList(1, { timeout: 2000 });
@@ -1313,7 +1244,7 @@ describe("Blog Reader Edge Cases", () => {
       global.fetch = createUrlBasedFetchMock(urlHandlers) as typeof fetch;
       setupMathJaxMock();
 
-      const { BlogReader } = await import("../../src/blog");
+      const { BlogReader } = await import("../../src/blog/reader");
       const reader = new BlogReader();
 
       await waitForBlogList(2, { timeout: 2000 });
@@ -1356,7 +1287,7 @@ describe("Blog Reader Edge Cases", () => {
       setupMathJaxMock(true);
       setupMermaidMock();
 
-      const { BlogReader } = await import("../../src/blog");
+      const { BlogReader } = await import("../../src/blog/reader");
       const reader = new BlogReader();
 
       await waitForBlogList(1, { timeout: 2000 });
@@ -1412,7 +1343,7 @@ describe("Blog Reader Edge Cases", () => {
       setupMathJaxMock(true);
       setupMermaidMock();
 
-      const { BlogReader } = await import("../../src/blog");
+      const { BlogReader } = await import("../../src/blog/reader");
       const reader = new BlogReader();
 
       await waitForBlogList(3, { timeout: 2000 });
@@ -1460,7 +1391,7 @@ describe("Blog Reader Edge Cases", () => {
       global.fetch = createUrlBasedFetchMock(urlHandlers) as typeof fetch;
       setupMathJaxMock();
 
-      const { BlogReader } = await import("../../src/blog");
+      const { BlogReader } = await import("../../src/blog/reader");
       new BlogReader();
 
       await waitForBlogList(1, { timeout: 2000 });
@@ -1486,7 +1417,7 @@ describe("Blog Reader Edge Cases", () => {
       global.fetch = createUrlBasedFetchMock(urlHandlers) as typeof fetch;
       setupMathJaxMock();
 
-      const { BlogReader } = await import("../../src/blog");
+      const { BlogReader } = await import("../../src/blog/reader");
       new BlogReader();
 
       await waitForBlogList(1, { timeout: 2000 });
@@ -1495,6 +1426,164 @@ describe("Blog Reader Edge Cases", () => {
       // Code block should be rendered
       const blogContent = document.getElementById("blog-content");
       expect(blogContent?.textContent).toContain("some code");
+    });
+  });
+
+  describe("Error path coverage", () => {
+    it("should handle non-PostNotFoundError in handleTopicFilterChange", async () => {
+      const manifest = createMockManifest(["post-1.md", "post-2.md"]);
+      const markdown1 = createMockMarkdown({
+        name: "Post 1",
+        date: "2024-01-15",
+        topics: ["testing"],
+      });
+      const markdown2 = createMockMarkdown({
+        name: "Post 2",
+        date: "2024-01-16",
+        topics: ["testing"],
+      });
+
+      const urlHandlers = new Map<string | RegExp, () => Response | Promise<Response>>();
+      urlHandlers.set(/manifest\.json/, () => createMockResponse(manifest));
+      urlHandlers.set(/post-1\.md/, () => createMockTextResponse(markdown1));
+      // Make post-2.md metadata succeed but content fail
+      let post2CallCount = 0;
+      urlHandlers.set(/post-2\.md/, () => {
+        post2CallCount++;
+        // First call is for metadata (during loadBlogList), second is for content
+        if (post2CallCount === 1) {
+          return createMockTextResponse(markdown2);
+        }
+        // Second call is for content - make it fail
+        return Promise.reject(new Error("Network error"));
+      });
+
+      global.fetch = createUrlBasedFetchMock(urlHandlers) as typeof fetch;
+      setupMathJaxMock();
+
+      const { BlogReader } = await import("../../src/blog/reader");
+      const reader = new BlogReader();
+
+      await waitForBlogList(2, { timeout: 2000 });
+      await waitForBlogContent({ timeout: 2000 });
+
+      // Filter to only post-2, which will fail to load content
+      const allPosts = (reader as any).allPosts;
+      const filteredPosts = allPosts.filter((p: any) => p.id === "post-2");
+      (reader as any).handleTopicFilterChange(filteredPosts);
+
+      // Wait for error to be displayed
+      await new Promise(resolveWithTimeout(500));
+
+      const blogContent = document.getElementById("blog-content");
+      expect(blogContent?.textContent).toContain("Failed to load blog post");
+    });
+
+    it("should handle non-PostNotFoundError in handlePostClick", async () => {
+      const manifest = createMockManifest(["post-1.md", "post-2.md"]);
+      const markdown1 = createMockMarkdown({
+        name: "Post 1",
+        date: "2024-01-15",
+        topics: ["testing"],
+      });
+      const markdown2 = createMockMarkdown({
+        name: "Post 2",
+        date: "2024-01-16",
+        topics: ["testing"],
+      });
+
+      const urlHandlers = new Map<string | RegExp, () => Response | Promise<Response>>();
+      urlHandlers.set(/manifest\.json/, () => createMockResponse(manifest));
+      urlHandlers.set(/post-1\.md/, () => createMockTextResponse(markdown1));
+      // Make post-2.md metadata succeed but content fail
+      let post2CallCount = 0;
+      urlHandlers.set(/post-2\.md/, () => {
+        post2CallCount++;
+        // First call is for metadata (during loadBlogList), second is for content
+        if (post2CallCount === 1) {
+          return createMockTextResponse(markdown2);
+        }
+        // Second call is for content - make it fail
+        return Promise.reject(new Error("Network error"));
+      });
+
+      global.fetch = createUrlBasedFetchMock(urlHandlers) as typeof fetch;
+      setupMathJaxMock();
+
+      const { BlogReader } = await import("../../src/blog/reader");
+      const reader = new BlogReader();
+
+      await waitForBlogList(2, { timeout: 2000 });
+      await waitForBlogContent({ timeout: 2000 });
+
+      // Try to load post-2 - should handle non-PostNotFoundError
+      await (reader as any).handlePostClick("post-2");
+
+      await new Promise(resolveWithTimeout(500));
+
+      const blogContent = document.getElementById("blog-content");
+      expect(blogContent?.textContent).toContain("Failed to load blog post");
+    });
+
+    it("should throw RenderingError when blogContent is null in loadBlogPost", async () => {
+      const manifest = createMockManifest(["post-1.md"]);
+      const markdown = createMockMarkdown({
+        name: "Post 1",
+        date: "2024-01-15",
+        content: "# Post 1",
+      });
+
+      const urlHandlers = new Map<string | RegExp, () => Response | Promise<Response>>();
+      urlHandlers.set(/manifest\.json/, () => createMockResponse(manifest));
+      urlHandlers.set(/post-1\.md/, () => createMockTextResponse(markdown));
+
+      global.fetch = createUrlBasedFetchMock(urlHandlers) as typeof fetch;
+      setupMathJaxMock();
+
+      const { BlogReader } = await import("../../src/blog/reader");
+      const { RenderingError } = await import("../../src/utils/errors");
+      const reader = new BlogReader();
+
+      await waitForBlogList(1, { timeout: 2000 });
+
+      // Set blogContent to null to trigger RenderingError
+      (reader as any).blogContent = null;
+
+      // Try to load post - should throw RenderingError
+      await expect((reader as any).loadBlogPost("post-1")).rejects.toThrow(RenderingError);
+    });
+
+    it("should wrap non-PostLoadError/non-RenderingError in loadBlogPost", async () => {
+      const manifest = createMockManifest(["post-1.md"]);
+      const markdown = createMockMarkdown({
+        name: "Post 1",
+        date: "2024-01-15",
+        content: "# Post 1",
+      });
+
+      const urlHandlers = new Map<string | RegExp, () => Response | Promise<Response>>();
+      urlHandlers.set(/manifest\.json/, () => createMockResponse(manifest));
+      urlHandlers.set(/post-1\.md/, () => createMockTextResponse(markdown));
+
+      global.fetch = createUrlBasedFetchMock(urlHandlers) as typeof fetch;
+      setupMathJaxMock();
+
+      const { BlogReader } = await import("../../src/blog/reader");
+      const { PostLoadError } = await import("../../src/utils/errors");
+      const reader = new BlogReader();
+
+      await waitForBlogList(1, { timeout: 2000 });
+      await waitForBlogContent({ timeout: 2000 });
+
+      // Mock PostRenderer.renderBlogPostContent to throw a generic Error
+      const { PostRenderer } = await import("../../src/blog/post-renderer");
+      const renderSpy = vi.spyOn(PostRenderer.prototype, "renderBlogPostContent");
+      renderSpy.mockRejectedValueOnce(new Error("Generic rendering error"));
+
+      // Try to load post - should wrap error in PostLoadError
+      await expect((reader as any).loadBlogPost("post-1")).rejects.toThrow(PostLoadError);
+
+      renderSpy.mockRestore();
     });
   });
 });

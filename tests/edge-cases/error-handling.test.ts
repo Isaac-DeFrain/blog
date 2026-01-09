@@ -5,7 +5,8 @@
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { setupDOM, cleanupDOM } from "../helpers/dom";
-import { parseDateAsPacificTime, parseFrontmatter } from "../../src/utils";
+import { parseDateAsPacificTime } from "../../src/utils/dates";
+import { parseFrontmatter } from "../../src/utils/frontmatter";
 
 describe("Error Handling", () => {
   beforeEach(() => {
