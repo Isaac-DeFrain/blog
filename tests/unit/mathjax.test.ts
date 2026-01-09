@@ -3,8 +3,8 @@
  * and handling MathJax errors.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { typesetMath } from "../../src/mathjax";
-import { resolveWithTimeout } from "../../src/utils";
+import { typesetMath } from "../../src/render/mathjax";
+import { resolveWithTimeout } from "../../src/utils/async";
 
 // Mock window.MathJax (loaded from CDN)
 const mockTypesetPromise = vi.fn().mockResolvedValue(undefined);

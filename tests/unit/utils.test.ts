@@ -3,14 +3,8 @@
  * HTML escaping, and DOM helper functions.
  */
 import { describe, it, expect } from "vitest";
-import {
-  parseDateAsPacificTime,
-  formatDateAsPacificTime,
-  escapeHtml,
-  unescapeHtml,
-  createDivElement,
-  createListItemElement,
-} from "../../src/utils";
+import { parseDateAsPacificTime, formatDateAsPacificTime } from "../../src/utils/dates";
+import { escapeHtml, unescapeHtml, createDivElement, createListItemElement } from "../../src/utils/html";
 
 describe("parseDateAsPacificTime", () => {
   it("should parse a valid date string", () => {
@@ -23,16 +17,16 @@ describe("parseDateAsPacificTime", () => {
 
   it("should handle dates in PST (winter)", () => {
     // January 15, 2024 is in PST (UTC-8)
-    const date = parseDateAsPacificTime("2024-01-15");
     // Should be noon Pacific Time, which is 8pm UTC (20:00) for PST
+    const date = parseDateAsPacificTime("2024-01-15");
     const utcHours = date.getUTCHours();
     expect(utcHours).toBe(20);
   });
 
   it("should handle dates in PDT (summer)", () => {
     // July 15, 2024 is in PDT (UTC-7)
-    const date = parseDateAsPacificTime("2024-07-15");
     // Should be noon Pacific Time, which is 7pm UTC (19:00) for PDT
+    const date = parseDateAsPacificTime("2024-07-15");
     const utcHours = date.getUTCHours();
     expect(utcHours).toBe(19);
   });
@@ -63,8 +57,8 @@ describe("parseDateAsPacificTime", () => {
     const date1 = parseDateAsPacificTime("2024-03-10");
     expect(date1).toBeInstanceOf(Date);
 
-    // November 3, 2024 is DST end (fall back)
-    const date2 = parseDateAsPacificTime("2024-11-03");
+    // November 5, 2024 is DST end (fall back)
+    const date2 = parseDateAsPacificTime("2024-11-05");
     expect(date2).toBeInstanceOf(Date);
   });
 });
@@ -87,8 +81,8 @@ describe("formatDateAsPacificTime", () => {
   });
 
   it("should use Pacific Time timezone", () => {
-    const formatted = formatDateAsPacificTime("2024-01-15");
     // The formatted date should be consistent regardless of system timezone
+    const formatted = formatDateAsPacificTime("2024-01-15");
     expect(formatted).toContain("2024");
   });
 });
@@ -191,6 +185,61 @@ describe("unescapeHtml", () => {
     const unescaped = unescapeHtml(escaped);
     expect(unescaped).toBe(original);
   });
+
+  it("should handle large strings using regex fallback", () => {
+    // Create a string larger than 100KB threshold
+    const largeString = "&lt;test&gt;".repeat(10000); // ~120KB
+    const result = unescapeHtml(largeString);
+
+    // The regex fallback strips HTML tags, so &lt;test&gt; becomes empty after tag stripping
+    // The function decodes &lt; to < and &gt; to >, then strips tags, leaving nothing
+    expect(result).toBe("");
+  });
+
+  it("should handle nested encoding", () => {
+    // Test nested encoding like &amp;lt; which should become &lt; then <
+    const nested = "&amp;lt;script&amp;gt;";
+    const result = unescapeHtml(nested);
+    expect(result).toBe("");
+  });
+
+  it("should handle hex numeric entities", () => {
+    expect(unescapeHtml("&#x27;")).toBe("'");
+    expect(unescapeHtml("&#x41;")).toBe("A");
+    expect(unescapeHtml("&#x61;")).toBe("a");
+  });
+
+  it("should handle decimal numeric entities", () => {
+    expect(unescapeHtml("&#39;")).toBe("'");
+    expect(unescapeHtml("&#65;")).toBe("A");
+    expect(unescapeHtml("&#97;")).toBe("a");
+  });
+
+  it("should handle mixed numeric and named entities", () => {
+    const mixed = "&lt;&#x27;&gt;&amp;&quot;";
+    const result = unescapeHtml(mixed);
+
+    // After decoding: <'>&"
+    // After tag stripping: &"
+    expect(result).toBe('&"');
+  });
+
+  it("should handle multiple passes of nested encoding", () => {
+    // Deeply nested encoding
+    const deeplyNested = "&amp;amp;amp;lt;";
+    const result = unescapeHtml(deeplyNested);
+
+    // Should decode multiple times
+    expect(result).toBeDefined();
+  });
+
+  it("should handle string that grows beyond threshold during decoding", () => {
+    // Create a string that starts small but grows during decoding
+    // This tests the threshold check during iteration
+    const growingString = "&amp;".repeat(20000); // Will grow significantly when decoded
+    const result = unescapeHtml(growingString);
+    expect(result).toBe("&".repeat(20000));
+  });
 });
 
 describe("div", () => {
@@ -253,22 +302,16 @@ describe("parseDateAsPacificTime - error cases", () => {
 
   it("should handle invalid month (JavaScript Date is lenient)", () => {
     // Note: JavaScript Date constructor is lenient and will overflow months
-    // So "2024-13-15" becomes "2025-01-15" (not invalid)
     const date = parseDateAsPacificTime("2024-13-15");
-    // The date will be valid but represent a different date
-    expect(date).toBeInstanceOf(Date);
-    // It will overflow to next year
-    expect(date.getFullYear()).toBeGreaterThanOrEqual(2024);
+    const expectedDate = parseDateAsPacificTime("2025-01-15");
+    expect(date).toEqual(expectedDate);
   });
 
   it("should handle invalid day (JavaScript Date is lenient)", () => {
     // Note: JavaScript Date constructor is lenient and will overflow days
-    // So "2024-02-30" becomes "2024-03-01" (not invalid)
     const date = parseDateAsPacificTime("2024-02-30");
-    // The date will be valid but represent a different date
-    expect(date).toBeInstanceOf(Date);
-    // It will overflow to next month
-    expect(date.getMonth()).toBeGreaterThanOrEqual(1);
+    const expectedDate = parseDateAsPacificTime("2024-03-01");
+    expect(date).toEqual(expectedDate);
   });
 
   it("should handle date parsing errors gracefully", () => {

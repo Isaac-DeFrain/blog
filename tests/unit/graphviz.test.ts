@@ -32,7 +32,7 @@ describe("renderGraphvizDiagrams", () => {
   });
 
   it("should render diagrams using Viz when Viz is available", async () => {
-    const { renderGraphvizDiagrams } = await import("../../src/graphviz");
+    const { renderGraphvizDiagrams } = await import("../../src/render/graphviz");
 
     const container = document.createElement("div");
     const graphvizElement = document.createElement("pre");
@@ -42,12 +42,11 @@ describe("renderGraphvizDiagrams", () => {
     container.appendChild(graphvizElement);
 
     await renderGraphvizDiagrams(container);
-
     expect(mockRenderSVGElement).toHaveBeenCalledWith("digraph { a -> b }");
   });
 
   it("should find and render multiple graphviz diagrams", async () => {
-    const { renderGraphvizDiagrams } = await import("../../src/graphviz");
+    const { renderGraphvizDiagrams } = await import("../../src/render/graphviz");
 
     const container = document.createElement("div");
     const graphviz1 = document.createElement("pre");
@@ -69,7 +68,7 @@ describe("renderGraphvizDiagrams", () => {
   });
 
   it("should handle both graphviz and dot class names", async () => {
-    const { renderGraphvizDiagrams } = await import("../../src/graphviz");
+    const { renderGraphvizDiagrams } = await import("../../src/render/graphviz");
 
     const container = document.createElement("div");
     const graphvizElement = document.createElement("pre");
@@ -84,23 +83,21 @@ describe("renderGraphvizDiagrams", () => {
     container.appendChild(dotElement);
 
     await renderGraphvizDiagrams(container);
-
     expect(mockRenderSVGElement).toHaveBeenCalledTimes(2);
   });
 
   it("should handle empty element arrays", async () => {
-    const { renderGraphvizDiagrams } = await import("../../src/graphviz");
+    const { renderGraphvizDiagrams } = await import("../../src/render/graphviz");
 
     const container = document.createElement("div");
     // No graphviz elements
 
     await renderGraphvizDiagrams(container);
-
     expect(mockRenderSVGElement).not.toHaveBeenCalled();
   });
 
   it("should handle elements without graphviz diagrams", async () => {
-    const { renderGraphvizDiagrams } = await import("../../src/graphviz");
+    const { renderGraphvizDiagrams } = await import("../../src/render/graphviz");
 
     const container = document.createElement("div");
     const regularDiv = document.createElement("div");
@@ -108,7 +105,6 @@ describe("renderGraphvizDiagrams", () => {
     container.appendChild(regularDiv);
 
     await renderGraphvizDiagrams(container);
-
     expect(mockRenderSVGElement).not.toHaveBeenCalled();
   });
 
@@ -119,7 +115,7 @@ describe("renderGraphvizDiagrams", () => {
     const { instance } = await import("@viz-js/viz");
     vi.mocked(instance).mockRejectedValueOnce(new Error("Failed to load Viz"));
 
-    const { renderGraphvizDiagrams } = await import("../../src/graphviz");
+    const { renderGraphvizDiagrams } = await import("../../src/render/graphviz");
 
     const container = document.createElement("div");
     const graphvizElement = document.createElement("pre");
@@ -133,15 +129,15 @@ describe("renderGraphvizDiagrams", () => {
     expect(consoleErrorSpy).toHaveBeenCalledWith("Graphviz rendering error:", expect.any(Error));
     expect(mockRenderSVGElement).not.toHaveBeenCalled();
 
-    consoleErrorSpy.mockRestore();
     // Restore the mock
+    consoleErrorSpy.mockRestore();
     vi.mocked(instance).mockResolvedValue(mockVizInstance as any);
   });
 
   it("should handle empty diagram code gracefully", async () => {
     const consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
-    const { renderGraphvizDiagrams } = await import("../../src/graphviz");
+    const { renderGraphvizDiagrams } = await import("../../src/render/graphviz");
 
     const container = document.createElement("div");
     const graphvizElement = document.createElement("pre");
@@ -166,7 +162,7 @@ describe("renderGraphvizDiagrams", () => {
       throw new Error("Invalid DOT syntax");
     });
 
-    const { renderGraphvizDiagrams } = await import("../../src/graphviz");
+    const { renderGraphvizDiagrams } = await import("../../src/render/graphviz");
 
     const container = document.createElement("div");
     const graphvizElement = document.createElement("pre");
@@ -176,7 +172,6 @@ describe("renderGraphvizDiagrams", () => {
     container.appendChild(graphvizElement);
 
     await renderGraphvizDiagrams(container);
-
     expect(consoleErrorSpy).toHaveBeenCalledWith("Graphviz rendering error:", expect.any(Error));
 
     // Check that error message was added to DOM
@@ -188,7 +183,7 @@ describe("renderGraphvizDiagrams", () => {
   });
 
   it("should replace pre element with SVG when rendering succeeds", async () => {
-    const { renderGraphvizDiagrams } = await import("../../src/graphviz");
+    const { renderGraphvizDiagrams } = await import("../../src/render/graphviz");
 
     const container = document.createElement("div");
     const graphvizElement = document.createElement("pre");
@@ -205,7 +200,7 @@ describe("renderGraphvizDiagrams", () => {
   });
 
   it("should handle multiple container elements", async () => {
-    const { renderGraphvizDiagrams } = await import("../../src/graphviz");
+    const { renderGraphvizDiagrams } = await import("../../src/render/graphviz");
 
     const container1 = document.createElement("div");
     const graphviz1 = document.createElement("pre");
@@ -220,12 +215,11 @@ describe("renderGraphvizDiagrams", () => {
     container2.appendChild(graphviz2);
 
     await renderGraphvizDiagrams([container1, container2]);
-
     expect(mockRenderSVGElement).toHaveBeenCalledTimes(2);
   });
 
   it("should trim whitespace from diagram code", async () => {
-    const { renderGraphvizDiagrams } = await import("../../src/graphviz");
+    const { renderGraphvizDiagrams } = await import("../../src/render/graphviz");
 
     const container = document.createElement("div");
     const graphvizElement = document.createElement("pre");
@@ -234,7 +228,6 @@ describe("renderGraphvizDiagrams", () => {
     container.appendChild(graphvizElement);
 
     await renderGraphvizDiagrams(container);
-
     expect(mockRenderSVGElement).toHaveBeenCalledWith("digraph { a -> b }");
   });
 });

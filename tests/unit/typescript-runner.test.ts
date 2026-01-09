@@ -4,19 +4,23 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import {
-  wrapTypeScriptCode,
-  stripTypeScriptTypes,
-  initializeTypeScriptRunner,
-} from "../../src/typescript-runner/index";
-import { resolveWithTimeout } from "../../src/utils";
+import { initializeTypeScriptRunner } from "../../src/code-executor/block-executor";
+import { TypeScriptTransformer } from "../../src/code-executor/typescript-transformer";
+import { resolveWithTimeout } from "../../src/utils/async";
+import assert from "assert";
 
-// Mock utils module
-vi.mock("../../src/utils", async () => {
-  const actual = await vi.importActual<typeof import("../../src/utils")>("../../src/utils");
+// Mock utils modules
+vi.mock("../../src/utils/async", async () => {
+  const actual = await vi.importActual<typeof import("../../src/utils/async")>("../../src/utils/async");
   return {
     ...actual,
-    getBasePath: vi.fn(() => "/"),
+  };
+});
+
+vi.mock("../../src/utils/html", async () => {
+  const actual = await vi.importActual<typeof import("../../src/utils/html")>("../../src/utils/html");
+  return {
+    ...actual,
     unescapeHtml: vi.fn((text: string) => text),
   };
 });
@@ -25,18 +29,12 @@ describe("typescript-runner", () => {
   let originalWindow: Window & typeof globalThis;
   let originalLocation: Location;
 
-  // Helper to prepare code as it would be at build time (wrapped in run() function)
-  function prepareCode(tsCode: string): string {
-    return wrapTypeScriptCode(tsCode);
-  }
-
   beforeEach(async () => {
     vi.clearAllMocks();
 
     // Reset utils mocks
-    const utils = await import("../../src/utils");
-    vi.mocked(utils.getBasePath).mockReturnValue("/");
-    vi.mocked(utils.unescapeHtml).mockImplementation((text: string) => text);
+    const htmlUtils = await import("../../src/utils/html");
+    vi.mocked(htmlUtils.unescapeHtml).mockImplementation((text: string) => text);
 
     // Mock window.location
     originalLocation = window.location;
@@ -86,7 +84,7 @@ describe("typescript-runner", () => {
 
       const codeScript = document.createElement("script");
       codeScript.dataset.tsCode = "test-execute";
-      codeScript.textContent = JSON.stringify(prepareCode("console.log('Hello');"));
+      codeScript.textContent = JSON.stringify(TypeScriptTransformer.wrapTypeScriptCode("console.log('Hello');"));
 
       block.appendChild(runButton);
       block.appendChild(outputContainer);
@@ -126,7 +124,7 @@ describe("typescript-runner", () => {
 
       const codeScript = document.createElement("script");
       codeScript.dataset.tsCode = "test-string-output";
-      codeScript.textContent = JSON.stringify(prepareCode("console.log('Hello World');"));
+      codeScript.textContent = JSON.stringify(TypeScriptTransformer.wrapTypeScriptCode("console.log('Hello World');"));
 
       block.appendChild(runButton);
       block.appendChild(outputContainer);
@@ -167,7 +165,7 @@ describe("typescript-runner", () => {
 
       const codeScript = document.createElement("script");
       codeScript.dataset.tsCode = "test-html-output";
-      codeScript.textContent = JSON.stringify(prepareCode("render('<div>Test</div>');"));
+      codeScript.textContent = JSON.stringify(TypeScriptTransformer.wrapTypeScriptCode("render('<div>Test</div>');"));
 
       block.appendChild(runButton);
       block.appendChild(outputContainer);
@@ -208,7 +206,7 @@ describe("typescript-runner", () => {
 
       const codeScript = document.createElement("script");
       codeScript.dataset.tsCode = "test-json-output";
-      codeScript.textContent = JSON.stringify(prepareCode("console.log({x: 1, y: 2});"));
+      codeScript.textContent = JSON.stringify(TypeScriptTransformer.wrapTypeScriptCode("console.log({x: 1, y: 2});"));
 
       block.appendChild(runButton);
       block.appendChild(outputContainer);
@@ -252,7 +250,7 @@ describe("typescript-runner", () => {
 
       const codeScript = document.createElement("script");
       codeScript.dataset.tsCode = "test-null-output";
-      codeScript.textContent = JSON.stringify(prepareCode("console.log(null);"));
+      codeScript.textContent = JSON.stringify(TypeScriptTransformer.wrapTypeScriptCode("console.log(null);"));
 
       block.appendChild(runButton);
       block.appendChild(outputContainer);
@@ -290,7 +288,7 @@ describe("typescript-runner", () => {
 
       const codeScript = document.createElement("script");
       codeScript.dataset.tsCode = "test-primitive-output";
-      codeScript.textContent = JSON.stringify(prepareCode("console.log(123);"));
+      codeScript.textContent = JSON.stringify(TypeScriptTransformer.wrapTypeScriptCode("console.log(123);"));
 
       block.appendChild(runButton);
       block.appendChild(outputContainer);
@@ -330,7 +328,9 @@ describe("typescript-runner", () => {
 
       const codeScript = document.createElement("script");
       codeScript.dataset.tsCode = "test-execution-error";
-      codeScript.textContent = JSON.stringify(prepareCode("throw new Error('Test error');"));
+      codeScript.textContent = JSON.stringify(
+        TypeScriptTransformer.wrapTypeScriptCode("throw new Error('Test error');"),
+      );
 
       block.appendChild(runButton);
       block.appendChild(outputContainer);
@@ -371,7 +371,7 @@ describe("typescript-runner", () => {
 
       const codeScript = document.createElement("script");
       codeScript.dataset.tsCode = "test-unknown-error";
-      codeScript.textContent = JSON.stringify(prepareCode("throw 'string error';"));
+      codeScript.textContent = JSON.stringify(TypeScriptTransformer.wrapTypeScriptCode("throw 'string error';"));
 
       block.appendChild(runButton);
       block.appendChild(outputContainer);
@@ -457,7 +457,7 @@ describe("typescript-runner", () => {
 
       const codeScript = document.createElement("script");
       codeScript.dataset.tsCode = "test-done";
-      codeScript.textContent = JSON.stringify(prepareCode("console.log('done');"));
+      codeScript.textContent = JSON.stringify(TypeScriptTransformer.wrapTypeScriptCode("console.log('done');"));
 
       block.appendChild(runButton);
       block.appendChild(outputContainer);
@@ -504,7 +504,7 @@ describe("typescript-runner", () => {
 
       const codeScript = document.createElement("script");
       codeScript.dataset.tsCode = "test-once";
-      codeScript.textContent = JSON.stringify(prepareCode("console.log('first');"));
+      codeScript.textContent = JSON.stringify(TypeScriptTransformer.wrapTypeScriptCode("console.log('first');"));
 
       block.appendChild(runButton);
       block.appendChild(outputContainer);
@@ -556,7 +556,7 @@ describe("typescript-runner", () => {
 
       const codeScript = document.createElement("script");
       codeScript.dataset.tsCode = "test-init";
-      codeScript.textContent = JSON.stringify(prepareCode("console.log('test');"));
+      codeScript.textContent = JSON.stringify(TypeScriptTransformer.wrapTypeScriptCode("console.log('test');"));
 
       block.appendChild(runButton);
       block.appendChild(outputContainer);
@@ -668,7 +668,7 @@ describe("typescript-runner", () => {
 
         const codeScript = document.createElement("script");
         codeScript.dataset.tsCode = `test-multi-${i}`;
-        codeScript.textContent = JSON.stringify(prepareCode(`console.log('test ${i}');`));
+        codeScript.textContent = JSON.stringify(TypeScriptTransformer.wrapTypeScriptCode(`console.log('test ${i}');`));
 
         block.appendChild(runButton);
         block.appendChild(outputContainer);
@@ -705,7 +705,7 @@ describe("typescript-runner", () => {
 
       const codeScript = document.createElement("script");
       codeScript.dataset.tsCode = "test-clear";
-      codeScript.textContent = JSON.stringify(prepareCode("console.log('test');"));
+      codeScript.textContent = JSON.stringify(TypeScriptTransformer.wrapTypeScriptCode("console.log('test');"));
 
       block.appendChild(runButton);
       block.appendChild(outputContainer);
@@ -760,7 +760,7 @@ describe("typescript-runner", () => {
 
       const codeScript = document.createElement("script");
       codeScript.dataset.tsCode = "test-empty-code";
-      codeScript.textContent = JSON.stringify(prepareCode("")); // Empty but valid JSON
+      codeScript.textContent = JSON.stringify(TypeScriptTransformer.wrapTypeScriptCode("")); // Empty but valid JSON
 
       block.appendChild(runButton);
       block.appendChild(outputContainer);
@@ -837,7 +837,7 @@ describe("typescript-runner", () => {
 
       const codeScript = document.createElement("script");
       codeScript.dataset.tsCode = "test-empty-button";
-      codeScript.textContent = JSON.stringify(prepareCode("console.log('test');"));
+      codeScript.textContent = JSON.stringify(TypeScriptTransformer.wrapTypeScriptCode("console.log('test');"));
 
       block.appendChild(runButton);
       block.appendChild(outputContainer);
@@ -872,7 +872,7 @@ describe("typescript-runner", () => {
 
       const codeScript = document.createElement("script");
       codeScript.dataset.tsCode = "test-whitespace-button";
-      codeScript.textContent = JSON.stringify(prepareCode("console.log('test');"));
+      codeScript.textContent = JSON.stringify(TypeScriptTransformer.wrapTypeScriptCode("console.log('test');"));
 
       block.appendChild(runButton);
       block.appendChild(outputContainer);
@@ -908,7 +908,9 @@ describe("typescript-runner", () => {
 
       const codeScript = document.createElement("script");
       codeScript.dataset.tsCode = "test-console-error";
-      codeScript.textContent = JSON.stringify(prepareCode("console.error('Error message');"));
+      codeScript.textContent = JSON.stringify(
+        TypeScriptTransformer.wrapTypeScriptCode("console.error('Error message');"),
+      );
 
       block.appendChild(runButton);
       block.appendChild(outputContainer);
@@ -949,7 +951,9 @@ describe("typescript-runner", () => {
 
       const codeScript = document.createElement("script");
       codeScript.dataset.tsCode = "test-console-warn";
-      codeScript.textContent = JSON.stringify(prepareCode("console.warn('Warning message');"));
+      codeScript.textContent = JSON.stringify(
+        TypeScriptTransformer.wrapTypeScriptCode("console.warn('Warning message');"),
+      );
 
       block.appendChild(runButton);
       block.appendChild(outputContainer);
@@ -990,7 +994,9 @@ describe("typescript-runner", () => {
 
       const codeScript = document.createElement("script");
       codeScript.dataset.tsCode = "test-console-info";
-      codeScript.textContent = JSON.stringify(prepareCode("console.info('Info message');"));
+      codeScript.textContent = JSON.stringify(
+        TypeScriptTransformer.wrapTypeScriptCode("console.info('Info message');"),
+      );
 
       block.appendChild(runButton);
       block.appendChild(outputContainer);
@@ -1031,7 +1037,7 @@ describe("typescript-runner", () => {
 
       const codeScript = document.createElement("script");
       codeScript.dataset.tsCode = "test-console-warn-object";
-      codeScript.textContent = JSON.stringify(prepareCode("console.warn({x: 1, y: 2});"));
+      codeScript.textContent = JSON.stringify(TypeScriptTransformer.wrapTypeScriptCode("console.warn({x: 1, y: 2});"));
 
       block.appendChild(runButton);
       block.appendChild(outputContainer);
@@ -1071,7 +1077,7 @@ describe("typescript-runner", () => {
 
       const codeScript = document.createElement("script");
       codeScript.dataset.tsCode = "test-console-info-null";
-      codeScript.textContent = JSON.stringify(prepareCode("console.info(null);"));
+      codeScript.textContent = JSON.stringify(TypeScriptTransformer.wrapTypeScriptCode("console.info(null);"));
 
       block.appendChild(runButton);
       block.appendChild(outputContainer);
@@ -1113,7 +1119,7 @@ describe("typescript-runner", () => {
       const codeScript = document.createElement("script");
       codeScript.dataset.tsCode = "test-circular";
       codeScript.textContent = JSON.stringify(
-        prepareCode(`
+        TypeScriptTransformer.wrapTypeScriptCode(`
         const obj: any = {};
         obj.self = obj;
         console.log(obj);
@@ -1157,7 +1163,7 @@ describe("typescript-runner", () => {
 
       const codeScript = document.createElement("script");
       codeScript.dataset.tsCode = "test-undefined";
-      codeScript.textContent = JSON.stringify(prepareCode("console.log(undefined);"));
+      codeScript.textContent = JSON.stringify(TypeScriptTransformer.wrapTypeScriptCode("console.log(undefined);"));
 
       block.appendChild(runButton);
       block.appendChild(outputContainer);
@@ -1197,7 +1203,9 @@ describe("typescript-runner", () => {
 
       const codeScript = document.createElement("script");
       codeScript.dataset.tsCode = "test-multi-args";
-      codeScript.textContent = JSON.stringify(prepareCode("console.log('Hello', 'World', 42);"));
+      codeScript.textContent = JSON.stringify(
+        TypeScriptTransformer.wrapTypeScriptCode("console.log('Hello', 'World', 42);"),
+      );
 
       block.appendChild(runButton);
       block.appendChild(outputContainer);
@@ -1242,7 +1250,7 @@ describe("typescript-runner", () => {
       const codeScript = document.createElement("script");
       codeScript.dataset.tsCode = "test-non-html-object";
       codeScript.textContent = JSON.stringify(
-        prepareCode(`
+        TypeScriptTransformer.wrapTypeScriptCode(`
         const obj = { data: 'test', value: 123 };
         stdout(obj);
       `),
@@ -1273,7 +1281,7 @@ describe("typescript-runner", () => {
   describe("stripTypeScriptTypes", () => {
     it("should strip type annotations from function parameters", () => {
       const code = "function test(x: number, y: string): void {}";
-      const result = stripTypeScriptTypes(code);
+      const result = TypeScriptTransformer.stripTypeScriptTypes(code);
       expect(result).not.toContain(": number");
       expect(result).not.toContain(": string");
       // Note: return type annotations may not be fully stripped by the current implementation
@@ -1282,38 +1290,38 @@ describe("typescript-runner", () => {
 
     it("should strip type annotations from arrow functions", () => {
       const code = "const fn = (x: number) => x + 1;";
-      const result = stripTypeScriptTypes(code);
+      const result = TypeScriptTransformer.stripTypeScriptTypes(code);
       expect(result).not.toContain(": number");
     });
 
     it("should strip type annotations from variable declarations", () => {
       const code = "const x: number = 42; let y: string = 'hello';";
-      const result = stripTypeScriptTypes(code);
+      const result = TypeScriptTransformer.stripTypeScriptTypes(code);
       expect(result).not.toContain(": number");
       expect(result).not.toContain(": string");
     });
 
     it("should strip type assertions", () => {
       const code = "const x = value as string;";
-      const result = stripTypeScriptTypes(code);
+      const result = TypeScriptTransformer.stripTypeScriptTypes(code);
       expect(result).not.toContain("as string");
     });
 
     it("should strip interface declarations", () => {
       const code = "interface Person { name: string; age: number; }";
-      const result = stripTypeScriptTypes(code);
+      const result = TypeScriptTransformer.stripTypeScriptTypes(code);
       expect(result).not.toContain("interface Person");
     });
 
     it("should strip type aliases", () => {
       const code = "type ID = string | number;";
-      const result = stripTypeScriptTypes(code);
+      const result = TypeScriptTransformer.stripTypeScriptTypes(code);
       expect(result).not.toContain("type ID");
     });
 
     it("should strip generic type parameters", () => {
       const code = "function identity<T>(arg: T): T { return arg; }";
-      const result = stripTypeScriptTypes(code);
+      const result = TypeScriptTransformer.stripTypeScriptTypes(code);
       expect(result).not.toContain("<T>");
     });
 
@@ -1328,13 +1336,230 @@ describe("typescript-runner", () => {
           return { id, name: 'test' } as T;
         }
       `;
-      const result = stripTypeScriptTypes(code);
+      const result = TypeScriptTransformer.stripTypeScriptTypes(code);
       expect(result).not.toContain("interface User");
       expect(result).not.toContain("type UserId");
       expect(result).not.toContain("<T extends User>");
+
       // Note: return type annotations and type assertions may not be fully stripped
       // The current implementation focuses on parameter types, interfaces, and type aliases
       expect(result).toContain("function getUser"); // Function should still be there
+    });
+  });
+
+  describe("JsCodeExecutor error handling", () => {
+    it("should handle InvalidCodeError for invalid code format", async () => {
+      const { JsCodeExecutor } = await import("../../src/code-executor/js-executor");
+
+      const invalidCode = "not a valid wrapped function";
+      const onOutput = vi.fn();
+      const onError = vi.fn();
+      const onDone = vi.fn();
+
+      // executeCode catches the error and calls onError
+      // The error is thrown synchronously in wrapJsCodeToRunWithHooks, which is called
+      // at the start of executeCode, inside the try-catch block, so it should be caught
+      try {
+        await JsCodeExecutor.executeCode(invalidCode, onOutput, onError, onDone);
+      } catch (error) {
+        assert(false, "Error should be caught internally, not propagated");
+      }
+
+      expect(onError).toHaveBeenCalledWith(
+        expect.stringContaining("Invalid code: Invalid wrapped JavaScript code: missing run() function"),
+      );
+      expect(onDone).toHaveBeenCalled();
+    });
+  });
+
+  describe("initializeTypeScriptRunner error handling", () => {
+    it("should handle missing blockId", async () => {
+      const block = document.createElement("div");
+      block.className = "ts-executable-block";
+
+      // No blockId set
+      const container = document.createElement("div");
+      container.appendChild(block);
+
+      await expect(initializeTypeScriptRunner(container)).resolves.not.toThrow();
+    });
+
+    it("should handle missing runButton", async () => {
+      const container = document.createElement("div");
+      const block = document.createElement("div");
+      block.className = "ts-executable-block";
+      block.dataset.blockId = "test-missing-button";
+
+      const outputContainer = document.createElement("div");
+      outputContainer.className = "ts-output-container";
+      outputContainer.dataset.blockId = "test-missing-button";
+
+      const outputContent = document.createElement("div");
+      outputContent.className = "ts-output-content";
+
+      const codeScript = document.createElement("script");
+      codeScript.dataset.tsCode = "test-missing-button";
+      codeScript.textContent = JSON.stringify("function run(stdout, stderr) {}");
+
+      block.appendChild(outputContainer);
+      outputContainer.appendChild(outputContent);
+      block.appendChild(codeScript);
+      container.appendChild(block);
+
+      await expect(initializeTypeScriptRunner(container)).resolves.not.toThrow();
+    });
+
+    it("should handle missing outputContainer", async () => {
+      const container = document.createElement("div");
+      const block = document.createElement("div");
+      block.className = "ts-executable-block";
+      block.dataset.blockId = "test-missing-container";
+
+      const runButton = document.createElement("button");
+      runButton.className = "ts-run-button";
+      runButton.dataset.blockId = "test-missing-container";
+
+      const codeScript = document.createElement("script");
+      codeScript.dataset.tsCode = "test-missing-container";
+      codeScript.textContent = JSON.stringify("function run(stdout, stderr) {}");
+
+      block.appendChild(runButton);
+      block.appendChild(codeScript);
+      container.appendChild(block);
+
+      await expect(initializeTypeScriptRunner(container)).resolves.not.toThrow();
+    });
+
+    it("should handle missing outputContent", async () => {
+      const container = document.createElement("div");
+      const block = document.createElement("div");
+      block.className = "ts-executable-block";
+      block.dataset.blockId = "test-missing-content";
+
+      const runButton = document.createElement("button");
+      runButton.className = "ts-run-button";
+      runButton.dataset.blockId = "test-missing-content";
+
+      const outputContainer = document.createElement("div");
+      outputContainer.className = "ts-output-container";
+      outputContainer.dataset.blockId = "test-missing-content";
+      // No outputContent added
+
+      const codeScript = document.createElement("script");
+      codeScript.dataset.tsCode = "test-missing-content";
+      codeScript.textContent = JSON.stringify("function run(stdout, stderr) {}");
+
+      block.appendChild(runButton);
+      block.appendChild(outputContainer);
+      block.appendChild(codeScript);
+      container.appendChild(block);
+
+      await expect(initializeTypeScriptRunner(container)).resolves.not.toThrow();
+    });
+
+    it("should handle missing codeScript", async () => {
+      const container = document.createElement("div");
+      const block = document.createElement("div");
+      block.className = "ts-executable-block";
+      block.dataset.blockId = "test-missing-script";
+
+      const runButton = document.createElement("button");
+      runButton.className = "ts-run-button";
+      runButton.dataset.blockId = "test-missing-script";
+
+      const outputContainer = document.createElement("div");
+      outputContainer.className = "ts-output-container";
+      outputContainer.dataset.blockId = "test-missing-script";
+
+      const outputContent = document.createElement("div");
+      outputContent.className = "ts-output-content";
+
+      // No codeScript
+
+      block.appendChild(runButton);
+      block.appendChild(outputContainer);
+      outputContainer.appendChild(outputContent);
+      container.appendChild(block);
+
+      await expect(initializeTypeScriptRunner(container)).resolves.not.toThrow();
+    });
+
+    it("should handle execution errors", async () => {
+      const container = document.createElement("div");
+      const block = document.createElement("div");
+      block.className = "ts-executable-block";
+      block.dataset.blockId = "test-execution-error";
+
+      const runButton = document.createElement("button");
+      runButton.className = "ts-run-button";
+      runButton.dataset.blockId = "test-execution-error";
+
+      const outputContainer = document.createElement("div");
+      outputContainer.className = "ts-output-container";
+      outputContainer.dataset.blockId = "test-execution-error";
+      outputContainer.style.display = "none";
+
+      const outputContent = document.createElement("div");
+      outputContent.className = "ts-output-content";
+
+      const codeScript = document.createElement("script");
+      codeScript.dataset.tsCode = "test-execution-error";
+
+      // Invalid code that will cause an error during execution
+      codeScript.textContent = JSON.stringify("function run(stdout, stderr) { throw new Error('Test error'); }");
+
+      block.appendChild(runButton);
+      block.appendChild(outputContainer);
+      outputContainer.appendChild(outputContent);
+      block.appendChild(codeScript);
+      container.appendChild(block);
+
+      await initializeTypeScriptRunner(container);
+
+      // Click - should show error (covers error handling path in index.ts lines 92-98)
+      runButton.click();
+      await new Promise(resolveWithTimeout(500));
+
+      expect(outputContent.querySelector(".ts-error")).toBeDefined();
+    });
+
+    it("should handle non-Error exceptions in execution", async () => {
+      const container = document.createElement("div");
+      const block = document.createElement("div");
+      block.className = "ts-executable-block";
+      block.dataset.blockId = "test-non-error-exception-2";
+
+      const runButton = document.createElement("button");
+      runButton.className = "ts-run-button";
+      runButton.dataset.blockId = "test-non-error-exception-2";
+
+      const outputContainer = document.createElement("div");
+      outputContainer.className = "ts-output-container";
+      outputContainer.dataset.blockId = "test-non-error-exception-2";
+      outputContainer.style.display = "none";
+
+      const outputContent = document.createElement("div");
+      outputContent.className = "ts-output-content";
+
+      const codeScript = document.createElement("script");
+      codeScript.dataset.tsCode = "test-non-error-exception-2";
+      // Code that throws a non-Error value (covers error instanceof Error check in index.ts line 92)
+      codeScript.textContent = JSON.stringify("function run(stdout, stderr) { throw 'String error'; }");
+
+      block.appendChild(runButton);
+      block.appendChild(outputContainer);
+      outputContainer.appendChild(outputContent);
+      block.appendChild(codeScript);
+      container.appendChild(block);
+
+      await initializeTypeScriptRunner(container);
+
+      runButton.click();
+      await new Promise(resolveWithTimeout(500));
+
+      // Error should be displayed (covers the error handling path)
+      const errorDiv = outputContent.querySelector(".ts-error");
+      expect(errorDiv).toBeDefined();
     });
   });
 });

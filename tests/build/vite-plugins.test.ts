@@ -8,7 +8,28 @@ import { readFileSync, writeFileSync, mkdirSync, readdirSync, existsSync, unlink
 import { join } from "path";
 import { tmpdir } from "os";
 import { getBasePath, generateBlogManifest, copyDir, process404Html } from "../../vite.config";
-import { basePathScript } from "../../src/utils";
+import { basePathScript } from "../../src/utils/paths";
+
+const HTML_404 = `<!doctype html>
+<html>
+<head>
+  <title>404</title>
+</head>
+<body>
+  <script>
+    var pathSegmentsToKeep = 0;
+  </script>
+</body>
+</html>`;
+
+// Post names and contents
+const POST1 = "post-1.md";
+const POST2 = "post-2.md";
+const POST3 = "post-3.md";
+
+const POST1_CONTENT = "# Post 1";
+const POST2_CONTENT = "# Post 2";
+const POST3_CONTENT = "# Post 3";
 
 describe("Vite Plugins", () => {
   let testDir: string;
@@ -75,15 +96,15 @@ describe("Vite Plugins", () => {
   describe("manifest generation", () => {
     it("should generate manifest with all posts", () => {
       // Create posts
-      writeFileSync(join(postsDir, "post-1.md"), "# Post 1");
-      writeFileSync(join(postsDir, "post-2.md"), "# Post 2");
-      writeFileSync(join(postsDir, "post-3.md"), "# Post 3");
+      writeFileSync(join(postsDir, POST1), POST1_CONTENT);
+      writeFileSync(join(postsDir, POST2), POST2_CONTENT);
+      writeFileSync(join(postsDir, POST3), POST3_CONTENT);
       writeFileSync(join(postsDir, "not-a-blog.txt"), "Not a blog");
 
       // Verify manifest
       const manifest = generateBlogManifest(postsDir);
       expect(manifest).not.toBeNull();
-      expect(manifest?.files).toEqual(["post-1.md", "post-2.md", "post-3.md"]);
+      expect(manifest?.files).toEqual([POST1, POST2, POST3]);
       expect(manifest?.files).not.toContain("not-a-blog.txt");
 
       // Verify path
@@ -92,7 +113,7 @@ describe("Vite Plugins", () => {
 
       // Verify content
       const manifestContent = JSON.parse(readFileSync(manifestPath, "utf-8"));
-      expect(manifestContent.files).toEqual(["post-1.md", "post-2.md", "post-3.md"]);
+      expect(manifestContent.files).toEqual([POST1, POST2, POST3]);
     });
 
     it("should sort files alphabetically", () => {
@@ -111,10 +132,10 @@ describe("Vite Plugins", () => {
 
     it("should skip directories", () => {
       mkdirSync(join(postsDir, "subdir"));
-      writeFileSync(join(postsDir, "post-1.md"), "# Post 1");
+      writeFileSync(join(postsDir, POST1), POST1_CONTENT);
 
       const manifest = generateBlogManifest(postsDir);
-      expect(manifest?.files).toEqual(["post-1.md"]);
+      expect(manifest?.files).toEqual([POST1]);
       expect(manifest?.files).not.toContain("subdir");
     });
 
@@ -190,21 +211,7 @@ describe("Vite Plugins", () => {
       const src404 = join(testDir, "404.html");
       const dist404 = join(testDir, "404-processed.html");
 
-      const html = `<!doctype html>
-<html>
-<head>
-  <title>404</title>
-</head>
-<body>
-  <script>
-    var pathSegmentsToKeep = 0;
-  </script>
-</body>
-</html>`;
-
-      writeFileSync(src404, html);
-
-      // Process using the actual function
+      writeFileSync(src404, HTML_404);
       process404Html(src404, dist404, basePath);
 
       const modifiedHtml = readFileSync(dist404, "utf-8");
@@ -219,21 +226,7 @@ describe("Vite Plugins", () => {
       const src404 = join(testDir, "404-root.html");
       const dist404 = join(testDir, "404-root-processed.html");
 
-      const html = `<!doctype html>
-<html>
-<head>
-  <title>404</title>
-</head>
-<body>
-  <script>
-    var pathSegmentsToKeep = 0;
-  </script>
-</body>
-</html>`;
-
-      writeFileSync(src404, html);
-
-      // Process using the actual function
+      writeFileSync(src404, HTML_404);
       process404Html(src404, dist404, basePath);
 
       const modifiedHtml = readFileSync(dist404, "utf-8");
@@ -246,20 +239,18 @@ describe("Vite Plugins", () => {
       const srcDir = postsDir;
       const distDir = join(testDir, "dist", "posts");
 
-      // Create source files
-      writeFileSync(join(srcDir, "post-1.md"), "# Post 1");
-      writeFileSync(join(srcDir, "post-2.md"), "# Post 2");
-
-      // Copy using the actual function
+      writeFileSync(join(srcDir, POST1), POST1_CONTENT);
+      writeFileSync(join(srcDir, POST2), POST2_CONTENT);
       copyDir(srcDir, distDir);
 
-      // Verify files were copied
-      expect(existsSync(join(distDir, "post-1.md"))).toBe(true);
-      expect(existsSync(join(distDir, "post-2.md"))).toBe(true);
+      expect(existsSync(join(distDir, POST1))).toBe(true);
+      expect(existsSync(join(distDir, POST2))).toBe(true);
 
-      // Verify content
-      const copiedContent = readFileSync(join(distDir, "post-1.md"), "utf-8");
-      expect(copiedContent).toBe("# Post 1");
+      const copiedContent1 = readFileSync(join(distDir, POST1), "utf-8");
+      expect(copiedContent1).toBe(POST1_CONTENT);
+
+      const copiedContent2 = readFileSync(join(distDir, POST2), "utf-8");
+      expect(copiedContent2).toBe(POST2_CONTENT);
     });
 
     it("should handle recursive directory copying", () => {
@@ -271,10 +262,7 @@ describe("Vite Plugins", () => {
       mkdirSync(subDir, { recursive: true });
       writeFileSync(join(subDir, "nested-post.md"), "# Nested Post");
 
-      // Copy using the actual function
       copyDir(srcDir, distDir);
-
-      // Verify nested file was copied
       expect(existsSync(join(distDir, "subdir", "nested-post.md"))).toBe(true);
     });
   });
@@ -282,28 +270,26 @@ describe("Vite Plugins", () => {
   describe("manifest validation", () => {
     it("should handle existing valid manifest", () => {
       const manifestPath = join(postsDir, "manifest.json");
-      const existingManifest = { files: ["post-1.md", "post-2.md"] };
+      const existingManifest = { files: [POST1, POST2] };
       writeFileSync(manifestPath, JSON.stringify(existingManifest, null, 2));
 
       // Generate manifest - should return existing one
       const manifest = generateBlogManifest(postsDir);
-
       expect(manifest).toEqual(existingManifest);
     });
 
     it("should regenerate invalid manifest", () => {
       const manifestPath = join(postsDir, "manifest.json");
       writeFileSync(manifestPath, "invalid json{");
-      writeFileSync(join(postsDir, "post-1.md"), "# Post 1");
+      writeFileSync(join(postsDir, POST1), POST1_CONTENT);
 
       // Generate manifest - should regenerate due to invalid JSON
       const manifest = generateBlogManifest(postsDir);
-
-      expect(manifest?.files).toEqual(["post-1.md"]);
+      expect(manifest?.files).toEqual([POST1]);
 
       // Verify manifest file was regenerated
       const newManifest = JSON.parse(readFileSync(manifestPath, "utf-8"));
-      expect(newManifest.files).toEqual(["post-1.md"]);
+      expect(newManifest.files).toEqual([POST1]);
     });
   });
 });

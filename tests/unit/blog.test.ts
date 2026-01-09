@@ -3,10 +3,11 @@
  * highlight configuration, and code highlighting functionality.
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { createHighlightConfig } from "../../src/blog";
-import { PostRenderer } from "../../src/blog/PostRenderer";
-import { parseFrontmatter } from "../../src/utils";
+import { createHighlightConfig } from "../../src/blog/reader";
+import { PostRenderer } from "../../src/blog/post-renderer";
+import { parseFrontmatter } from "../../src/utils/frontmatter";
 import type { HLJSApi } from "highlight.js";
+import { TypeScriptTransformer } from "../../src/code-executor/typescript-transformer";
 
 type KnownLanguage = "typescript" | "javascript" | "python" | "markdown" | "dot" | "graphviz";
 
@@ -374,6 +375,8 @@ describe("createTypeScriptExecutableBlock", () => {
   it("should include highlighted code in the output", () => {
     const tsCode = "const x = 1;";
     const blockId = "test-block-2";
+
+    new TypeScriptTransformer();
     const result = renderer.createTypeScriptExecutableBlock(tsCode, blockId, highlightConfig);
 
     expect(mockHljs.highlight).toHaveBeenCalledWith(tsCode, { language: "typescript" });
