@@ -139,6 +139,20 @@ describe("Vite Plugins", () => {
       expect(manifest?.files).not.toContain("subdir");
     });
 
+    it("should include nested posts with relative path", () => {
+      writeFileSync(join(postsDir, POST1), POST1_CONTENT);
+
+      const subdir = "subdir";
+      const nestedPost = "nested-post.md";
+      mkdirSync(join(postsDir, subdir), { recursive: true });
+      writeFileSync(join(postsDir, subdir, nestedPost), "# Nested Post");
+
+      const manifest = generateBlogManifest(postsDir);
+      expect(manifest).not.toBeNull();
+      expect(manifest?.files).toContain(POST1);
+      expect(manifest?.files).toContain(join(subdir, nestedPost));
+    });
+
     it("should exclude markdown files in excluded subdirectory", () => {
       // Create included posts
       writeFileSync(join(postsDir, "published-post-1.md"), "# Published Post 1");

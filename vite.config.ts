@@ -1,7 +1,7 @@
 /// <reference types="vitest/config" />
 import { defineConfig } from "vite";
 import { readFileSync, writeFileSync, copyFileSync, mkdirSync, readdirSync, existsSync, statSync, Dirent } from "fs";
-import { join } from "path";
+import { join, relative, basename } from "path";
 import { basePathScript } from "./src/utils/paths";
 
 // Directories
@@ -96,14 +96,14 @@ export function process404Html(src404: string, dist404: string, basePath: string
 }
 
 /**
- * Generates a manifest file listing all markdown files found recursively in the posts directory
+ * Generates a manifest file listing all markdown files found recursively in the posts directory.
+ * Uses relative paths from postsDir (e.g. "zk/post.md") so nested posts load correctly.
  *
- * By default, returns existing manifest if present. Can be forced to regenerate via the
- * `regenerate` parameter. Excludes markdown files from the specified `excludeDir` if provided.
+ * By default, returns existing manifest if present. Excludes markdown files from the
+ * specified `excludeDir` if provided.
  *
  * @param postsDir - The directory to recursively search for markdown files
  * @param excludeDir - Optional directory name to exclude from the manifest (e.g. "wip")
- * @param regenerate - If true, forces regeneration even if manifest exists
  * @returns The manifest object with sorted files array, or null if generation failed
  */
 export function generateBlogManifest(postsDir: string, excludeDir?: string): { files: string[] } | null {
@@ -120,13 +120,13 @@ export function generateBlogManifest(postsDir: string, excludeDir?: string): { f
 
   try {
     const isIncluded = (entry: Dirent) => {
-      const parentDir = entry.parentPath.split("/").slice(-1)[0];
+      const parentDir = basename(entry.parentPath);
       return entry.isFile() && entry.name.endsWith(".md") && parentDir !== excludeDir;
     };
     const entries = readdirSync(postsDir, { withFileTypes: true, recursive: true });
     const posts = entries
       .filter(isIncluded)
-      .map((entry) => entry.name)
+      .map((entry) => relative(postsDir, join(entry.parentPath, entry.name)).replace(/\\/g, "/"))
       .sort();
     const manifest = { files: posts };
 
