@@ -4,6 +4,8 @@ date: 2026-02-07
 topics:
   - zk
   - summary
+  - stark
+  - iop
 ---
 
 # STARK paper summary
