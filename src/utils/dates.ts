@@ -99,4 +99,3 @@ export function formatDateAsPacificTime(dateString: string): string {
 export function formatPostDate(dateString: string): string {
   return formatDateAsPacificTime(dateString);
 }
-

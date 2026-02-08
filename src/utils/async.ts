@@ -20,4 +20,3 @@ export const resolveWithTimeout = (timeout: number) => {
     setTimeout(resolve, timeout);
   };
 };
-

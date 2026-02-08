@@ -75,13 +75,19 @@ describe("Blog Post Loading Integration Test", () => {
       const manifestContent = readFileSync(manifestPath, "utf-8");
       const manifest = JSON.parse(manifestContent) as { files: string[] };
 
-      const entries = readdirSync(srcBlogsDir, { withFileTypes: true });
+      const wipDir = join(srcBlogsDir, "wip");
+      const entries = readdirSync(srcBlogsDir, { recursive: true, withFileTypes: true });
       const sourceFiles = new Set(
-        entries.filter((entry) => entry.isFile() && entry.name.endsWith(".md")).map((entry) => entry.name),
+        entries
+          .filter((entry) => entry.isFile() && entry.name.endsWith(".md") && entry.parentPath !== wipDir)
+          .map((entry) => entry.name),
       );
 
       for (const manifestFile of manifest.files) {
-        expect(sourceFiles.has(manifestFile)).toBe(true);
+        const file = manifestFile.split("/").pop();
+        console.log("file", file);
+        console.log("sourceFiles", sourceFiles);
+        expect(sourceFiles.has(file!)).toBe(true);
       }
     });
   });

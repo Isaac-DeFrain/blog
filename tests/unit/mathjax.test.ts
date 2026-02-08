@@ -49,7 +49,7 @@ describe("typesetMath", () => {
   it("should wait for MathJax to load from CDN before typesetting", async () => {
     clearMathJax();
     const element = document.createElement("div");
-    
+
     // Simulate MathJax loading from CDN after a delay
     // Use the same mockTypesetPromise from beforeEach to ensure it's tracked
     setTimeout(() => {
@@ -89,9 +89,9 @@ describe("typesetMath", () => {
     // Set a timeout to prevent infinite waiting in test
     const timeoutPromise = new Promise(resolveWithTimeout(100));
     const typesetPromise = typesetMath(element);
-    
+
     await Promise.race([typesetPromise, timeoutPromise]);
-    
+
     // Note: In a real scenario, this would wait indefinitely for CDN to load
     // In tests, we can't easily test the timeout behavior without making the test slow
     // So we just verify the function doesn't throw

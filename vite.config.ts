@@ -104,12 +104,17 @@ export function process404Html(src404: string, dist404: string, basePath: string
  *
  * @param postsDir - The directory to recursively search for markdown files
  * @param excludeDir - Optional directory name to exclude from the manifest (e.g. "wip")
+ * @param forceRegenerate - If true, always scan and write manifest (used by build)
  * @returns The manifest object with sorted files array, or null if generation failed
  */
-export function generateBlogManifest(postsDir: string, excludeDir?: string): { files: string[] } | null {
+export function generateBlogManifest(
+  postsDir: string,
+  excludeDir?: string,
+  forceRegenerate?: boolean,
+): { files: string[] } | null {
   const manifestPath = join(postsDir, "manifest.json");
 
-  if (existsSync(manifestPath)) {
+  if (!forceRegenerate && existsSync(manifestPath)) {
     try {
       const validJson = JSON.parse(readFileSync(manifestPath, "utf-8"));
       return validJson;
@@ -269,14 +274,14 @@ export default defineConfig({
     {
       name: "generate-blog-manifest",
       buildStart() {
-        generateBlogManifest(join(process.cwd(), POSTS_DIR), WIP_POSTS_DIR);
+        generateBlogManifest(join(process.cwd(), POSTS_DIR), WIP_POSTS_DIR, true);
       },
       /**
        * Generate manifest file and write to dist directory
        */
       closeBundle() {
         const srcPostsDir = join(process.cwd(), POSTS_DIR);
-        const manifest = generateBlogManifest(srcPostsDir, WIP_POSTS_DIR);
+        const manifest = generateBlogManifest(srcPostsDir, WIP_POSTS_DIR, true);
 
         if (manifest) {
           const distPostsDir = join(process.cwd(), DIST_DIR, POSTS_DIR);

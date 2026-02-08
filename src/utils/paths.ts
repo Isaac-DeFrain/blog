@@ -26,4 +26,3 @@ export function getBasePath(): string {
 export function basePathScript(basePath: string): string {
   return `<script>window.__BASE_PATH__ = ${JSON.stringify(basePath)};</script>`;
 }
-
