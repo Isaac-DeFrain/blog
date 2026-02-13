@@ -11,6 +11,7 @@ import { RenderingError } from "../utils/errors";
 import { createDivElement, escapeHtml, unescapeHtml } from "../utils/html";
 import { formatPostDate } from "../utils/dates";
 import { resolveWithTimeout } from "../utils/async";
+import { getBasePath } from "../utils/paths";
 import { CSS_CLASSES, TIMEOUTS, REGEX_PATTERNS, BUTTON_LABELS } from "./constants";
 import { initializeTypeScriptRunner } from "../code-executor/block-executor";
 import { TypeScriptTransformer } from "../code-executor/typescript-transformer";
@@ -139,6 +140,12 @@ export class PostRenderer {
           code({ lang, text }) {
             return processCodeBlock(lang, text, highlightConfig, renderer);
           },
+          link({ href, title, text }) {
+            const resolvedHref = rewritePostsLinkToRoot(href, getBasePath());
+            const finalHref = resolvedHref ?? href;
+            const titleAttr = title ? ` title="${escapeHtml(title)}"` : "";
+            return `<a href="${escapeHtml(finalHref)}"${titleAttr}>${text}</a>`;
+          },
         },
       });
 
@@ -176,6 +183,34 @@ export class PostRenderer {
     </div>
   `;
   }
+}
+
+/**
+ * Rewrites internal blog post links that reference the posts directory to root-relative URLs.
+ * Handles @posts/, posts/, and /posts/ prefixes so links work with SPA routing.
+ *
+ * @param href - Raw link href from markdown
+ * @param basePath - Application base path (e.g. "/blog/" or "/")
+ * @returns Rewritten href, or null if not a posts link
+ */
+function rewritePostsLinkToRoot(href: string, basePath: string): string | null {
+  if (!href || href.startsWith("http://") || href.startsWith("https://") || href.startsWith("#")) {
+    return null;
+  }
+
+  const [pathPart, hashPart] = href.split("#", 2);
+  if (!/^(?:@?posts\/|\/posts\/)/.test(pathPart)) return null;
+
+  const afterPrefix = pathPart
+    .replace(/^(?:@?posts\/|\/posts\/)/, "")
+    .replace(REGEX_PATTERNS.MARKDOWN_EXTENSION, "")
+    .replace(REGEX_PATTERNS.LEADING_TRAILING_SLASHES, "");
+  const postId = afterPrefix.trim();
+  if (!postId) return null;
+
+  const base = basePath.replace(/\/$/, "") || "";
+  const newHref = base ? `${base}/${postId}` : `/${postId}`;
+  return hashPart !== undefined ? `${newHref}#${hashPart}` : newHref;
 }
 
 function processHeading(md: typeof marked, text: string, depth: number): string {

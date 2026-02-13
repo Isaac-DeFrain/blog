@@ -2,12 +2,13 @@
  * Unit tests for blog module functions including frontmatter parsing,
  * highlight configuration, and code highlighting functionality.
  */
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { createHighlightConfig } from "../../src/blog/reader";
 import { PostRenderer } from "../../src/blog/post-renderer";
 import { parseFrontmatter } from "../../src/utils/frontmatter";
 import type { HLJSApi } from "highlight.js";
 import { TypeScriptTransformer } from "../../src/code-executor/typescript-transformer";
+import { setBasePath } from "../helpers/dom";
 
 type KnownLanguage = "typescript" | "javascript" | "python" | "markdown" | "dot" | "graphviz";
 
@@ -416,5 +417,59 @@ describe("createTypeScriptExecutableBlock", () => {
     expect(result).toContain('data-ts-code="test-block-6"');
     // The processed code should be JSON stringified
     expect(result).toMatch(/<script[^>]*>.*?<\/script>/s);
+  });
+});
+
+describe("processMarkdown link rewriting (posts/ to root)", () => {
+  const mockHighlightConfig = {
+    langPrefix: "hljs language-",
+    highlight: (code: string, _lang: string) => code,
+  };
+
+  afterEach(() => {
+    delete (window as unknown as { __BASE_PATH__?: string }).__BASE_PATH__;
+  });
+
+  it("rewrites posts/ links to basePath-relative URL", async () => {
+    setBasePath("/blog/");
+    const markdown = "See [zk terminology](posts/zk/zk-terminology.md) for details.";
+    const html = await renderer.processMarkdown(markdown, mockHighlightConfig);
+    expect(html).toContain('href="/blog/zk/zk-terminology"');
+  });
+
+  it("rewrites @posts/ links to basePath-relative URL", async () => {
+    setBasePath("/blog/");
+    const markdown = "See [zk terminology](@posts/zk/zk-terminology.md) for details.";
+    const html = await renderer.processMarkdown(markdown, mockHighlightConfig);
+    expect(html).toContain('href="/blog/zk/zk-terminology"');
+  });
+
+  it("rewrites /posts/ links to basePath-relative URL", async () => {
+    setBasePath("/blog/");
+    const markdown = "See [zk terminology](/posts/zk/zk-terminology.md) for details.";
+    const html = await renderer.processMarkdown(markdown, mockHighlightConfig);
+    expect(html).toContain('href="/blog/zk/zk-terminology"');
+  });
+
+  it("preserves hash fragment when rewriting posts links", async () => {
+    setBasePath("/");
+    const markdown = "See [section](posts/some/post.md#section-name).";
+    const html = await renderer.processMarkdown(markdown, mockHighlightConfig);
+    expect(html).toContain('href="/some/post#section-name"');
+  });
+
+  it("leaves non-posts links unchanged", async () => {
+    setBasePath("/blog/");
+    const markdown = "External: [example](https://example.com). Relative: [other](./other.md).";
+    const html = await renderer.processMarkdown(markdown, mockHighlightConfig);
+    expect(html).toContain('href="https://example.com"');
+    expect(html).toContain('href="./other.md"');
+  });
+
+  it("uses root when basePath is /", async () => {
+    setBasePath("/");
+    const markdown = "See [post](posts/zk/zk-terminology.md).";
+    const html = await renderer.processMarkdown(markdown, mockHighlightConfig);
+    expect(html).toContain('href="/zk/zk-terminology"');
   });
 });
