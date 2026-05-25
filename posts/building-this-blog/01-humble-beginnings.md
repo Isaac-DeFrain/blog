@@ -1,0 +1,402 @@
+---
+name: Building This Blog (part 1) - Humble Beginnings
+date: 2025-12-15
+topics:
+  - building this blog
+  - ci/cd
+  - nix
+---
+
+# Building This Blog (part 1) - Humble Beginnings
+
+This is the humble beginning of a [blog](https://isaac-defrain.github.io/blog/) and subsequent series of posts about building said [blog](https://github.com/Isaac-DeFrain/blog). The series consists of 5 posts:
+
+1. [Humble Beginnings](./01-humble-beginnings.md)
+2. [Routing for GitHub Pages (part 1)](./02-routing-for-github-pages-01.md)
+3. [Routing for GitHub Pages (part 2)](./03-routing-for-github-pages-02.md)
+4. [Testing](./04-testing.md)
+5. [CI/CD Deployment Pipeline](./05-cicd-pipeline.md)
+
+First, a quick introduction.
+
+## A little about me
+
+I've been a software developer for over 7 years. Somehow I had managed to keep myself far away from any AI tools. Perhaps I viewed them as more of a crutch than anything, but even a crutch is a tool. However, in my extremely limited exposure, I had not found them terribly helpful. Most likely because I didn't know how to use them.
+
+Throughout my career, I had also managed to keep myself far away from web/frontend development and TypeScript. This did not make me cool... or a well-rounded developer, for that matter.
+
+It was high time I change _my_ status quo, start working with AI tools and stop hiding from the frontend. I decided to build my first web app, a simple blog.
+
+I'm certainly no frontend or AI expert, and I think, that's _exactly_ why my experience here is particularly valuable to share. I hope you enjoy and maybe even learn something along the way.
+
+## A little about this blog
+
+The initial idea was simple:
+
+> Build a basic, vanilla (framework-free) [TypeScript](https://www.typescriptlang.org/) blog web app
+
+Of course, that couldn't be the whole goal... I also felt strongly compelled to use [Nix flakes](https://nixos.wiki/wiki/Flakes), CI/CD best practices, and copious AI assistance. My aim was specifically to get (more) familiar with [Cursor](https://cursor.sh/) and TypeScript, while using the former to bootstrap and accelerate my learning of the latter.
+
+This post will highlight:
+
+- [tech choices](#this-blogs-tech-choices)
+- [design decisions](#design)
+- [CI/CD best practices](#cicd-best-practices)
+- [deploying to GitHub Pages](#deploying-to-github-pages)
+
+### This blog's tech choices
+
+As mentioned above, we use:
+
+- [Nix flakes](#why-nix-flakes)
+- [TypeScript](#why-typescript)
+- [Vite](#why-vite)
+- [Cursor](#why-cursor)
+- [GitHub Actions/Pages](#why-github-actionspages)
+
+We now address the reasoning for each choice.
+
+### Why Nix flakes
+
+Nix flakes handles our development and deployment environments. Instead of manually installing dev tools (or hoping they're already installed), [`flake.nix`](../../../flake.nix) declares exactly what's needed for the project.
+
+For the blog, we only need [Node.js](https://nodejs.org/en/learn/getting-started/introduction-to-nodejs). The `nodejs_24` Nix package provides the Node.js runtime and [`npm` package manager](https://www.npmjs.com/). Node.js is required to run [Vite](https://vite.dev/), TypeScript, and all the `npm` scripts. After the flake gives us `npm`, we use it to install the remaining project dependencies from `package.json`.
+
+#### Nix flakes offer
+
+- **Reproducibility**: Every clone of the repo gets the exact same versions of Node.js, `npm`, and other tools, regardless of the underlying system
+- **Version pinning**: Flakes lock dependencies, ensuring builds are reproducible across time and machines
+- **Lighter than Docker**: No container overhead, direct access to your system, and faster startup times
+
+The flake ensures that anyone can run `nix develop` and immediately have the correct Node.js version, without any manual setup or version conflicts.
+
+> Using Nix flakes for development and CI/CD pipelines is a best practice
+
+### Why TypeScript
+
+TypeScript is widely used across many industries. I chose to restrict myself to vanilla TypeScript in order to force myself to encounter firsthand, all the problems that various frameworks solve.
+
+### Why Vite
+
+Vite serves as both the development server and build tool for the blog. It delivers a delightful developer experience with instant dev server startup and hot module replacement (HMR), while also handling TypeScript compilation, code bundling, and asset optimization for production. It can also be configured with TypeScript code.
+
+#### Vite offers
+
+- **Fast dev server**: Uses native ES modules in the browser during development, eliminating the need for bundling and providing near-instant server startup
+- **Hot Module Replacement**: Changes to code are reflected immediately in the browser without a full page reload
+- **TypeScript support**: Built-in TypeScript compilation without additional configuration
+- **Build tool**: Bundles and optimizes code for production, including minification and code splitting
+- **Plugin system**: Extensible architecture allows custom build steps which we use to copy blog files, generate manifests, and process 404.html for GitHub Pages
+- **Modern tooling**: Works seamlessly with modern JavaScript features and ES modules
+
+For this blog, Vite handles the entire _build pipeline_:
+
+- serving the blog during development
+- compiling TypeScript code
+- copying markdown files to the `/dist` directory
+- generating the blog manifest
+- configuring the base path for GitHub Pages deployment
+
+### Why Cursor
+
+Cursor is an AI-powered IDE built on VS Code which has become an almost essential tool for software developers.
+
+#### Cursor offers
+
+- **Context-aware assistance**: Unlike generic AI chatbots, Cursor understands your entire codebase, making suggestions that fit your project's architecture and coding style
+- **Learning accelerator**: When working with unfamiliar technologies (TypeScript, frontend development in my case), Cursor provides real-time explanations and helps you understand best practices
+- **Code generation and refactoring**: Quickly generate boilerplate code, refactor existing code, and implement features while maintaining consistency with your project's patterns
+- **Error resolution**: Cursor helps diagnose and fix errors faster by understanding the context of your code and suggesting targeted solutions
+
+For this blog, Cursor has helped me navigate and understand TypeScript syntax, Vite's build system, implementing client-side routing, integrating Mermaid and Graphviz diagram rendering, building executable TypeScript code blocks with Web Workers, and solving deployment challenges with GitHub Pages much more easily. It transformed what would have been several hard weeks of learning and trial-and-error into a productive 2-week push. It turns out that writing blog posts takes much longer than writing code though...
+
+### Why GitHub Actions/Pages
+
+Since the code is already hosted on [GitHub](https://github.com/), it makes sense to keep workflows local. To that end, we use [GitHub Actions](https://github.com/features/actions) to automate code quality checks, testing, and deployment. Deploying to [GitHub Pages](https://docs.github.com/en/pages) allows us to host a static site while avoiding the need for an external hosting service.
+
+Our deployment to GitHub Pages posed several unexpected challenges which will be discussed in detail later.
+
+## Design
+
+This blog is a [single-page application (SPA)](https://en.wikipedia.org/wiki/Single-page_application) built with TypeScript and a highly customized Vite config. It renders markdown blog posts with client-side routing, topic filtering, internal post/section links, and light/dark theme toggling. The blog supports rich content features including [Mermaid diagrams](#mermaid-diagrams), [Graphviz diagrams](#graphviz-diagrams), and [executable TypeScript code blocks](#executable-typescript-code-blocks).
+
+### Architecture
+
+This blog's architecture is as simple as possible while supporting deployment to [GitHub Pages](https://docs.github.com/en/pages).
+
+- **Framework**: Vanilla TypeScript with Vite
+- **Blog Content**: Markdown files with YAML frontmatter (name, date, topics)
+- **Rendering**: Marked.js for markdown → HTML, Highlight.js for code syntax highlighting, MathJax for math, Mermaid for diagrams, Graphviz for graph visualization, and executable TypeScript code blocks
+- **Routing**: Client-side routing with browser history API
+- **Deployment**: GitHub Pages with base path support
+
+### Layout
+
+The layout of the single page:
+
+```txt
+┌──────────────────────────────────────────────────────────────┐
+│ HEADER (sticky)                                              │
+│ ┌─────────────────────────────────────┐ ┌──────────────────┐ │
+│ │ TITLE                               │ │  [Theme Toggle]  │ │
+│ └─────────────────────────────────────┘ └──────────────────┘ │
+├──────────────────────────────────────────────────────────────┤
+│ TOPICS BAR (sticky)                                          │
+│ [all] [blog] [best practices] [cursor] [cicd] ...            │
+│ (horizontal scrollable filter buttons)                       │
+├──────────────────────────────────────────────────────────────┤
+│ MAIN CONTAINER                                               │
+│ ┌──────────────────┐  ┌───────────────────────────────────┐  │
+│ │ SIDEBAR          │  │ CONTENT AREA                      │  │
+│ │ (sticky)         │  │                                   │  │
+│ │                  │  │ ┌───────────────────────────────┐ │  │
+│ │ Recent Posts     │  │ │ Blog Post Card                │ │  │
+│ │ ─────────────    │  │ │                               │ │  │
+│ │ • Post 1         │  │ │ Date: January 15, 2024        │ │  │
+│ │   Jan 15, 2024   │  │ │ ───────────────────────────── │ │  │
+│ │                  │  │ │                               │ │  │
+│ │ • Post 2         │  │ │ # Post Title                  │ │  │
+│ │   Jan 10, 2024   │  │ │                               │ │  │
+│ │                  │  │ │ Blog content (markdown)       │ │  │
+│ │ • Post 3         │  │ │ rendered as HTML with         │ │  │
+│ │   Jan 5, 2024    │  │ │ code highlighting, MathJax,   │ │  │
+│ │                  │  │ │ Mermaid/Graphviz diagrams,    │ │  │
+│ │                  │  │ │ and executable TypeScript     │ │  │
+│ │ (scrollable)     │  │ │                               │ │  │
+│ │ (topic-filtered) │  │ └───────────────────────────────┘ │  │
+│ └──────────────────┘  └───────────────────────────────────┘  │
+└──────────────────────────────────────────────────────────────┘
+```
+
+### Content Features
+
+The blog supports several advanced content features that enhance the reading and learning experience:
+
+#### Mermaid Diagrams
+
+[Mermaid](https://mermaid.js.org/) diagrams can be embedded directly in markdown using fenced code blocks with the `mermaid` language identifier. Mermaid renders flowcharts, sequence diagrams, class diagrams, and more as SVG graphics. The diagrams are automatically rendered when blog posts are loaded, with proper styling for both light and dark themes.
+
+**Usage:**
+
+````plaintext
+```mermaid
+graph TD
+    A[Start] --> B{Decision}
+    B -->|Yes| C[Action 1]
+    B -->|No| D[Action 2]
+```
+````
+
+Makes:
+
+```mermaid
+graph TD
+    A[Start] --> B{Decision}
+    B -->|Yes| C[Action 1]
+    B -->|No| D[Action 2]
+```
+
+#### Graphviz Diagrams
+
+[Graphviz](https://graphviz.org/) DOT language diagrams can be embedded using fenced code blocks with either `dot` or `graphviz` language identifiers. Graphviz provides powerful graph visualization capabilities, rendering complex directed and undirected graphs as SVG. The blog uses [Viz.js](https://github.com/mdaines/viz.js/) to render Graphviz diagrams in the browser.
+
+**Usage:**
+
+````plaintext
+```dot
+digraph G {
+    A -> B
+    B -> C
+    C -> A
+}
+```
+````
+
+Makes:
+
+```dot
+digraph G {
+    A -> B
+    B -> C
+    C -> A
+}
+```
+
+#### Executable TypeScript Code Blocks
+
+Interactive, executable TypeScript code blocks allow readers to run code directly in the browser. Code blocks with the `typescript:run` language identifier are compiled to JavaScript using the TypeScript compiler (loaded from CDN) and executed in a sandboxed Web Worker environment. This feature enables interactive examples, demonstrations, and learning exercises within blog posts.
+
+**Features:**
+
+- Compiles TypeScript to JavaScript using the TypeScript compiler
+- Executes code in a Web Worker for sandboxing and isolation
+- Captures `console.log`, `console.error`, `console.warn`, and `console.info` output
+- Shows compilation diagnostics (errors and warnings)
+- Provides a `render()` function for HTML output
+- 10-second execution timeout for safety
+
+**Usage:**
+
+````plaintext
+```typescript:run
+const add = (x: number, y: number) => x + y;
+const x = 19;
+const y = 23;
+console.log(`${x} + ${y} = ${add(x, y)}`);
+```
+````
+
+Makes:
+
+```typescript:run
+const add = (x: number, y: number) => x + y;
+const x = 19;
+const y = 23;
+console.log(`${x} + ${y} = ${add(x, y)}`);
+```
+
+All three features are dynamically loaded and initialized when blog posts are rendered, ensuring fast initial page load while providing rich interactive content when needed.
+
+#### Mobile UX
+
+The blog includes mobile-specific UX enhancements to improve the reading experience on smaller screens. On mobile devices (viewport width ≤ 768px), the header and topics bar automatically hide when the user scrolls past the sidebar and becomes idle, maximizing the available screen space for content.
+
+**Behavior:**
+
+- **Auto-hide**: When scrolling past the sidebar, the header and topics bar hide after 2 seconds of inactivity (no scrolling, mouse movement, or touch events)
+- **Auto-show**: The header reappears when:
+  - The user scrolls back to the sidebar area
+  - The user moves the mouse (on devices with mouse input)
+  - The user scrolls up 100 times consecutively while the header is hidden
+- **Smooth transitions**: Header visibility changes use CSS transitions for a polished user experience
+
+**Implementation:**
+
+The `MobileHeaderHide` class in [`src/mobile-header-hide.ts`](../../../src/mobile-header-hide.ts) manages this behavior using:
+
+- Media queries to detect mobile viewport (max-width: 768px)
+- Scroll event tracking to determine when the sidebar is out of view
+- Idle timeout detection (2 seconds) to trigger hiding
+- Scroll direction tracking to enable the "scroll up 100 times" show behavior
+- Event delegation for mouse and touch interactions
+
+This feature enhances mobile reading by providing more vertical space for content while keeping navigation easily accessible when needed.
+
+## CI/CD best practices
+
+In attempting to use some notion of _best practices_, I should at least attempt define what I mean. This is a _non-exhaustive_ list of best practices:
+
+- reproducible dev environments/builds/deploys (e.g. Nix flakes)
+- automated lint, audit, test, coverage, build, and deploy
+- embrace [CI/CD](https://semaphore.io/cicd) practices
+- test strictly and make coverage reports easily accessible
+
+We use GitHub Actions to
+
+- lint
+- audit
+- test (technically, we run coverage)
+- build
+- deploy
+
+_every push_ to the [`main` branch](https://github.com/Isaac-DeFrain/blog/tree/main). Successful builds are immediately deployed into [production on GitHub Pages](https://isaac-defrain.github.io/blog/).
+
+## Deploying to GitHub Pages
+
+Deploying to GitHub Pages presented the most significant challenges while building this blog. While the application consistently worked locally (because of Vite's dev server), production deployment failures revealed platform uniquenesses that needed to be accounted for.
+
+Since most of the following concepts were new to me, Cursor was especially helpful in implementing these solutions.
+
+### Main challenges
+
+The main challenges we encountered were all caused by our choice of deployment to GitHub pages and insistence on vanilla TypeScript. These include:
+
+- [Routing](#routing-for-github-pages)
+- [Base path configuration](#base-path-configuration-for-github-pages)
+- [Script injection timing](#script-injection-timing-for-github-pages)
+- [Build-time processing](#build-time-processing-for-github-pages)
+- [Post/section linking](#postsection-linking-for-github-pages)
+
+#### Routing for GitHub Pages
+
+_Problem_:
+
+The most significant challenge was that **GitHub Pages doesn't natively support SPA routing**. When a user navigated directly to a route like `/welcome` or refreshed the page, GitHub Pages would return a 404 error because it was looking for an actual file at that path, not understanding that this was a client-side route handled by JavaScript.
+
+_Solution_:
+
+We leveraged GitHub Pages' special behavior of serving `404.html` when a file isn't found. By creating a `404.html` file that mirrors the main `index.html` structure and processes it during build to inject the base path, we ensure that any "missing" route loads the SPA, which then reads the original pathname from the URL and routes accordingly. This solution is detailed in [part 2 of this series](./02-routing-for-github-pages-01.md).
+
+#### Base path configuration for GitHub Pages
+
+_Problem_:
+
+GitHub Pages serves project repositories from `/repo-name/` rather than the root `/`. This means all asset paths, API calls, and routing logic needed to account for this base path. Without proper handling, assets wouldn't load and routing would break.
+
+_Solution_:
+
+The build process detects the repository name from the `GITHUB_REPOSITORY` environment variable and injects `window.__BASE_PATH__` as a global variable into both `index.html` and `404.html`. The application code then uses this base path when constructing fetch URLs and managing navigation. Vite's `base` configuration is also set to ensure asset paths are correctly prefixed.
+
+#### Script injection timing for GitHub Pages
+
+_Problem_:
+
+A subtle yet critical bug emerged where blog posts failed to load because `window.__BASE_PATH__` wasn't available when the application code executed. The base path injection script was initially placed just before the closing `</head>` tag, but Vite's module scripts were loading earlier, causing the application to run before the base path was defined.
+
+_Solution_:
+
+The script injection point was moved to immediately after the opening `<head>` tag, ensuring the base path variable is defined before any module scripts execute. This fix was applied to both `index.html` and `404.html` processing. This debugging process is covered in detail in [part 2 of this series](./02-routing-for-github-pages-01.md).
+
+#### Build-time processing for GitHub Pages
+
+_Problem_:
+
+Multiple build-time transformations were needed:
+
+- Injecting base path into HTML files
+- Processing `404.html` with path rewriting for assets
+- Copying blog markdown files to the dist directory
+- Generating a manifest file listing all blog posts
+
+_Solution_:
+
+[Custom Vite plugins](../../../vite.config.ts) handle all necessary transformations during the build process. The plugins run at different stages (`buildStart`, `transformIndexHtml`, `closeBundle`) to ensure proper ordering and availability of files. This approach keeps the source code clean while generating production-ready artifacts. The details of this process are covered in [part ./02-routing-for-github-pages-01.md.md) and [part 4](./04-testing.md) of this series.
+
+#### Post/section linking for GitHub Pages
+
+_Problem_:
+
+1. Links to other blog posts (e.g. `./02-routing-for-github-pages-part-1.md`) triggered full page navigation instead of our routing. This worked in development (Vite handles SPA routing), but failed on GitHub Pages because it doesn't support client-side routing.
+2. Links to sections (same-post or cross-post, hash fragments like `#this-blogs-tech-choices`) within blog posts weren't being indexed or handled in any way, thus didn't work locally or on GitHub Pages.
+3. After initially resolving the section link problem, the scrolling was a little off. Basically the header and topic bar were covering the section title.
+
+_Solution_:
+
+We added _link interception_ and utilized our existing routing by
+
+1. Detecting clicks on internal links within blog content via event delegation.
+2. Extracting the post ID from the link URL (handling base path and `.md` extensions).
+3. If the link points to a valid blog post, preventing default navigation and always using `handlePostClick()`.
+4. Allowing external links to navigate normally.
+5. Fix heights of the header and topic bar. Account for that when we scroll to a section.
+
+Internal blog post/section links use SPA routing on both the dev server and GitHub Pages, avoiding default browser navigation. See [Building this Blog (part 3) - Routing for GitHub Pages (part 2)](./03-routing-for-github-pages-02.md) for the full details.
+
+### Conclusion
+
+The challenges encountered while building and deploying this blog demonstrate that even when using best practices, local development and production environments can still differ significantly. What works locally on a dev server may require special handling for deployment platforms like GitHub Pages.
+
+The challenges we encountered and solutions we implemented demonstrate several important principles:
+
+1. **Platform-specific features can be leveraged creatively**: The 404.html fallback is a GitHub Pages quirk that became a feature.
+2. **Build-time configuration is powerful**: Injecting environment-specific values at build time allows the same codebase to work in multiple contexts.
+3. **Script execution order matters**: When dealing with build-time code injection and module loading, careful attention to execution order is essential.
+4. **Event delegation enables dynamic content handling**: Using event delegation to intercept link clicks allows the application to handle dynamically loaded content without modifying the original markdown.
+5. **Custom build tooling bridges platform gaps**: Custom Vite plugins can transform and process files at build time to adapt code for platform-specific requirements.
+6. **Dev and production environments differ**: What works in development may require special handling in production, making it essential to test in production-like environments early and fully embrace CI/CD best practices.
+
+The transformation from initial design to production-ready deployment shows how iterative development through CI/CD best practices, combined with persistent debugging and creative problem-solving, can create robust applications.
+
+---
+
+[Part 2: Routing for GitHub Pages (part 1)](./02-routing-for-github-pages-01.md)
