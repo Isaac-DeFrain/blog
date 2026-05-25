@@ -1,9 +1,13 @@
-# [blog](https://isaac-defrain.github.io/blog/)
+# [blog](https://blog.isaacdefrain.com/)
+
+Also available at [isaac-defrain.github.io/blog/](https://isaac-defrain.github.io/blog/).
 
 [![Build and Deploy](https://github.com/Isaac-DeFrain/blog/actions/workflows/build-deploy.yml/badge.svg)](https://github.com/Isaac-DeFrain/blog/actions)
 [![](./assets/coverage-badge.svg)](./scripts/generate-coverage-badge.ts)
 
 Vanilla TypeScript blog with support for GitHub Pages SPA routing, executable code blocks, code highlighting, MathJax equation rendering, GraphViz and Mermaid diagrams, and light/dark themes.
+
+The production build uses relative asset URLs and runtime hostname detection so the same deployment works on both the custom domain and the GitHub Pages project URL.
 
 ## Features
 

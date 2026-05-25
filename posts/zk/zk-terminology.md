@@ -52,7 +52,7 @@ TODO
 
 TODO
 
-## [Reed-Solomon codes](TODO)
+## [Reed-Solomon codes](https://en.wikipedia.org/wiki/Reed%E2%80%93Solomon_error_correction)
 
 TODO
 

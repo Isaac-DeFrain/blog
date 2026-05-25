@@ -1,32 +1,14 @@
 /// <reference types="vitest/config" />
 import { defineConfig } from "vite";
 import { readFileSync, writeFileSync, copyFileSync, mkdirSync, readdirSync, existsSync, statSync, Dirent } from "fs";
-import { join, relative, basename } from "path";
-import { basePathScript } from "./src/utils/paths";
+import { join, relative } from "path";
+import { basePathDetectionScript, pathSegmentsToKeepScript } from "./src/utils/paths";
 
 // Directories
 const DIST_DIR = "dist";
 const POSTS_DIR = "posts";
 const WIP_POSTS_DIR = "wip";
-
-/** Determine base path for GitHub Pages deployment
- *
- * For project repositories, GitHub Pages serves from /repo-name/
- * Extract repo name from GITHUB_REPOSITORY (format: owner/repo-name)
- *
- * @returns The base path for GitHub Pages deployment or root for local development
- */
-export function getBasePath(): string {
-  const repo = process.env.GITHUB_REPOSITORY;
-  if (repo) {
-    const repoName = repo.split("/")[1];
-    return `/${repoName}/`;
-  }
-
-  return "/";
-}
-
-const basePath = getBasePath();
+const CNAME_FILE = "CNAME";
 
 /**
  * Recursively copies a directory and its contents
@@ -51,46 +33,18 @@ export function copyDir(src: string, dest: string): void {
 }
 
 /**
- * Replaces absolute internal paths in HTML with base path prefixed paths
- * Skips external URLs (protocol-relative // or http/https)
+ * Processes 404.html to inject runtime base path detection for GitHub Pages SPA routing
  *
- * @param html - HTML content to process
- * @param basePath - Base path to prepend to internal paths
- * @returns HTML with base path injected into internal paths
- */
-export function basePathPrefixPaths(html: string, basePath: string): string {
-  // Replace absolute internal paths (href="/path" or src="/path")
-  return html.replace(/(href|src)="\/([^"]*)"/g, (match, attr, path) => {
-    if (path.startsWith("/") || path.startsWith("http")) {
-      return match;
-    }
-
-    return `${attr}="${basePath}${path}"`;
-  });
-}
-
-/**
- * Processes 404.html to inject base path for GitHub Pages SPA routing
- *
- * - Injects the base path as a global variable right after opening <head> tag
- * - Updates `pathSegmentsToKeep` in the redirect script
- * - Prefixes paths with the base path if needed
+ * - Injects hostname-aware base path detection right after opening <head> tag
+ * - Updates `pathSegmentsToKeep` in the redirect script for github.io vs custom domain
  *
  * @param src404 - Path to source 404.html file
  * @param dist404 - Path to destination 404.html file
- * @param basePath - Base path for the application
  */
-export function process404Html(src404: string, dist404: string, basePath: string): void {
+export function process404Html(src404: string, dist404: string): void {
   let html = readFileSync(src404, "utf-8");
-  html = html.replace("<head>", `<head>${basePathScript(basePath)}`);
-
-  // Count non-empty segments in the base path (e.g. "/blog/" = 1 segment)
-  const pathSegmentsToKeep = basePath.split("/").filter((segment) => segment.length > 0).length;
-  html = html.replace(/var pathSegmentsToKeep = \d+;/, `var pathSegmentsToKeep = ${pathSegmentsToKeep};`);
-
-  if (basePath !== "/") {
-    html = basePathPrefixPaths(html, basePath);
-  }
+  html = html.replace("<head>", `<head>${basePathDetectionScript()}`);
+  html = html.replace(/var pathSegmentsToKeep = \d+;/, pathSegmentsToKeepScript());
 
   writeFileSync(dist404, html);
 }
@@ -125,8 +79,16 @@ export function generateBlogManifest(
 
   try {
     const isIncluded = (entry: Dirent) => {
-      const parentDir = basename(entry.parentPath);
-      return entry.isFile() && entry.name.endsWith(".md") && parentDir !== excludeDir;
+      if (!entry.isFile() || !entry.name.endsWith(".md")) {
+        return false;
+      }
+
+      const relativePath = relative(postsDir, join(entry.parentPath, entry.name)).replace(/\\/g, "/");
+      if (excludeDir && (relativePath === excludeDir || relativePath.startsWith(`${excludeDir}/`))) {
+        return false;
+      }
+
+      return true;
     };
     const entries = readdirSync(postsDir, { withFileTypes: true, recursive: true });
     const posts = entries
@@ -144,7 +106,7 @@ export function generateBlogManifest(
 }
 
 export default defineConfig({
-  base: basePath,
+  base: "./",
   build: {
     chunkSizeWarningLimit: 1500, // 1.5 MB
   },
@@ -246,12 +208,12 @@ export default defineConfig({
     {
       name: "inject-base-path",
       /**
-       * Inject base path as a global variable so client code can access it
+       * Inject runtime base path detection so client code works on github.io and custom domains
        */
       transformIndexHtml: {
         order: "pre",
         handler(html) {
-          return html.replace("<head>", `<head>${basePathScript(basePath)}`);
+          return html.replace("<head>", `<head>${basePathDetectionScript()}`);
         },
       },
     },
@@ -302,9 +264,27 @@ export default defineConfig({
         const dist404 = join(process.cwd(), DIST_DIR, "404.html");
 
         try {
-          process404Html(src404, dist404, basePath);
+          process404Html(src404, dist404);
         } catch (error) {
           console.warn("Failed to process 404.html:", error);
+        }
+      },
+    },
+    {
+      name: "copy-cname",
+      /**
+       * Copy CNAME file for custom domain persistence on GitHub Pages
+       */
+      closeBundle() {
+        const srcCname = join(process.cwd(), CNAME_FILE);
+        const distCname = join(process.cwd(), DIST_DIR, CNAME_FILE);
+
+        try {
+          if (existsSync(srcCname)) {
+            copyFileSync(srcCname, distCname);
+          }
+        } catch (error) {
+          console.warn("Failed to copy CNAME file:", error);
         }
       },
     },

@@ -4,6 +4,7 @@
  * - `MobileHeader` handles mobile auto-hide behavior
  */
 
+import "../styling/blog.css";
 import { BlogReader } from "./blog/reader";
 import { MobileHeader } from "./components/mobile-header";
 

@@ -7,8 +7,8 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { readFileSync, writeFileSync, mkdirSync, readdirSync, existsSync, unlinkSync, rmdirSync } from "fs";
 import { join } from "path";
 import { tmpdir } from "os";
-import { getBasePath, generateBlogManifest, copyDir, process404Html } from "../../vite.config";
-import { basePathScript } from "../../src/utils/paths";
+import { generateBlogManifest, copyDir, process404Html } from "../../vite.config";
+import { basePathDetectionScript, pathSegmentsToKeepScript } from "../../src/utils/paths";
 
 const HTML_404 = `<!doctype html>
 <html>
@@ -177,74 +177,41 @@ describe("Vite Plugins", () => {
   });
 
   describe("base path injection", () => {
-    let originalGithubRepository: string | undefined;
-
-    beforeEach(() => {
-      originalGithubRepository = process.env.GITHUB_REPOSITORY;
-    });
-
-    afterEach(() => {
-      if (originalGithubRepository !== undefined) {
-        process.env.GITHUB_REPOSITORY = originalGithubRepository;
-      } else {
-        delete process.env.GITHUB_REPOSITORY;
-      }
-    });
-
-    it("should determine base path from GITHUB_REPOSITORY", () => {
-      const repo = "owner/repo-name";
-      process.env.GITHUB_REPOSITORY = repo;
-
-      const basePath = getBasePath();
-      const basePathExpected = repo ? `/${repo.split("/")[1]}/` : "/";
-      expect(basePath).toBe(basePathExpected);
-    });
-
-    it("should use root path when GITHUB_REPOSITORY is not set", () => {
-      delete process.env.GITHUB_REPOSITORY;
-
-      // After deleting GITHUB_REPOSITORY, basePath should be "/"
-      const basePath = getBasePath();
-      const basePathExpected = "/";
-      expect(basePath).toBe(basePathExpected);
-    });
-
-    it("should inject base path script into HTML", () => {
-      const basePath = getBasePath();
+    it("should inject runtime base path detection script into HTML", () => {
       const html = "<head><title>Test</title></head><body>Content</body>";
-      const modifiedHtml = html.replace("<head>", `<head>${basePathScript(basePath)}`);
+      const modifiedHtml = html.replace("<head>", `<head>${basePathDetectionScript()}`);
 
-      expect(modifiedHtml).toContain(`window.__BASE_PATH__ = "${basePath}"`);
+      expect(modifiedHtml).toContain("window.__BASE_PATH__");
+      expect(modifiedHtml).toContain(".github.io");
       expect(modifiedHtml).toContain("<head>");
     });
   });
 
   describe("404 processing", () => {
-    it("should inject base path into 404.html", () => {
-      const basePath = getBasePath();
+    it("should inject runtime base path detection into 404.html", () => {
       const src404 = join(testDir, "404.html");
       const dist404 = join(testDir, "404-processed.html");
 
       writeFileSync(src404, HTML_404);
-      process404Html(src404, dist404, basePath);
+      process404Html(src404, dist404);
 
       const modifiedHtml = readFileSync(dist404, "utf-8");
-      const pathSegmentsToKeep = basePath.split("/").filter((segment) => segment.length > 0).length;
 
-      expect(modifiedHtml).toContain(`window.__BASE_PATH__ = "${basePath}"`);
-      expect(modifiedHtml).toContain(`var pathSegmentsToKeep = ${pathSegmentsToKeep};`);
+      expect(modifiedHtml).toContain("window.__BASE_PATH__");
+      expect(modifiedHtml).toContain(".github.io");
+      expect(modifiedHtml).toContain(pathSegmentsToKeepScript());
     });
 
-    it("should handle root base path in 404.html", () => {
-      const basePath = "/";
+    it("should replace static pathSegmentsToKeep with hostname-aware logic", () => {
       const src404 = join(testDir, "404-root.html");
       const dist404 = join(testDir, "404-root-processed.html");
 
       writeFileSync(src404, HTML_404);
-      process404Html(src404, dist404, basePath);
+      process404Html(src404, dist404);
 
       const modifiedHtml = readFileSync(dist404, "utf-8");
-      expect(modifiedHtml).toContain(`window.__BASE_PATH__ = "/"`);
+      expect(modifiedHtml).not.toContain("var pathSegmentsToKeep = 0;");
+      expect(modifiedHtml).toContain('location.hostname.endsWith(".github.io") ? 1 : 0');
     });
   });
 
