@@ -1,6 +1,6 @@
-# [blog](https://blog.isaacdefrain.com/)
+# blog
 
-Also available at [isaac-defrain.github.io/blog/](https://isaac-defrain.github.io/blog/).
+View at <https://blog.isaacdefrain.com>.
 
 [![Build and Deploy](https://github.com/Isaac-DeFrain/blog/actions/workflows/build-deploy.yml/badge.svg)](https://github.com/Isaac-DeFrain/blog/actions)
 [![](./assets/coverage-badge.svg)](./scripts/generate-coverage-badge.ts)
