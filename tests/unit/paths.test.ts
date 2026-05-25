@@ -76,6 +76,7 @@ describe("basePathDetectionScript", () => {
     expect(script).toContain("<script>");
     expect(script).toContain("window.__BASE_PATH__");
     expect(script).toContain(".github.io");
+    expect(script).toContain('l.href=b+"assets/favicon.ico"');
   });
 });
 

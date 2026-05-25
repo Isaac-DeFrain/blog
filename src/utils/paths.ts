@@ -79,7 +79,7 @@ export function basePathScript(basePath: string): string {
  * @returns Script tag string
  */
 export function basePathDetectionScript(): string {
-  return `<script>(function(){var b="/";if(location.hostname.endsWith(".github.io")){var s=location.pathname.split("/").filter(Boolean)[0];if(s)b="/"+s+"/";}window.__BASE_PATH__=b;})();</script>`;
+  return `<script>(function(){var b="/";if(location.hostname.endsWith(".github.io")){var s=location.pathname.split("/").filter(Boolean)[0];if(s)b="/"+s+"/";}window.__BASE_PATH__=b;var l=document.createElement("link");l.rel="icon";l.type="image/x-icon";l.href=b+"assets/favicon.ico";document.head.appendChild(l);})();</script>`;
 }
 
 /**
