@@ -30,8 +30,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Install Nix
-        uses: DeterminateSystems/nix-installer-action@main
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
       - name: Restore cache
         uses: actions/cache@v4
         with:
@@ -41,12 +44,11 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-vite-${{ hashFiles('**/package-lock.json') }}-
       - name: Install dependencies
-        run: nix develop --command npm ci
-        shell: bash
+        run: npm ci
       - name: Run lint
-        run: nix develop --command npm run lint
+        run: npm run lint
       - name: Run audit
-        run: nix develop --command npm run audit
+        run: npm run audit
       # Mirrors resolveBuildBasePath() in src/utils/paths.ts — keep in sync
       - name: Resolve base path
         run: |
@@ -59,11 +61,11 @@ jobs:
             echo "Project Pages → base path /${REPO}/"
           fi
       - name: Run build
-        run: nix develop --command npm run build
+        run: npm run build
       - name: Run test coverage
-        run: nix develop --command npm run coverage
+        run: npm run coverage
       - name: Generate coverage badge
-        run: nix develop --command npm run generate-coverage-badge
+        run: npm run generate-coverage-badge
       - name: Commit coverage badge
         run: |
           git config --local user.email "action@github.com"
