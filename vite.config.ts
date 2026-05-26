@@ -2,13 +2,35 @@
 import { defineConfig } from "vite";
 import { readFileSync, writeFileSync, copyFileSync, mkdirSync, readdirSync, existsSync, statSync, Dirent } from "fs";
 import { join, relative } from "path";
-import { basePathDetectionScript, pathSegmentsToKeepScript } from "./src/utils/paths";
+import { resolveBuildBasePath, basePathScript, getPathSegmentsToKeepFromBasePath } from "./src/utils/paths";
 
 // Directories
 const DIST_DIR = "dist";
 const POSTS_DIR = "posts";
 const WIP_POSTS_DIR = "wip";
 const CNAME_FILE = "CNAME";
+
+const buildBasePath = resolveBuildBasePath({
+  cnameExists: existsSync(CNAME_FILE),
+  githubRepository: process.env.GITHUB_REPOSITORY,
+  override: process.env.VITE_BASE_PATH,
+});
+const pathSegmentsToKeep = getPathSegmentsToKeepFromBasePath(buildBasePath);
+
+if (process.env.VITE_BASE_PATH) {
+  console.log(`Resolved base path: ${buildBasePath} (VITE_BASE_PATH override)`);
+} else if (existsSync(CNAME_FILE)) {
+  console.log(`Resolved base path: ${buildBasePath} (custom domain via CNAME)`);
+} else if (process.env.GITHUB_REPOSITORY) {
+  console.log(`Resolved base path: ${buildBasePath} (project Pages)`);
+} else {
+  console.log(`Resolved base path: ${buildBasePath}`);
+}
+
+export type Process404HtmlOptions = {
+  basePath: string;
+  pathSegmentsToKeep: number;
+};
 
 /**
  * Recursively copies a directory and its contents
@@ -33,18 +55,19 @@ export function copyDir(src: string, dest: string): void {
 }
 
 /**
- * Processes 404.html to inject runtime base path detection for GitHub Pages SPA routing
+ * Processes 404.html to inject compile-time base path for GitHub Pages SPA routing
  *
- * - Injects hostname-aware base path detection right after opening <head> tag
- * - Updates `pathSegmentsToKeep` in the redirect script for github.io vs custom domain
+ * - Injects fixed base path right after opening <head> tag
+ * - Sets static `pathSegmentsToKeep` in the redirect script
  *
  * @param src404 - Path to source 404.html file
  * @param dist404 - Path to destination 404.html file
+ * @param options - Resolved base path and path segment count
  */
-export function process404Html(src404: string, dist404: string): void {
+export function process404Html(src404: string, dist404: string, options: Process404HtmlOptions): void {
   let html = readFileSync(src404, "utf-8");
-  html = html.replace("<head>", `<head>${basePathDetectionScript()}`);
-  html = html.replace(/var pathSegmentsToKeep = \d+;/, pathSegmentsToKeepScript());
+  html = html.replace("<head>", `<head>${basePathScript(options.basePath)}`);
+  html = html.replace(/var pathSegmentsToKeep = \d+;/, `var pathSegmentsToKeep = ${options.pathSegmentsToKeep};`);
 
   writeFileSync(dist404, html);
 }
@@ -208,12 +231,12 @@ export default defineConfig({
     {
       name: "inject-base-path",
       /**
-       * Inject runtime base path detection so client code works on github.io and custom domains
+       * Inject compile-time base path so client code uses the resolved deployment URL shape
        */
       transformIndexHtml: {
         order: "pre",
         handler(html) {
-          return html.replace("<head>", `<head>${basePathDetectionScript()}`);
+          return html.replace("<head>", `<head>${basePathScript(buildBasePath)}`);
         },
       },
     },
@@ -264,7 +287,7 @@ export default defineConfig({
         const dist404 = join(process.cwd(), DIST_DIR, "404.html");
 
         try {
-          process404Html(src404, dist404);
+          process404Html(src404, dist404, { basePath: buildBasePath, pathSegmentsToKeep });
         } catch (error) {
           console.warn("Failed to process 404.html:", error);
         }

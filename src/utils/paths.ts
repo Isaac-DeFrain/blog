@@ -4,6 +4,66 @@
  * Base path utilities for GitHub Pages deployments.
  */
 
+export type ResolveBuildBasePathOptions = {
+  cnameExists?: boolean;
+  githubRepository?: string;
+  override?: string;
+};
+
+/**
+ * Normalizes a base path to always start with / and end with / (except root).
+ *
+ * @param basePath - Raw base path string
+ * @returns Normalized base path (e.g. "/blog/" or "/")
+ */
+export function normalizeBasePath(basePath: string): string {
+  if (!basePath || basePath === "/") {
+    return "/";
+  }
+
+  const withLeadingSlash = basePath.startsWith("/") ? basePath : `/${basePath}`;
+  return withLeadingSlash.endsWith("/") ? withLeadingSlash : `${withLeadingSlash}/`;
+}
+
+/**
+ * Resolves the base path at build time for GitHub Pages deployments.
+ *
+ * Priority: explicit override → CNAME (custom domain) → GITHUB_REPOSITORY (project Pages) → root.
+ *
+ * @param options - Build environment signals
+ * @returns The resolved base path (e.g. "/blog/" or "/")
+ */
+export function resolveBuildBasePath(options: ResolveBuildBasePathOptions = {}): string {
+  const { cnameExists = false, githubRepository, override } = options;
+
+  if (override) {
+    return normalizeBasePath(override);
+  }
+
+  if (cnameExists) {
+    return "/";
+  }
+
+  if (githubRepository) {
+    const repoName = githubRepository.split("/")[1];
+    if (repoName) {
+      return `/${repoName}/`;
+    }
+  }
+
+  return "/";
+}
+
+/**
+ * Gets the number of path segments to keep for GitHub Pages SPA 404 redirects from a base path.
+ *
+ * @param basePath - The resolved base path (e.g. "/blog/" or "/")
+ * @returns The number of path segments to keep
+ */
+export function getPathSegmentsToKeepFromBasePath(basePath: string): number {
+  return basePath.split("/").filter((segment) => segment.length > 0).length;
+}
+
 /**
  * Detects the base path from the current location.
  *
@@ -58,7 +118,7 @@ export function getBasePath(): string {
 }
 
 /**
- * Creates a script tag to inject the base path as a global variable.
+ * Creates a script tag to inject the base path as a global variable and favicon link.
  *
  * Uses JSON.stringify to properly escape the base path string and prevent
  * XSS vulnerabilities if the base path contains special characters.
@@ -67,26 +127,5 @@ export function getBasePath(): string {
  * @returns Script tag string
  */
 export function basePathScript(basePath: string): string {
-  return `<script>window.__BASE_PATH__ = ${JSON.stringify(basePath)};</script>`;
-}
-
-/**
- * Creates a script tag that detects and injects the base path at runtime.
- *
- * Supports both github.io project Pages and custom-domain root deployments
- * from a single build artifact.
- *
- * @returns Script tag string
- */
-export function basePathDetectionScript(): string {
-  return `<script>(function(){var b="/";if(location.hostname.endsWith(".github.io")){var s=location.pathname.split("/").filter(Boolean)[0];if(s)b="/"+s+"/";}window.__BASE_PATH__=b;var l=document.createElement("link");l.rel="icon";l.type="image/x-icon";l.href=b+"assets/favicon.ico";document.head.appendChild(l);})();</script>`;
-}
-
-/**
- * Creates a script snippet that sets pathSegmentsToKeep based on hostname.
- *
- * @returns JavaScript statement string
- */
-export function pathSegmentsToKeepScript(): string {
-  return `var pathSegmentsToKeep = location.hostname.endsWith(".github.io") ? 1 : 0;`;
+  return `<script>(function(){var b=${JSON.stringify(basePath)};window.__BASE_PATH__=b;var l=document.createElement("link");l.rel="icon";l.type="image/x-icon";l.href=b+"assets/favicon.ico";document.head.appendChild(l);})();</script>`;
 }

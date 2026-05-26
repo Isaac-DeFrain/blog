@@ -7,7 +7,7 @@ View at <https://blog.isaacdefrain.com>.
 
 Vanilla TypeScript blog with support for GitHub Pages SPA routing, executable code blocks, code highlighting, MathJax equation rendering, GraphViz and Mermaid diagrams, and light/dark themes.
 
-The production build uses relative asset URLs and runtime hostname detection so the same deployment works on both the custom domain and the GitHub Pages project URL.
+The production build resolves the base path at compile time from the CNAME file (custom domain) or `GITHUB_REPOSITORY` (project Pages), then injects it into HTML. Relative asset URLs keep paths working across deployment shapes.
 
 ## Features
 

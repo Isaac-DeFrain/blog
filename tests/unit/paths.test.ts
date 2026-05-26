@@ -7,9 +7,55 @@ import {
   detectBasePath,
   getBasePath,
   getPathSegmentsToKeep,
-  basePathDetectionScript,
-  pathSegmentsToKeepScript,
+  getPathSegmentsToKeepFromBasePath,
+  resolveBuildBasePath,
+  basePathScript,
 } from "../../src/utils/paths";
+
+describe("resolveBuildBasePath", () => {
+  const githubRepository = "Isaac-DeFrain/blog";
+  it("should use root when CNAME is present", () => {
+    expect(
+      resolveBuildBasePath({
+        cnameExists: true,
+        githubRepository,
+      }),
+    ).toBe("/");
+  });
+
+  it("should use repo name for project Pages when CNAME is absent", () => {
+    expect(
+      resolveBuildBasePath({
+        cnameExists: false,
+        githubRepository,
+      }),
+    ).toBe("/blog/");
+  });
+
+  it("should prefer explicit override over CNAME and repository", () => {
+    expect(
+      resolveBuildBasePath({
+        cnameExists: true,
+        githubRepository,
+        override: "/custom/",
+      }),
+    ).toBe("/custom/");
+  });
+
+  it("should default to root for local dev without CNAME or repository", () => {
+    expect(resolveBuildBasePath()).toBe("/");
+  });
+});
+
+describe("getPathSegmentsToKeepFromBasePath", () => {
+  it("should keep zero segments for custom domain root", () => {
+    expect(getPathSegmentsToKeepFromBasePath("/")).toBe(0);
+  });
+
+  it("should keep one segment for project Pages", () => {
+    expect(getPathSegmentsToKeepFromBasePath("/blog/")).toBe(1);
+  });
+});
 
 describe("detectBasePath", () => {
   it("should use first path segment on github.io project Pages", () => {
@@ -69,19 +115,20 @@ describe("getBasePath", () => {
   });
 });
 
-describe("basePathDetectionScript", () => {
-  it("should emit hostname-aware base path detection", () => {
-    const script = basePathDetectionScript();
+describe("basePathScript", () => {
+  it("should inject fixed root base path for custom domain", () => {
+    const script = basePathScript("/");
 
-    expect(script).toContain("<script>");
-    expect(script).toContain("window.__BASE_PATH__");
-    expect(script).toContain(".github.io");
-    expect(script).toContain('l.href=b+"assets/favicon.ico"');
+    expect(script).toContain('var b="/"');
+    expect(script).toContain("window.__BASE_PATH__=b");
+    expect(script).not.toContain(".github.io");
   });
-});
 
-describe("pathSegmentsToKeepScript", () => {
-  it("should emit hostname-aware path segment logic", () => {
-    expect(pathSegmentsToKeepScript()).toContain('.github.io") ? 1 : 0');
+  it("should inject fixed project Pages base path", () => {
+    const script = basePathScript("/blog/");
+
+    expect(script).toContain('var b="/blog/"');
+    expect(script).toContain("window.__BASE_PATH__=b");
+    expect(script).not.toContain(".github.io");
   });
 });

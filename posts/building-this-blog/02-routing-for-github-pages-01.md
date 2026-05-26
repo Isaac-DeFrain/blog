@@ -309,7 +309,7 @@ In this post, we've covered the first three major challenges encountered when de
 3. **Script Injection Timing**:
    A subtle bug where `window.__BASE_PATH__` wasn't available when module scripts expecting it executed. We fixed this by moving the injection point to immediately after `<head>`, before any module script executes.
 
-The remaining challenges - _internal post/section link interception_ and _direct URL navigation_ - are covered in [Part 3: Routing for GitHub Pages (part 2)](../03-routing-for-github-pages-02.md), where we'll see how we made both of these work seamlessly with our SPA routing.
+The remaining challenges - _internal post/section link interception_ and _direct URL navigation_ - are covered in [Part 3: Routing for GitHub Pages (part 2)](./03-routing-for-github-pages-02.md), where we'll see how we made both of these work seamlessly with our SPA routing.
 
 ---
 
