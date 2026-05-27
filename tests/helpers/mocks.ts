@@ -47,6 +47,13 @@ export function createMockManifest(files: string[] = ["test-post.md"]): { files:
 }
 
 /**
+ * Creates mock home page markdown (no frontmatter)
+ */
+export function createMockHomeMarkdown(content: string = "# Home\n\nWelcome to my blog."): string {
+  return content;
+}
+
+/**
  * Creates a mock markdown file with frontmatter
  */
 export function createMockMarkdown(options: {

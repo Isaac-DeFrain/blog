@@ -9,14 +9,16 @@ describe("LinkInterceptor", () => {
   let interceptor: LinkInterceptor;
   let blogContent: HTMLElement;
   let mockOnPostClick: PostClickCallback;
+  let mockOnHomeClick: () => Promise<void>;
 
-  beforeEach(() => {
+    beforeEach(() => {
     document.body.innerHTML = "";
     interceptor = new LinkInterceptor();
     blogContent = document.createElement("div");
-    blogContent.className = "blog-content";
+    blogContent.id = "blog-content";
     document.body.appendChild(blogContent);
     mockOnPostClick = vi.fn<PostClickCallback>();
+    mockOnHomeClick = vi.fn(async () => {});
   });
 
   describe("scrollToHash", () => {
@@ -111,6 +113,15 @@ describe("LinkInterceptor", () => {
 
   describe("setup - hash-only links", () => {
     it("should handle hash-only link with hash fragment", async () => {
+      Object.defineProperty(window, "location", {
+        value: {
+          pathname: "/post-1",
+          origin: "http://localhost",
+          href: "http://localhost/post-1",
+        },
+        writable: true,
+      });
+
       const allPosts: BlogPost[] = [
         {
           id: "post-1",
@@ -128,10 +139,10 @@ describe("LinkInterceptor", () => {
       contentElement.className = "blog-content";
       blogContent.appendChild(contentElement);
 
-      interceptor.setup(blogContent, "/", allPosts, "post-1", mockOnPostClick);
+      interceptor.setup(blogContent, "/", allPosts, "post-1", mockOnPostClick, mockOnHomeClick);
 
       const link = document.createElement("a");
-      link.href = `${window.location.pathname}#section-1`;
+      link.href = "http://localhost/post-1#section-1";
       contentElement.appendChild(link);
 
       const targetElement = document.createElement("div");
@@ -160,7 +171,7 @@ describe("LinkInterceptor", () => {
         },
       ];
 
-      interceptor.setup(blogContent, "/", allPosts, "post-1", mockOnPostClick);
+      interceptor.setup(blogContent, "/", allPosts, "post-1", mockOnPostClick, mockOnHomeClick);
 
       const link = document.createElement("a");
       link.href = window.location.pathname; // Same pathname, no hash

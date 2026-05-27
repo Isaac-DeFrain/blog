@@ -10,6 +10,8 @@ import { PathResolver } from "../utils/path-resolver";
 import { querySelectorSafe } from "../utils/dom";
 import { CSS_CLASSES } from "./constants";
 
+export type HomeClickCallback = (hash?: string) => Promise<void>;
+
 /**
  * Intercepts clicks on internal links within blog content for SPA routing.
  */
@@ -25,6 +27,7 @@ export class LinkInterceptor {
    * @param allPosts - Array of all blog posts (for link validation)
    * @param currentPostId - The ID of the currently displayed post
    * @param onPostClick - Callback to handle post clicks
+   * @param onHomeClick - Callback to handle navigation to the home page
    */
   setup(
     blogContent: HTMLElement,
@@ -32,6 +35,7 @@ export class LinkInterceptor {
     allPosts: BlogPost[],
     currentPostId: string | null,
     onPostClick: PostClickCallback,
+    onHomeClick: HomeClickCallback,
   ): void {
     if (!blogContent) return;
 
@@ -56,8 +60,26 @@ export class LinkInterceptor {
         return;
       }
 
-      // Handle hash-only links (section links within the current post)
       const currentPathname = window.location.pathname;
+
+      // Handle links to the home page
+      if (PathResolver.isHomePath(linkPathname, basePath)) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (PathResolver.isHomePath(currentPathname, basePath)) {
+          if (linkHash) {
+            window.history.pushState({ postId: null }, "", `${currentPathname}${linkHash}`);
+            this.scrollToHash(linkHash);
+          }
+        } else {
+          await onHomeClick(linkHash);
+        }
+
+        return;
+      }
+
+      // Handle hash-only links (section links within the current post)
       if (PathResolver.isHashOnlyLink(linkPathname, currentPathname, basePath)) {
         if (linkHash) {
           // This is a section link within the current post

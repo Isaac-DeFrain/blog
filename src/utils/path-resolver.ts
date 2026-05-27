@@ -19,6 +19,25 @@ export class PathResolver {
    * @param basePath - The base path of the application (e.g. "/blog/" or "/")
    * @returns The post ID if found, or null if on the index page
    */
+  /**
+   * Checks if a pathname represents the home page (index route).
+   *
+   * @param pathname - The pathname to check
+   * @param basePath - The base path of the application
+   * @returns True if the pathname is the home page
+   */
+  static isHomePath(pathname: string, basePath: string): boolean {
+    const normalize = (path: string): string => {
+      if (!path || path === "/") {
+        return "/";
+      }
+
+      return path.replace(/\/$/, "") || "/";
+    };
+
+    return normalize(pathname) === normalize(basePath);
+  }
+
   static getPostIdFromPath(basePath: string): string | null {
     // Remove the base path from the beginning
     const pathname = window.location.pathname;

@@ -26,24 +26,26 @@ export class PostRenderer {
    *
    * @param blogContent - The container element for blog content
    * @param html - The parsed HTML content
-   * @param date - The post date string
    * @param markdown - The original markdown content (for feature detection)
    * @param hash - Optional hash fragment to scroll to after rendering
+   * @param date - Optional post date string; when omitted, no metadata header is shown
    * @returns Promise that resolves when rendering is complete
    */
   async renderBlogPostContent(
     blogContent: HTMLElement,
     html: string,
-    date: string,
     markdown: string,
     hash?: string,
+    date?: string,
   ): Promise<void> {
     if (!blogContent) {
       throw new RenderingError("Blog post content element is null");
     }
 
+    const metaHtml = date ? createDivElement(CSS_CLASSES.BLOG_META, escapeHtml(formatPostDate(date))) : "";
+
     blogContent.innerHTML = `
-      ${createDivElement(CSS_CLASSES.BLOG_META, escapeHtml(formatPostDate(date)))}
+      ${metaHtml}
       ${createDivElement(CSS_CLASSES.BLOG_CONTENT, html)}
     `;
 

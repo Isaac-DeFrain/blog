@@ -85,6 +85,10 @@ Generate coverage badge SVG
 npm run generate-coverage-badge
 ```
 
+## Home Page
+
+The site root loads `public/home.md` as a standalone page. It uses the same layout as blog posts but has no name, date, or topics metadata. Edit this file to customize the landing page content.
+
 ## Adding New Blog Posts
 
 1. Create a new markdown file in `posts/` (e.g. `my-post.md`)

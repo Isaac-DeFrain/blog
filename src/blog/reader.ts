@@ -81,6 +81,8 @@ export class BlogReader {
     this.postRenderer = new PostRenderer();
     this.linkInterceptor = new LinkInterceptor();
 
+    this.setupHomeLink();
+
     // Set up link interception for internal blog post links
     if (this.blogContent) {
       this.linkInterceptor.setup(
@@ -89,6 +91,7 @@ export class BlogReader {
         this.allPosts,
         this.currentPostId,
         this.handlePostClick.bind(this),
+        this.loadHomePage.bind(this),
       );
     }
 
@@ -99,12 +102,12 @@ export class BlogReader {
       try {
         // Get post ID from state or path
         // If no post ID in state or path, load first post
-        const postId = event.state?.postId || PathResolver.getPostIdFromPath(this.basePath);
+        const postId = event.state?.postId ?? PathResolver.getPostIdFromPath(this.basePath);
 
         if (postId) {
           await this.loadBlogPost(postId);
-        } else if (this.posts.length > 0) {
-          await this.loadBlogPost(this.posts[0].id);
+        } else {
+          await this.loadHomePage();
         }
       } catch (error) {
         logError(error, "Error handling popstate event:");
@@ -114,6 +117,26 @@ export class BlogReader {
         } else {
           this.showError(ERROR_MESSAGES.FAILED_LOAD_POST);
         }
+      }
+    });
+  }
+
+  /**
+   * Wires the header title link to navigate to the home page via SPA routing.
+   */
+  private setupHomeLink(): void {
+    const homeLink = document.getElementById(ELEMENT_IDS.HOME_LINK);
+    if (!homeLink) return;
+
+    homeLink.setAttribute("href", this.basePath);
+    homeLink.addEventListener("click", async (e) => {
+      e.preventDefault();
+
+      try {
+        await this.loadHomePage();
+      } catch (error) {
+        logError(error, "Error loading home page from header link:");
+        this.showError(ERROR_MESSAGES.FAILED_LOAD_POST);
       }
     });
   }
@@ -139,14 +162,10 @@ export class BlogReader {
 
       if (pathPostId && this.posts.some((p) => p.id === pathPostId)) {
         await this.loadBlogPost(pathPostId);
+      } else if (pathPostId) {
+        this.showError(ERROR_MESSAGES.POST_NOT_FOUND);
       } else {
-        const mostRecentPost = this.posts[0];
-
-        if (mostRecentPost) {
-          await this.loadBlogPost(mostRecentPost.id);
-        } else {
-          this.showError(ERROR_MESSAGES.NO_POSTS);
-        }
+        await this.loadHomePage();
       }
     } catch (error) {
       logError(error, "Error initializing blog:");
@@ -300,6 +319,7 @@ export class BlogReader {
         this.allPosts,
         this.currentPostId,
         this.handlePostClick.bind(this),
+        this.loadHomePage.bind(this),
       );
     }
 
@@ -331,9 +351,9 @@ export class BlogReader {
       await this.postRenderer.renderBlogPostContent(
         this.blogContent,
         html,
-        post.date,
         markdownWithoutFrontmatter,
         hash,
+        post.date,
       );
     } catch (error) {
       if (error instanceof PostLoadError || error instanceof RenderingError) {
@@ -341,6 +361,60 @@ export class BlogReader {
       }
 
       throw new PostLoadError("Failed to load blog post content", { postId, originalError: error });
+    }
+  }
+
+  /**
+   * Loads and displays the home page markdown content.
+   *
+   * @param hash - Optional hash fragment to include in the URL
+   * @returns Promise that resolves when the home page has been loaded and rendered
+   */
+  private async loadHomePage(hash?: string): Promise<void> {
+    if (!this.blogContent) {
+      throw new RenderingError(ERROR_MESSAGES.BLOG_CONTENT_NOT_FOUND);
+    }
+
+    this.currentPostId = null;
+    this.topicsBar.setSelectedTopic(null, true);
+    this.posts = [...this.allPosts];
+    this.sidebar.setActivePost(null);
+    this.sidebar.setPosts(this.posts);
+
+    if (this.blogContent) {
+      this.linkInterceptor.setup(
+        this.blogContent,
+        this.basePath,
+        this.allPosts,
+        this.currentPostId,
+        this.handlePostClick.bind(this),
+        this.loadHomePage.bind(this),
+      );
+    }
+
+    const url = `${this.basePath}${hash || ""}`;
+    window.history.pushState({ postId: null }, "", url);
+    document.title = "Isaac's Blog";
+    this.blogContent.innerHTML = createDivElement(CSS_CLASSES.LOADING, LOADING_MESSAGES.LOADING_HOME);
+
+    try {
+      const contentMarkdown = await this.postLoader.loadHomePageContent(this.basePath);
+      const hljsModule = await import("highlight.js");
+
+      const hljs = hljsModule.default || hljsModule;
+      hljs.configure({ ignoreUnescapedHTML: true });
+      const highlightConfig = createHighlightConfig(hljs);
+
+      const html = await this.postRenderer.processMarkdown(contentMarkdown, highlightConfig);
+      const markdownWithoutFrontmatter = contentMarkdown.replace(REGEX_PATTERNS.FRONTMATTER, "");
+
+      await this.postRenderer.renderBlogPostContent(this.blogContent, html, markdownWithoutFrontmatter, hash);
+    } catch (error) {
+      if (error instanceof PostLoadError || error instanceof RenderingError) {
+        throw error;
+      }
+
+      throw new PostLoadError("Failed to load home page content", { originalError: error });
     }
   }
 

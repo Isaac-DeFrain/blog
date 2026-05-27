@@ -197,9 +197,9 @@ describe("Blog Reader Edge Cases", () => {
       await waitForBlogList(1, TIMEOUT);
       await waitForBlogContent(TIMEOUT);
 
-      // Should load first post when pathname is just base path
+      // Should load the home page when pathname is just base path
       const blogContent = document.getElementById("blog-content");
-      expect(blogContent?.textContent).toContain("Post 1");
+      expect(blogContent?.textContent).toContain("Welcome to my blog");
     });
 
     it("should handle pathname not starting with base path", async () => {
@@ -231,9 +231,9 @@ describe("Blog Reader Edge Cases", () => {
       await waitForBlogList(1, TIMEOUT);
       await waitForBlogContent(TIMEOUT);
 
-      // Should load first post when pathname doesn't match base path
+      // Should load the home page when pathname doesn't match base path
       const blogContent = document.getElementById("blog-content");
-      expect(blogContent?.textContent).toContain("Post 1");
+      expect(blogContent?.textContent).toContain("Welcome to my blog");
     });
   });
 
@@ -357,6 +357,15 @@ describe("Blog Reader Edge Cases", () => {
     it("should handle post content fetch failure", async () => {
       const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
+      Object.defineProperty(window, "location", {
+        value: {
+          pathname: "/post-1",
+          origin: "http://localhost",
+          href: "http://localhost/post-1",
+        },
+        writable: true,
+      });
+
       const manifest = createMockManifest(["post-1.md"]);
       const markdown = createMockMarkdown({
         name: "Post 1",
@@ -416,7 +425,7 @@ describe("Blog Reader Edge Cases", () => {
       // Try to render content with null blogContent (simulating missing element)
       // This should throw a RenderingError
       try {
-        await (reader as any).postRenderer.renderBlogPostContent(null as any, "<p>Test</p>", "2024-01-15", "# Test");
+        await (reader as any).postRenderer.renderBlogPostContent(null as any, "<p>Test</p>", "# Test", undefined, "2024-01-15");
         assert(false, "Should not reach here");
       } catch (error) {
         expect((error as Error).name).toBe(RenderingError.name);
@@ -734,6 +743,15 @@ describe("Blog Reader Edge Cases", () => {
     });
 
     it("should handle topic filter when no posts match", async () => {
+      Object.defineProperty(window, "location", {
+        value: {
+          pathname: "/post-1",
+          origin: "http://localhost",
+          href: "http://localhost/post-1",
+        },
+        writable: true,
+      });
+
       const manifest = createMockManifest(["post-1.md"]);
       const markdown = createMockMarkdown({
         name: "Post 1",
@@ -807,9 +825,9 @@ describe("Blog Reader Edge Cases", () => {
       window.dispatchEvent(popstateEvent);
       await waitForBlogContent(TIMEOUT);
 
-      // Should have loaded first post
+      // Should have loaded the home page
       const blogContent = document.getElementById("blog-content");
-      expect(blogContent?.textContent).toContain("Post 1");
+      expect(blogContent?.textContent).toContain("Welcome to my blog");
     });
   });
 
@@ -870,6 +888,15 @@ describe("Blog Reader Edge Cases", () => {
     });
 
     it("should handle scrollToHash with anchor element", async () => {
+      Object.defineProperty(window, "location", {
+        value: {
+          pathname: "/post-1",
+          origin: "http://localhost",
+          href: "http://localhost/post-1",
+        },
+        writable: true,
+      });
+
       const manifest = createMockManifest(["post-1.md"]);
       const markdown = createMockMarkdown({
         name: "Post 1",
@@ -912,7 +939,7 @@ describe("Blog Reader Edge Cases", () => {
       await new Promise(resolveWithTimeout(200));
 
       const blogContent = document.getElementById("blog-content");
-      expect(blogContent?.textContent).toContain("No posts available");
+      expect(blogContent?.textContent).toContain("Welcome to my blog");
     });
   });
 
@@ -1377,6 +1404,15 @@ describe("Blog Reader Edge Cases", () => {
 
   describe("Code renderer edge cases", () => {
     it("should handle code block with no language", async () => {
+      Object.defineProperty(window, "location", {
+        value: {
+          pathname: "/post-1",
+          origin: "http://localhost",
+          href: "http://localhost/post-1",
+        },
+        writable: true,
+      });
+
       const manifest = createMockManifest(["post-1.md"]);
       const markdown = createMockMarkdown({
         name: "Post 1",
@@ -1403,6 +1439,15 @@ describe("Blog Reader Edge Cases", () => {
     });
 
     it("should handle code block with unknown language", async () => {
+      Object.defineProperty(window, "location", {
+        value: {
+          pathname: "/post-1",
+          origin: "http://localhost",
+          href: "http://localhost/post-1",
+        },
+        writable: true,
+      });
+
       const manifest = createMockManifest(["post-1.md"]);
       const markdown = createMockMarkdown({
         name: "Post 1",

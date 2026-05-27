@@ -13,7 +13,7 @@ import {
   waitForBlogList,
   setBasePath,
 } from "../helpers/dom";
-import { createMockManifest, createMockMarkdown } from "../helpers/mocks";
+import { createMockManifest, createMockMarkdown, createMockHomeMarkdown } from "../helpers/mocks";
 import { resolveWithTimeout } from "../../src/utils/async";
 import { initializeBlogReader } from "../common";
 
@@ -42,6 +42,11 @@ describe("BlogReader Integration", () => {
     originalFetch = global.fetch;
     mockFetch = vi.fn<typeof fetch>().mockImplementation((input: RequestInfo | URL) => {
       const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+
+      if (url.includes("home.md")) {
+        return Promise.resolve(createMockTextResponse("# Home\n\nWelcome to my blog."));
+      }
+
       // Return a proper error response instead of undefined
       return Promise.resolve(
         new Response(JSON.stringify({ error: `Unmocked fetch call: ${url}` }), {
@@ -170,6 +175,16 @@ describe("BlogReader Integration", () => {
 
   describe("Post Loading", () => {
     it("should load and display blog posts", async () => {
+      Object.defineProperty(window, "location", {
+        value: {
+          ...originalLocation,
+          pathname: "/post-1",
+          origin: "http://localhost",
+          href: "http://localhost/post-1",
+        },
+        writable: true,
+      });
+
       const manifest = createMockManifest(["post-1.md"]);
       const markdown = createMockMarkdown({
         name: "Test Post",
@@ -257,8 +272,48 @@ describe("BlogReader Integration", () => {
     });
   });
 
+  describe("Home Page", () => {
+    it("should load the home page at the root URL", async () => {
+      const manifest = createMockManifest(["post-1.md"]);
+      const markdown = createMockMarkdown({
+        name: "Post 1",
+        date: "2024-01-15",
+        content: "# Post 1\n\nThis is Post 1 content.",
+      });
+      const homeMarkdown = createMockHomeMarkdown("# Welcome\n\nThis is the home page.");
+
+      const urlHandlers = new Map<string | RegExp, () => Response | Promise<Response>>();
+      urlHandlers.set(/manifest\.json/, () => createMockResponse(manifest));
+      urlHandlers.set(/post-1\.md/, () => createMockTextResponse(markdown));
+      urlHandlers.set(/home\.md/, () => createMockTextResponse(homeMarkdown));
+
+      global.fetch = createUrlBasedFetchMock(urlHandlers) as typeof fetch;
+      (window as any).MathJax = {
+        typesetPromise: vi.fn().mockResolvedValue(undefined),
+      };
+
+      await initializeBlogReader();
+      await waitForBlogList(1, TIMEOUT);
+      await waitForBlogContent(TIMEOUT);
+
+      const blogContent = document.getElementById("blog-content");
+      expect(blogContent?.textContent).toContain("This is the home page");
+      expect(blogContent?.querySelector(".blog-meta")).toBeNull();
+    });
+  });
+
   describe("Link Interception", () => {
     it("should intercept internal blog post links", async () => {
+      Object.defineProperty(window, "location", {
+        value: {
+          ...originalLocation,
+          pathname: "/post-1",
+          origin: "http://localhost",
+          href: "http://localhost/post-1",
+        },
+        writable: true,
+      });
+
       const manifest = createMockManifest(["post-1.md", "post-2.md"]);
       const markdown1 = createMockMarkdown({
         name: "Post 1",
@@ -293,6 +348,16 @@ describe("BlogReader Integration", () => {
     });
 
     it("should allow external links to navigate normally", async () => {
+      Object.defineProperty(window, "location", {
+        value: {
+          ...originalLocation,
+          pathname: "/post-1",
+          origin: "http://localhost",
+          href: "http://localhost/post-1",
+        },
+        writable: true,
+      });
+
       const manifest = createMockManifest(["post-1.md"]);
       const markdown = createMockMarkdown({
         name: "Post 1",
@@ -326,6 +391,16 @@ describe("BlogReader Integration", () => {
     });
 
     it("should handle hash-only links for section navigation", async () => {
+      Object.defineProperty(window, "location", {
+        value: {
+          ...originalLocation,
+          pathname: "/post-1",
+          origin: "http://localhost",
+          href: "http://localhost/post-1",
+        },
+        writable: true,
+      });
+
       const manifest = createMockManifest(["post-1.md"]);
       const markdown = createMockMarkdown({
         name: "Post 1",
@@ -406,6 +481,16 @@ describe("BlogReader Integration", () => {
 
   describe("MathJax Integration", () => {
     it("should typeset math after content loads", async () => {
+      Object.defineProperty(window, "location", {
+        value: {
+          ...originalLocation,
+          pathname: "/post-1",
+          origin: "http://localhost",
+          href: "http://localhost/post-1",
+        },
+        writable: true,
+      });
+
       const manifest = createMockManifest(["post-1.md"]);
       const markdown = createMockMarkdown({
         name: "Post 1",
@@ -434,6 +519,16 @@ describe("BlogReader Integration", () => {
     });
 
     it("should detect and render display math ($$)", async () => {
+      Object.defineProperty(window, "location", {
+        value: {
+          ...originalLocation,
+          pathname: "/post-1",
+          origin: "http://localhost",
+          href: "http://localhost/post-1",
+        },
+        writable: true,
+      });
+
       const manifest = createMockManifest(["post-1.md"]);
       const markdown = createMockMarkdown({
         name: "Post 1",
@@ -461,6 +556,16 @@ describe("BlogReader Integration", () => {
     });
 
     it("should detect and render LaTeX delimiters", async () => {
+      Object.defineProperty(window, "location", {
+        value: {
+          ...originalLocation,
+          pathname: "/post-1",
+          origin: "http://localhost",
+          href: "http://localhost/post-1",
+        },
+        writable: true,
+      });
+
       const manifest = createMockManifest(["post-1.md"]);
       const markdown = createMockMarkdown({
         name: "Post 1",
@@ -490,6 +595,16 @@ describe("BlogReader Integration", () => {
 
   describe("Mermaid Integration", () => {
     it("should detect and render Mermaid diagrams", async () => {
+      Object.defineProperty(window, "location", {
+        value: {
+          ...originalLocation,
+          pathname: "/post-1",
+          origin: "http://localhost",
+          href: "http://localhost/post-1",
+        },
+        writable: true,
+      });
+
       const manifest = createMockManifest(["post-1.md"]);
       const markdown = createMockMarkdown({
         name: "Post 1",
@@ -585,6 +700,16 @@ describe("BlogReader Integration", () => {
 
   describe("TypeScript Executable Blocks", () => {
     it("should render TypeScript executable blocks", async () => {
+      Object.defineProperty(window, "location", {
+        value: {
+          ...originalLocation,
+          pathname: "/post-1",
+          origin: "http://localhost",
+          href: "http://localhost/post-1",
+        },
+        writable: true,
+      });
+
       const manifest = createMockManifest(["post-1.md"]);
       const markdown = createMockMarkdown({
         name: "Post 1",

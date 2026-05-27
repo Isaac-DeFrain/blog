@@ -20,6 +20,22 @@ describe("PathResolver", () => {
     });
   });
 
+  describe("isHomePath", () => {
+    it("should return true for root path with root base path", () => {
+      expect(PathResolver.isHomePath("/", "/")).toBe(true);
+    });
+
+    it("should return true when pathname equals base path", () => {
+      expect(PathResolver.isHomePath("/blog/", "/blog/")).toBe(true);
+      expect(PathResolver.isHomePath("/blog", "/blog/")).toBe(true);
+    });
+
+    it("should return false for post paths", () => {
+      expect(PathResolver.isHomePath("/post-1", "/")).toBe(false);
+      expect(PathResolver.isHomePath("/blog/post-1", "/blog/")).toBe(false);
+    });
+  });
+
   describe("getPostIdFromPath", () => {
     it("should extract post ID from root base path", () => {
       Object.defineProperty(window, "location", {

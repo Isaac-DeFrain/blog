@@ -96,6 +96,7 @@ export const ELEMENT_IDS = {
   BLOG_LIST: "blog-list",
   TOPICS_BAR: "topics-bar",
   THEME_TOGGLE: "theme-toggle",
+  HOME_LINK: "home-link",
 } as const;
 
 /**
@@ -205,8 +206,14 @@ export const ERROR_MESSAGES = {
 } as const;
 
 /**
+ * Home page filename (served from site root, not from posts/)
+ */
+export const HOME_PAGE_FILE = "home.md";
+
+/**
  * Loading messages
  */
 export const LOADING_MESSAGES = {
   LOADING_POST: "Loading post...",
+  LOADING_HOME: "Loading...",
 } as const;

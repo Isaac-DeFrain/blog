@@ -3,6 +3,8 @@
  * @description DOM setup and teardown utilities for testing
  */
 
+import { createMockHomeMarkdown } from "./mocks";
+
 /**
  * Sets up a minimal DOM environment for testing
  * Creates required elements that components expect
@@ -97,7 +99,19 @@ export function createMockTextResponse(text: string, options: ResponseInit = {})
  */
 export function createUrlBasedFetchMock(
   urlHandlers: Map<string | RegExp, () => Response | Promise<Response>>,
+  options: { includeHomePage?: boolean } = {},
 ): typeof fetch {
+  const handlers = new Map(urlHandlers);
+  const includeHomePage = options.includeHomePage !== false;
+  const hasHomeHandler = [...handlers.keys()].some((pattern) => {
+    const value = typeof pattern === "string" ? pattern : pattern.source;
+    return value.includes("home");
+  });
+
+  if (includeHomePage && !hasHomeHandler) {
+    handlers.set(/home\.md/, () => createMockTextResponse(createMockHomeMarkdown()));
+  }
+
   return async (input: RequestInfo | URL): Promise<Response> => {
     const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
 
@@ -150,7 +164,7 @@ export function createUrlBasedFetchMock(
 
     // Try to find a matching handler
     // Test against: original URL, normalized URL (without port), and pathname
-    for (const [pattern, handler] of urlHandlers.entries()) {
+    for (const [pattern, handler] of handlers.entries()) {
       if (typeof pattern === "string") {
         // String matching: check if pattern appears in any of the URL variants
         if (url.includes(pattern) || normalizedUrl.includes(pattern) || pathname.includes(pattern)) {

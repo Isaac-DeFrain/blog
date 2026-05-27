@@ -9,7 +9,7 @@ import type { BlogPost, BlogManifest } from "./types";
 import { ManifestLoadError, PostLoadError } from "../utils/errors";
 import { parseFrontmatter } from "../utils/frontmatter";
 import { parseDateAsPacificTime } from "../utils/dates";
-import { REGEX_PATTERNS } from "./constants";
+import { HOME_PAGE_FILE, REGEX_PATTERNS } from "./constants";
 
 /**
  * Loads and parses blog posts from the server.
@@ -110,6 +110,30 @@ export class PostLoader {
    * @returns Promise that resolves with the markdown content
    * @throws PostLoadError if post fails to load
    */
+  /**
+   * Loads the home page markdown content.
+   *
+   * @param basePath - The base path for the application
+   * @returns Promise that resolves with the markdown content
+   * @throws PostLoadError if the home page fails to load
+   */
+  async loadHomePageContent(basePath: string): Promise<string> {
+    try {
+      const response = await fetch(`${basePath}${HOME_PAGE_FILE}`);
+      if (!response.ok) {
+        throw new PostLoadError("Failed to load home page", { filename: HOME_PAGE_FILE, status: response.status });
+      }
+
+      return await response.text();
+    } catch (error) {
+      if (error instanceof PostLoadError) {
+        throw error;
+      }
+
+      throw new PostLoadError("Failed to load home page content", { filename: HOME_PAGE_FILE, originalError: error });
+    }
+  }
+
   async loadPostContent(basePath: string, filename: string): Promise<string> {
     try {
       const response = await fetch(`${basePath}posts/${filename}`);
