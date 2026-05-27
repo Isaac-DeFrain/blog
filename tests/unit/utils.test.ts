@@ -2,7 +2,7 @@
  * Unit tests for utility functions including date parsing and formatting,
  * HTML escaping, and DOM helper functions.
  */
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import { parseDateAsPacificTime, formatDateAsPacificTime } from "../../src/utils/dates";
 import { escapeHtml, unescapeHtml, createDivElement, createListItemElement } from "../../src/utils/html";
 
@@ -239,6 +239,38 @@ describe("unescapeHtml", () => {
     const growingString = "&amp;".repeat(20000); // Will grow significantly when decoded
     const result = unescapeHtml(growingString);
     expect(result).toBe("&".repeat(20000));
+  });
+
+  it("should use regex fallback when DOM decoding hits string length limits", () => {
+    const originalCreateElement = document.createElement.bind(document);
+    vi.spyOn(document, "createElement").mockImplementation((tagName: string) => {
+      if (tagName === "textarea") {
+        throw new RangeError("Invalid string length");
+      }
+
+      return originalCreateElement(tagName);
+    });
+
+    expect(unescapeHtml("&amp;hello")).toBe("&hello");
+  });
+
+  it("should fall back to innerText when textContent is empty", () => {
+    const originalCreateElement = document.createElement.bind(document);
+    vi.spyOn(document, "createElement").mockImplementation((tagName: string) => {
+      const element = originalCreateElement(tagName);
+      if (tagName === "div") {
+        Object.defineProperty(element, "textContent", { get: () => "" });
+        Object.defineProperty(element, "innerText", { get: () => "visible text" });
+      }
+
+      return element;
+    });
+
+    expect(unescapeHtml("&lt;strong&gt;visible text&lt;/strong&gt;")).toBe("visible text");
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 });
 

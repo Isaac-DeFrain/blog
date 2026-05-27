@@ -134,7 +134,6 @@ describe("LinkInterceptor", () => {
 
       const pushStateSpy = vi.spyOn(window.history, "pushState");
 
-      // Create a nested blog-content element as the code expects
       const contentElement = document.createElement("div");
       contentElement.className = "blog-content";
       blogContent.appendChild(contentElement);
@@ -183,6 +182,132 @@ describe("LinkInterceptor", () => {
       await new Promise((resolve) => setTimeout(resolve, 10));
 
       expect(mockOnPostClick).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("setup - navigation", () => {
+    const allPosts: BlogPost[] = [
+      {
+        id: "post-1",
+        name: "Post 1",
+        date: "2024-01-15",
+        file: "post-1.md",
+        topics: [],
+      },
+      {
+        id: "post-2",
+        name: "Post 2",
+        date: "2024-01-16",
+        file: "post-2.md",
+        topics: [],
+      },
+    ];
+
+    function createNestedContent(): HTMLElement {
+      const contentElement = document.createElement("div");
+      contentElement.className = "blog-content";
+      blogContent.appendChild(contentElement);
+      return contentElement;
+    }
+
+    it("should route internal post clicks through the SPA callback", async () => {
+      Object.defineProperty(window, "location", {
+        value: {
+          pathname: "/post-1",
+          origin: "http://localhost",
+          href: "http://localhost/post-1",
+        },
+        writable: true,
+      });
+
+      const contentElement = createNestedContent();
+      interceptor.setup(blogContent, "/", allPosts, "post-1", mockOnPostClick, mockOnHomeClick);
+
+      const link = document.createElement("a");
+      link.href = "http://localhost/post-2#intro";
+      contentElement.appendChild(link);
+
+      const event = new MouseEvent("click", { bubbles: true, cancelable: true });
+      link.dispatchEvent(event);
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      expect(event.defaultPrevented).toBe(true);
+      expect(mockOnPostClick).toHaveBeenCalledWith("post-2", "#intro");
+    });
+
+    it("should navigate home when clicking the home link from another page", async () => {
+      Object.defineProperty(window, "location", {
+        value: {
+          pathname: "/post-1",
+          origin: "http://localhost",
+          href: "http://localhost/post-1",
+        },
+        writable: true,
+      });
+
+      const contentElement = createNestedContent();
+      interceptor.setup(blogContent, "/", allPosts, "post-1", mockOnPostClick, mockOnHomeClick);
+
+      const link = document.createElement("a");
+      link.href = "http://localhost/";
+      contentElement.appendChild(link);
+
+      const event = new MouseEvent("click", { bubbles: true, cancelable: true });
+      link.dispatchEvent(event);
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      expect(event.defaultPrevented).toBe(true);
+      expect(mockOnHomeClick).toHaveBeenCalledWith("");
+    });
+
+    it("should scroll in-page when clicking a home hash link while already home", async () => {
+      Object.defineProperty(window, "location", {
+        value: {
+          pathname: "/",
+          origin: "http://localhost",
+          href: "http://localhost/",
+        },
+        writable: true,
+      });
+
+      const contentElement = createNestedContent();
+      const targetElement = document.createElement("div");
+      targetElement.id = "welcome";
+      document.body.appendChild(targetElement);
+      const scrollIntoViewSpy = vi.spyOn(targetElement, "scrollIntoView");
+      const pushStateSpy = vi.spyOn(window.history, "pushState");
+
+      interceptor.setup(blogContent, "/", allPosts, null, mockOnPostClick, mockOnHomeClick);
+
+      const link = document.createElement("a");
+      link.href = "http://localhost/#welcome";
+      contentElement.appendChild(link);
+
+      const event = new MouseEvent("click", { bubbles: true, cancelable: true });
+      link.dispatchEvent(event);
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      expect(event.defaultPrevented).toBe(true);
+      expect(mockOnHomeClick).not.toHaveBeenCalled();
+      expect(pushStateSpy).toHaveBeenCalledWith({ postId: null }, "", "/#welcome");
+      expect(scrollIntoViewSpy).toHaveBeenCalled();
+    });
+
+    it("should allow external links to navigate normally", async () => {
+      const contentElement = createNestedContent();
+      interceptor.setup(blogContent, "/", allPosts, "post-1", mockOnPostClick, mockOnHomeClick);
+
+      const link = document.createElement("a");
+      link.href = "https://example.com/docs";
+      contentElement.appendChild(link);
+
+      const event = new MouseEvent("click", { bubbles: true, cancelable: true });
+      link.dispatchEvent(event);
+      await new Promise((resolve) => setTimeout(resolve, 10));
+
+      expect(event.defaultPrevented).toBe(false);
+      expect(mockOnPostClick).not.toHaveBeenCalled();
+      expect(mockOnHomeClick).not.toHaveBeenCalled();
     });
   });
 });

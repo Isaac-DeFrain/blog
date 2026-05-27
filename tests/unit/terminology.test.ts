@@ -91,6 +91,11 @@ describe("parseTerminologyDefinitions", () => {
     expect(generateHeadingId("Interactive Oracle Proofs of Proximity")).toBe("interactive-oracle-proofs-of-proximity");
     expect(definitions.has("reed-solomon-codes")).toBe(true);
   });
+
+  it("skips malformed sections without body content", () => {
+    const definitions = parseTerminologyDefinitions(`## Heading only`);
+    expect(definitions.size).toBe(0);
+  });
 });
 
 describe("resolveRelativePostId", () => {
@@ -100,6 +105,19 @@ describe("resolveRelativePostId", () => {
 
   it("strips markdown extension", () => {
     expect(resolveRelativePostId("./zk-terminology.md", "zk/fri-paper-summary")).toBe("zk/zk-terminology");
+  });
+
+  it("returns null for empty or external paths", () => {
+    expect(resolveRelativePostId("", "zk/fri-paper-summary")).toBeNull();
+    expect(resolveRelativePostId("https://example.com/glossary", "zk/fri-paper-summary")).toBeNull();
+  });
+
+  it("resolves parent-directory relative links", () => {
+    expect(resolveRelativePostId("../other/glossary.md", "zk/nested/post")).toBe("zk/other/glossary");
+  });
+
+  it("resolves sibling filenames in nested directories", () => {
+    expect(resolveRelativePostId("glossary.md", "zk/fri-paper-summary")).toBe("zk/glossary");
   });
 });
 
@@ -120,6 +138,21 @@ describe("rewriteInternalPostLink", () => {
     expect(buildPostUrl("/blog/", "zk/zk-terminology", "reed-solomon-codes")).toBe(
       "/blog/zk/zk-terminology#reed-solomon-codes",
     );
+  });
+
+  it("returns null for external and hash-only links", () => {
+    expect(rewriteInternalPostLink("https://example.com", "/", "zk/fri-paper-summary")).toBeNull();
+    expect(rewriteInternalPostLink("#section", "/", "zk/fri-paper-summary")).toBeNull();
+    expect(rewriteInternalPostLink("", "/", "zk/fri-paper-summary")).toBeNull();
+  });
+
+  it("returns null for absolute paths and missing current post context", () => {
+    expect(rewriteInternalPostLink("/zk/zk-terminology", "/", null)).toBeNull();
+    expect(rewriteInternalPostLink("./zk-terminology", "/", null)).toBeNull();
+  });
+
+  it("rewrites @posts/ links to SPA URLs", () => {
+    expect(rewritePostsLinkToRoot("@posts/zk/zk-terminology.md#term", "/blog")).toBe("/blog/zk/zk-terminology#term");
   });
 });
 
@@ -149,6 +182,34 @@ describe("resolveTerminologyLink", () => {
   it("returns null for non-terminology targets", () => {
     expect(
       resolveTerminologyLink("/zk/fri-paper-summary#motivation", "/", "zk/fri-paper-summary", terminologyIds),
+    ).toBeNull();
+  });
+
+  it("returns null when the hash anchor is missing", () => {
+    expect(resolveTerminologyLink("/zk/zk-terminology#", "/", "zk/fri-paper-summary", terminologyIds)).toBeNull();
+  });
+
+  it("returns null for relative links without a current post", () => {
+    expect(resolveTerminologyLink("./zk-terminology#arithmetic-complexity", "/", null, terminologyIds)).toBeNull();
+  });
+
+  it("resolves absolute glossary URLs", () => {
+    expect(
+      resolveTerminologyLink(
+        "https://blog.example.com/zk/zk-terminology#reed-solomon-codes",
+        "/",
+        "zk/fri-paper-summary",
+        terminologyIds,
+      ),
+    ).toEqual({
+      postId: "zk/zk-terminology",
+      termId: "reed-solomon-codes",
+    });
+  });
+
+  it("returns null for invalid absolute glossary URLs", () => {
+    expect(
+      resolveTerminologyLink("https://[invalid/zk-terminology#term", "/", "zk/fri-paper-summary", terminologyIds),
     ).toBeNull();
   });
 });
