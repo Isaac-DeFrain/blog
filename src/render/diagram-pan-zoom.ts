@@ -134,6 +134,42 @@ function getElementCenterInContainer(container: HTMLElement, element: Element): 
 }
 
 /**
+ * Returns the untransformed layout size of the zoom content.
+ */
+function getContentDimensions(content: HTMLElement): { width: number; height: number } {
+  if (content.scrollWidth > 0 && content.scrollHeight > 0) {
+    return { width: content.scrollWidth, height: content.scrollHeight };
+  }
+
+  const svg = content.querySelector("svg");
+  if (svg) {
+    const { width, height } = getElementPixelSize(svg);
+    if (width > 0 && height > 0) {
+      return { width, height };
+    }
+  }
+
+  return getElementPixelSize(content);
+}
+
+/**
+ * Returns the scale needed to fit content inside the viewport without upscaling.
+ */
+function computeFitScale(viewport: HTMLElement, content: HTMLElement): number {
+  const { width: viewportWidth, height: viewportHeight } = getElementPixelSize(viewport);
+  const { width: contentWidth, height: contentHeight } = getContentDimensions(content);
+
+  if (viewportWidth <= 0 || viewportHeight <= 0 || contentWidth <= 0 || contentHeight <= 0) {
+    return 1;
+  }
+
+  const scaleX = viewportWidth / contentWidth;
+  const scaleY = viewportHeight / contentHeight;
+
+  return Math.min(scaleX, scaleY, 1);
+}
+
+/**
  * Returns the visible diagram center relative to the zoom content container.
  */
 function getVisibleCenterInContent(content: HTMLElement): { x: number; y: number } | null {
@@ -188,6 +224,7 @@ export function attachPanZoom(
   };
 
   let centerAnimationFrame = 0;
+  let initialView: Pick<ZoomState, "scale" | "translateX" | "translateY"> | null = null;
 
   const applyTransform = (): void => {
     content.style.transform = `translate(${state.translateX}px, ${state.translateY}px) scale(${state.scale})`;
@@ -195,7 +232,11 @@ export function attachPanZoom(
 
   const clampScale = (scale: number): number => Math.min(MAX_SCALE, Math.max(MIN_SCALE, scale));
 
-  const centerContent = (): void => {
+  const fitAndCenterContent = (): void => {
+    content.style.transform = "none";
+
+    state.scale = computeFitScale(viewport, content);
+
     const visibleCenter = getVisibleCenterInContent(content);
     const { width: viewportWidth, height: viewportHeight } = getElementPixelSize(viewport);
 
@@ -203,37 +244,44 @@ export function attachPanZoom(
       state.translateX = viewportWidth / 2 - visibleCenter.x * state.scale;
       state.translateY = viewportHeight / 2 - visibleCenter.y * state.scale;
     } else {
-      state.translateX = (viewportWidth - content.scrollWidth * state.scale) / 2;
-      state.translateY = (viewportHeight - content.scrollHeight * state.scale) / 2;
+      const { width: contentWidth, height: contentHeight } = getContentDimensions(content);
+      state.translateX = (viewportWidth - contentWidth * state.scale) / 2;
+      state.translateY = (viewportHeight - contentHeight * state.scale) / 2;
     }
+
     applyTransform();
+    initialView = {
+      scale: state.scale,
+      translateX: state.translateX,
+      translateY: state.translateY,
+    };
   };
 
-  const scheduleCenterContent = (): void => {
+  const scheduleFitAndCenterContent = (): void => {
     if (centerAnimationFrame) {
       cancelAnimationFrame(centerAnimationFrame);
     }
 
     let attempts = 0;
-    const tryCenter = (): void => {
+    const tryFitAndCenter = (): void => {
       const { width: viewportWidth, height: viewportHeight } = getElementPixelSize(viewport);
 
       if (viewportWidth > 0 && viewportHeight > 0) {
         centerAnimationFrame = 0;
-        centerContent();
+        fitAndCenterContent();
         return;
       }
 
       attempts += 1;
       if (attempts < 10) {
-        centerAnimationFrame = requestAnimationFrame(tryCenter);
+        centerAnimationFrame = requestAnimationFrame(tryFitAndCenter);
       } else {
         centerAnimationFrame = 0;
-        centerContent();
+        fitAndCenterContent();
       }
     };
 
-    centerAnimationFrame = requestAnimationFrame(tryCenter);
+    centerAnimationFrame = requestAnimationFrame(tryFitAndCenter);
   };
 
   const zoomAtPoint = (nextScale: number, clientX: number, clientY: number): void => {
@@ -250,12 +298,26 @@ export function attachPanZoom(
     state.translateX = pointX - (pointX - state.translateX) * scaleRatio;
     state.translateY = pointY - (pointY - state.translateY) * scaleRatio;
     state.scale = clampedScale;
+
     applyTransform();
   };
 
   const reset = (): void => {
-    state.scale = 1;
-    centerContent();
+    if (centerAnimationFrame) {
+      cancelAnimationFrame(centerAnimationFrame);
+      centerAnimationFrame = 0;
+    }
+
+    if (initialView) {
+      state.scale = initialView.scale;
+      state.translateX = initialView.translateX;
+      state.translateY = initialView.translateY;
+      applyTransform();
+      return;
+    }
+
+    content.style.transform = "none";
+    scheduleFitAndCenterContent();
   };
 
   const controls = createElement("div", {
@@ -302,6 +364,7 @@ export function attachPanZoom(
     dragStartY = event.clientY;
     dragOriginX = state.translateX;
     dragOriginY = state.translateY;
+
     viewport.classList.add(CSS_CLASSES.DIAGRAM_MODAL_DRAGGING);
     event.preventDefault();
   };
@@ -313,6 +376,7 @@ export function attachPanZoom(
 
     state.translateX = dragOriginX + (event.clientX - dragStartX);
     state.translateY = dragOriginY + (event.clientY - dragStartY);
+
     applyTransform();
   };
 
@@ -329,7 +393,7 @@ export function attachPanZoom(
   window.addEventListener("mousemove", onMouseMove);
   window.addEventListener("mouseup", onMouseUp);
 
-  scheduleCenterContent();
+  scheduleFitAndCenterContent();
 
   return {
     reset,
@@ -338,10 +402,12 @@ export function attachPanZoom(
         cancelAnimationFrame(centerAnimationFrame);
         centerAnimationFrame = 0;
       }
+
       viewport.removeEventListener("wheel", onWheel);
       viewport.removeEventListener("mousedown", onMouseDown);
       window.removeEventListener("mousemove", onMouseMove);
       window.removeEventListener("mouseup", onMouseUp);
+
       controls.remove();
       content.style.transform = "";
     },

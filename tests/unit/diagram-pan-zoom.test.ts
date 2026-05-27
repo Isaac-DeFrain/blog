@@ -1,6 +1,7 @@
 /**
  * Unit tests for diagram pan/zoom behavior.
  */
+
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { CSS_CLASSES, DIAGRAM_LABELS } from "../../src/blog/constants";
 import { attachPanZoom } from "../../src/render/diagram-pan-zoom";
@@ -21,6 +22,7 @@ describe("attachPanZoom", () => {
     const viewport = document.createElement("div");
     viewport.style.width = "400px";
     viewport.style.height = "300px";
+
     const content = document.createElement("div");
     content.innerHTML = "<svg width='200' height='100'></svg>";
     viewport.appendChild(content);
@@ -37,25 +39,35 @@ describe("attachPanZoom", () => {
     expect(content.style.transform).toContain("scale(1.25)");
   });
 
-  it("should reset zoom when the reset button is clicked", async () => {
+  it("should reset zoom and pan when the reset button is clicked", async () => {
     const panel = document.createElement("div");
     const viewport = document.createElement("div");
+
     viewport.style.width = "400px";
     viewport.style.height = "300px";
+
     const content = document.createElement("div");
     content.innerHTML = "<svg width='200' height='100'></svg>";
+
     viewport.appendChild(content);
     panel.appendChild(viewport);
     document.body.appendChild(panel);
 
     const controller = attachPanZoom(viewport, content, panel);
     await flushAnimationFrame();
-    const initialTransform = content.style.transform;
 
+    const initialTransform = content.style.transform;
     panel.querySelector<HTMLButtonElement>(`button[title="${DIAGRAM_LABELS.ZOOM_IN}"]`)?.click();
+    viewport.dispatchEvent(new MouseEvent("mousedown", { clientX: 100, clientY: 100, button: 0, bubbles: true }));
+
+    window.dispatchEvent(new MouseEvent("mousemove", { clientX: 200, clientY: 200, bubbles: true }));
+    window.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+
     expect(content.style.transform).not.toBe(initialTransform);
 
     controller.reset();
+    await flushAnimationFrame();
+
     expect(content.style.transform).toBe(initialTransform);
   });
 
@@ -64,14 +76,16 @@ describe("attachPanZoom", () => {
     const viewport = document.createElement("div");
     viewport.style.width = "800px";
     viewport.style.height = "600px";
-    const content = document.createElement("div");
 
+    const content = document.createElement("div");
     const wrapper = document.createElement("pre");
     wrapper.className = CSS_CLASSES.MERMAID;
+
     const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     svg.setAttribute("viewBox", "0 0 400 300");
     svg.style.width = "400px";
     svg.style.height = "300px";
+
     wrapper.appendChild(svg);
     content.appendChild(wrapper);
     viewport.appendChild(content);
@@ -89,16 +103,19 @@ describe("attachPanZoom", () => {
     const viewport = document.createElement("div");
     const content = document.createElement("div");
     content.innerHTML = "<svg style='width: 200px; height: 100px'></svg>";
+
     viewport.appendChild(content);
     panel.appendChild(viewport);
     document.body.appendChild(panel);
 
     let viewportWidth = 0;
     let viewportHeight = 0;
+
     Object.defineProperty(viewport, "clientWidth", {
       configurable: true,
       get: () => viewportWidth,
     });
+
     Object.defineProperty(viewport, "clientHeight", {
       configurable: true,
       get: () => viewportHeight,
@@ -117,10 +134,11 @@ describe("attachPanZoom", () => {
     const viewport = document.createElement("div");
     viewport.style.width = "400px";
     viewport.style.height = "300px";
-    const content = document.createElement("div");
 
+    const content = document.createElement("div");
     const wrapper = document.createElement("div");
     wrapper.className = CSS_CLASSES.GRAPHVIZ_CONTAINER;
+
     const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     svg.setAttribute("viewBox", "0 0 89 188");
     svg.style.width = "89px";
@@ -129,6 +147,7 @@ describe("attachPanZoom", () => {
     const graphGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
     graphGroup.setAttribute("class", "graph");
     graphGroup.setAttribute("transform", "translate(4 184)");
+
     svg.appendChild(graphGroup);
     wrapper.appendChild(svg);
     content.appendChild(wrapper);
@@ -179,8 +198,8 @@ describe("attachPanZoom", () => {
     const viewport = document.createElement("div");
     viewport.style.width = "400px";
     viewport.style.height = "300px";
-    const content = document.createElement("div");
 
+    const content = document.createElement("div");
     const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     svg.setAttribute("viewBox", "0 0 500 500");
     svg.style.width = "500px";
@@ -190,6 +209,7 @@ describe("attachPanZoom", () => {
     circle.setAttribute("cx", "100");
     circle.setAttribute("cy", "100");
     circle.setAttribute("r", "20");
+
     svg.appendChild(circle);
     content.appendChild(svg);
     viewport.appendChild(content);
@@ -211,13 +231,64 @@ describe("attachPanZoom", () => {
     attachPanZoom(viewport, content, panel);
     await flushAnimationFrame();
 
-    expect(content.style.transform).toBe("translate(100px, 50px) scale(1)");
+    expect(content.style.transform).toBe("translate(140px, 90px) scale(0.6)");
+  });
+
+  it("should scale down oversized diagrams to fit the viewport", async () => {
+    const panel = document.createElement("div");
+    const viewport = document.createElement("div");
+    viewport.style.width = "400px";
+    viewport.style.height = "300px";
+
+    const content = document.createElement("div");
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.style.width = "800px";
+    svg.style.height = "600px";
+
+    content.appendChild(svg);
+    viewport.appendChild(content);
+    panel.appendChild(viewport);
+    document.body.appendChild(panel);
+
+    attachPanZoom(viewport, content, panel);
+    await flushAnimationFrame();
+
+    expect(content.style.transform).toBe("translate(0px, 0px) scale(0.5)");
+  });
+
+  it("should restore fit and center on reset for oversized diagrams", async () => {
+    const panel = document.createElement("div");
+    const viewport = document.createElement("div");
+    viewport.style.width = "400px";
+    viewport.style.height = "300px";
+
+    const content = document.createElement("div");
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.style.width = "800px";
+    svg.style.height = "600px";
+
+    content.appendChild(svg);
+    viewport.appendChild(content);
+    panel.appendChild(viewport);
+    document.body.appendChild(panel);
+
+    const controller = attachPanZoom(viewport, content, panel);
+    await flushAnimationFrame();
+
+    const initialTransform = content.style.transform;
+    panel.querySelector<HTMLButtonElement>(`button[title="${DIAGRAM_LABELS.ZOOM_IN}"]`)?.click();
+
+    controller.reset();
+    await flushAnimationFrame();
+
+    expect(content.style.transform).toBe(initialTransform);
   });
 
   it("should remove listeners and controls on destroy", () => {
     const panel = document.createElement("div");
     const viewport = document.createElement("div");
     const content = document.createElement("div");
+
     viewport.appendChild(content);
     panel.appendChild(viewport);
     document.body.appendChild(panel);
