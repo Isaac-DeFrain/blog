@@ -5,7 +5,7 @@ View at <https://blog.isaacdefrain.com>.
 [![Build and Deploy](https://github.com/Isaac-DeFrain/blog/actions/workflows/build-deploy.yml/badge.svg)](https://github.com/Isaac-DeFrain/blog/actions)
 [![](./assets/coverage-badge.svg)](./scripts/generate-coverage-badge.ts)
 
-Vanilla TypeScript blog with support for GitHub Pages SPA routing, executable code blocks, code highlighting, MathJax equation rendering, GraphViz and Mermaid diagrams, and light/dark themes.
+TypeScript blog web app with support for GitHub Pages SPA routing, executable code blocks, code highlighting, MathJax equation rendering, zoomable GraphViz and Mermaid diagrams, terminology hover previews, and light/dark themes.
 
 The production build resolves the base path at compile time from the CNAME file (custom domain) or `GITHUB_REPOSITORY` (project Pages), then injects it into HTML. Relative asset URLs keep paths working across deployment shapes.
 
@@ -15,8 +15,8 @@ The production build resolves the base path at compile time from the CNAME file 
 - Executable TypeScript code blocks
 - Markdown rendering with syntax highlighting
 - MathJax support for mathematical equations
-- Graphviz diagram support
-- Mermaid diagram support
+- Graphviz and Mermaid diagram support
+- Terminology hover previews for glossary term links
 - Dark mode support
 
 ## Setup
@@ -122,6 +122,20 @@ The post ID is automatically generated from the filename (e.g. `my-post.md` beco
 - **Display math**: `$$equation$$`
 - **Mermaid diagrams**: Fenced code blocks with `mermaid` language identifier
 - **Executable TypeScript**: Fenced code blocks with `typescript:run` language identifier
+
+### Terminology glossaries
+
+Posts tagged with `terminology` in frontmatter `topics` are treated as glossaries. Each `##` heading defines a term; the heading text becomes the anchor ID (e.g. `## Interactive Oracle Proof (IOP)` → `#interactive-oracle-proof-iop`).
+
+Link to a term from another post to enable hover and focus preview cards with that section's definition:
+
+```markdown
+[IOPP](posts/zk/zk-terminology.md#interactive-oracle-proof-of-proximity-iopp)
+```
+
+Supported link forms include `posts/.../glossary.md#term`, same-directory `./glossary#term`, and SPA paths like `/zk/zk-terminology#term`. Preview cards appear on hover or keyboard focus; clicking the link still navigates to the full glossary entry. Sections marked TODO or left empty show a placeholder in the preview.
+
+See [`posts/zk/zk-terminology.md`](./posts/zk/zk-terminology.md) for an example glossary.
 
 ### Executable TypeScript Code Blocks
 

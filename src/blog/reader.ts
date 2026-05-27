@@ -25,6 +25,10 @@ import { getElementByIdSafe } from "../utils/dom";
 import { ELEMENT_IDS, CSS_CLASSES, ERROR_MESSAGES, LOADING_MESSAGES } from "./constants";
 import type { HLJSApi } from "highlight.js";
 import { CODE_LANGUAGES, REGEX_PATTERNS } from "./constants";
+import { collectTerminologyPostIds } from "../utils/terminology";
+import { clearTerminologyDefinitionCache } from "../render/terminology-preview";
+import type { TerminologyPreviewContext } from "../render/terminology-preview";
+import type { HighlightConfig } from "./types";
 
 /**
  * Creates highlight.js configuration for marked-highlight.
@@ -64,6 +68,8 @@ export class BlogReader {
   private postLoader: PostLoader;
   private postRenderer: PostRenderer;
   private linkInterceptor: LinkInterceptor;
+  private terminologyPostIds: Set<string> = new Set();
+  private highlightConfigPromise: Promise<HighlightConfig> | null = null;
 
   constructor() {
     this.basePath = getBasePath();
@@ -195,6 +201,8 @@ export class BlogReader {
     try {
       this.allPosts = await this.postLoader.loadBlogList(this.basePath);
       this.posts = [...this.allPosts];
+      this.terminologyPostIds = collectTerminologyPostIds(this.allPosts);
+      clearTerminologyDefinitionCache();
     } catch (error) {
       logError(error, "Error loading blog list:");
       this.showError(ERROR_MESSAGES.FAILED_LOAD_POSTS);
@@ -358,6 +366,7 @@ export class BlogReader {
 
       // Process markdown to HTML
       // Remove frontmatter for feature detection
+      this.postRenderer.setCurrentPostId(postId);
       const html = await this.postRenderer.processMarkdown(contentMarkdown, highlightConfig);
       const markdownWithoutFrontmatter = contentMarkdown.replace(REGEX_PATTERNS.FRONTMATTER, "");
 
@@ -367,6 +376,7 @@ export class BlogReader {
         markdownWithoutFrontmatter,
         hash,
         post.date,
+        this.buildTerminologyPreviewContext(),
       );
     } catch (error) {
       if (error instanceof PostLoadError || error instanceof RenderingError) {
@@ -421,7 +431,15 @@ export class BlogReader {
       const html = await this.postRenderer.processMarkdown(contentMarkdown, highlightConfig);
       const markdownWithoutFrontmatter = contentMarkdown.replace(REGEX_PATTERNS.FRONTMATTER, "");
 
-      await this.postRenderer.renderBlogPostContent(this.blogContent, html, markdownWithoutFrontmatter, hash);
+      this.postRenderer.setCurrentPostId(null);
+      await this.postRenderer.renderBlogPostContent(
+        this.blogContent,
+        html,
+        markdownWithoutFrontmatter,
+        hash,
+        undefined,
+        this.buildTerminologyPreviewContext(),
+      );
     } catch (error) {
       if (error instanceof PostLoadError || error instanceof RenderingError) {
         throw error;
@@ -429,6 +447,36 @@ export class BlogReader {
 
       throw new PostLoadError("Failed to load home page content", { originalError: error });
     }
+  }
+
+  /**
+   * Builds context for terminology hover previews.
+   */
+  private buildTerminologyPreviewContext(): TerminologyPreviewContext {
+    return {
+      basePath: this.basePath,
+      currentPostId: this.currentPostId,
+      terminologyPostIds: this.terminologyPostIds,
+      postLoader: this.postLoader,
+      postRenderer: this.postRenderer,
+      postFiles: new Map(this.allPosts.map((post) => [post.id, post.file])),
+      getHighlightConfig: () => this.getHighlightConfig(),
+    };
+  }
+
+  /**
+   * Returns a cached highlight.js configuration for markdown rendering.
+   */
+  private async getHighlightConfig(): Promise<HighlightConfig> {
+    if (!this.highlightConfigPromise) {
+      this.highlightConfigPromise = import("highlight.js").then((hljsModule) => {
+        const hljs = hljsModule.default || hljsModule;
+        hljs.configure({ ignoreUnescapedHTML: true });
+        return createHighlightConfig(hljs);
+      });
+    }
+
+    return this.highlightConfigPromise;
   }
 
   /**

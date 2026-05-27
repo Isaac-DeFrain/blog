@@ -104,6 +104,13 @@ export class ContentFeatureDetector {
   }
 
   /**
+   * Checks if the markdown contains links with hash anchors (potential terminology previews).
+   */
+  static needsTerminologyLinks(markdown: string): boolean {
+    return REGEX_PATTERNS.TERMINOLOGY_LINK.test(markdown);
+  }
+
+  /**
    * Detects all content features present in the markdown.
    *
    * @param markdown - The markdown content to analyze

@@ -11,13 +11,13 @@ topics:
 ## Table of contents
 
 - [Arithmetic Complexity](#arithmetic-complexity)
-- [FFT (Fast Fourier Transform)](#fast-fourier-transform)
-- [IOPs (Interactive Oracle Proofs)](#interactive-oracle-proofs)
-- [IOPPs (Interactive Oracle Proofs of Proximity)](#interactive-oracle-proofs-of-proximity)
-- [PCPs (Probabilistically Checkable Proofs)](#probabilistically-checkable-proofs)
-- [PCPPs (Probabilistically Checkable Proofs of Proximity)](#probabilistically-checkable-proofs-of-proximity)
-- [Reed-Solomon (RS) codes](#reed-solomon-codes)
-- [RS-IOPPs (Reed-Solomon Interactive Oracle Proofs of Proximity)](#reed-solomon-interactive-oracle-proofs-of-proximity)
+- [FFT (Fast Fourier Transform)](#fast-fourier-transform-fft)
+- [IOPs (Interactive Oracle Proofs)](#interactive-oracle-proof-iop)
+- [IOPPs (Interactive Oracle Proofs of Proximity)](#interactive-oracle-proof-of-proximity-iopp)
+- [PCPs (Probabilistically Checkable Proofs)](#probabilistically-checkable-proof-pcp)
+- [PCPPs (Probabilistically Checkable Proofs of Proximity)](#probabilistically-checkable-proof-of-proximity-pcpp)
+- [Reed-Solomon codes](#reed-solomon-code)
+- [RS-IOPPs (Reed-Solomon Interactive Oracle Proofs of Proximity)](#reed-solomon-interactive-oracle-proof-of-proximity-rs-iopp)
 
 ---
 
@@ -32,30 +32,30 @@ An **arithmetic circuit** $C$ over the [_field_](<https://en.wikipedia.org/wiki/
 
 TODO
 
-## [Fast Fourier Transform](TODO)
+## [Fast Fourier Transform (FFT)](TODO)
 
 TODO
 
-## [Interactive Oracle Proofs](TODO)
+## [Interactive Oracle Proof (IOP)](TODO)
 
 TODO
 
-## [Interactive Oracle Proofs of Proximity](TODO)
+## [Interactive Oracle Proof of Proximity (IOPP)](TODO)
 
 TODO
 
-## [Probabilistically Checkable Proofs](TODO)
+## [Probabilistically Checkable Proof (PCP)](TODO)
 
 TODO
 
-## [Probabilistically Checkable Proofs of Proximity](TODO)
+## [Probabilistically Checkable Proof of Proximity (PCPP)](TODO)
 
 TODO
 
-## [Reed-Solomon codes](https://en.wikipedia.org/wiki/Reed%E2%80%93Solomon_error_correction)
+## [Reed-Solomon code](https://en.wikipedia.org/wiki/Reed%E2%80%93Solomon_error_correction)
 
 TODO
 
-## [Reed-Solomon Interactive Oracle Proofs of Proximity](TODO)
+## [Reed-Solomon Interactive Oracle Proof of Proximity (RS-IOPP)](TODO)
 
 TODO

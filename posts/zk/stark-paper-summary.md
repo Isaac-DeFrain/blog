@@ -27,16 +27,16 @@ topics:
 
 1. **zkSTARK:** A transparent ZK argument system where verification is exponentially faster than database (or computation) size. The speedup is observed concretely for meaningful sequential computations.
 
-2. **Building blocks:** The system uses recent IOP machinery, including a **“fast” (linear-time) IOP** for error-correcting codes - i.e. **FRI** (Fast Reed-Solomon IOPP) - plus **Algebraic Linking (ALI)** and an algebraic intermediate representation for the computation.
+2. **Building blocks:** The system uses recent [IOP](posts/zk/zk-terminology.md#interactive-oracle-proof-iop) machinery, including a **“fast” (linear-time) IOP** for error-correcting codes - i.e. **FRI** (Fast [Reed–Solomon IOPP](posts/zk/zk-terminology.md#reed-solomon-interactive-oracle-proof-of-proximity-rs-iopp)) - plus **Algebraic Linking (ALI)** and an algebraic intermediate representation for the computation.
 
 3. **Proof-of-concept:** A DNA database application: the Police prove to the public that a candidate’s DNA profile is **not** in the forensic database, without revealing any DNA data. The proof is shorter than the database and verifies faster than a naive scan.
 
 ## Technical core
 
-- **IOP-based:** The argument is built from an Interactive Oracle Proof (IOP); the prover sends oracles (e.g. polynomial evaluations), the verifier queries them. Making it non-interactive uses a public random string (Fiat–Shamir style).
+- **IOP-based:** The argument is built from an [Interactive Oracle Proof (IOP)](posts/zk/zk-terminology.md#interactive-oracle-proof-iop); the prover sends oracles (e.g. polynomial evaluations), the verifier queries them. Making it non-interactive uses a public random string (Fiat–Shamir style).
 - **Transparency:** Only public randomness; no trusted setup or trapdoors.
 - **Post-quantum:** Security relies on collision-resistant hashing (no known efficient quantum attack on the construction).
-- **Complexity:** Prover $O(T \log T)$, verifier $O(\log T)$ for computation of length $T$ (in the improved formulation), with FRI providing the low-degree test.
+- **Complexity:** Prover $O(T \log T)$, verifier $O(\log T)$ for computation of length $T$ (in the improved formulation), with FRI ([RS-IOPP](posts/zk/zk-terminology.md#reed-solomon-interactive-oracle-proof-of-proximity-rs-iopp)) providing the low-degree test.
 
 ## Efficiency and impact
 

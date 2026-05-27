@@ -1,0 +1,40 @@
+.terminology-preview {
+  display: none;
+  position: fixed;
+  z-index: 1001;
+  max-width: 40ch;
+  max-height: min(40vh, 20rem);
+  overflow: auto;
+  padding: var(--spacing-md) var(--spacing-base);
+  background: var(--bg-card);
+  border: var(--border-width-base) solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  pointer-events: none;
+}
+
+.terminology-preview.is-visible {
+  display: block;
+}
+
+.terminology-preview-title {
+  font-size: var(--font-size-md);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: var(--spacing-sm);
+}
+
+.terminology-preview-body {
+  font-size: var(--font-size-sm);
+  max-width: none;
+  margin: 0;
+}
+
+.terminology-preview-body p {
+  margin-bottom: var(--spacing-sm);
+  font-size: var(--font-size-sm);
+}
+
+.terminology-preview-body p:last-child {
+  margin-bottom: 0;
+}

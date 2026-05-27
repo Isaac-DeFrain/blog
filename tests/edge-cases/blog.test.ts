@@ -425,7 +425,13 @@ describe("Blog Reader Edge Cases", () => {
       // Try to render content with null blogContent (simulating missing element)
       // This should throw a RenderingError
       try {
-        await (reader as any).postRenderer.renderBlogPostContent(null as any, "<p>Test</p>", "# Test", undefined, "2024-01-15");
+        await (reader as any).postRenderer.renderBlogPostContent(
+          null as any,
+          "<p>Test</p>",
+          "# Test",
+          undefined,
+          "2024-01-15",
+        );
         assert(false, "Should not reach here");
       } catch (error) {
         expect((error as Error).name).toBe(RenderingError.name);

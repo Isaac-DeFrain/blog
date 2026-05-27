@@ -86,6 +86,10 @@ export const CSS_CLASSES = {
   DIAGRAM_MODAL_DRAGGING: "diagram-modal-dragging",
   DARK_MODE: "dark-mode",
   DATE: "date",
+  TERMINOLOGY_PREVIEW: "terminology-preview",
+  TERMINOLOGY_PREVIEW_VISIBLE: "is-visible",
+  TERMINOLOGY_PREVIEW_TITLE: "terminology-preview-title",
+  TERMINOLOGY_PREVIEW_BODY: "terminology-preview-body",
 } as const;
 
 /**
@@ -152,6 +156,8 @@ export const REGEX_PATTERNS = {
   FRONTMATTER_TOPICS: /^topics:\s*(?:\n|$)/m,
   /** Matches nested markdown code blocks in plaintext */
   NESTED_CODE_BLOCKS: /```\w+/,
+  /** Matches markdown links with hash anchors to glossary-style paths */
+  TERMINOLOGY_LINK: /\]\([^)]*#/,
 } as const;
 
 /**

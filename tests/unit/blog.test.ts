@@ -472,4 +472,12 @@ describe("processMarkdown link rewriting (posts/ to root)", () => {
     const html = await renderer.processMarkdown(markdown, mockHighlightConfig);
     expect(html).toContain('href="/zk/zk-terminology"');
   });
+
+  it("rewrites same-directory relative glossary links", async () => {
+    setBasePath("/");
+    renderer.setCurrentPostId("zk/fri-paper-summary");
+    const markdown = "See [RS codes](./zk-terminology#reed-solomon-codes).";
+    const html = await renderer.processMarkdown(markdown, mockHighlightConfig);
+    expect(html).toContain('href="/zk/zk-terminology#reed-solomon-codes"');
+  });
 });

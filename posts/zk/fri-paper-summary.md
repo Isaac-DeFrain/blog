@@ -12,11 +12,11 @@ topics:
 
 [Fast Reed-Solomon Interactive Oracle Proofs of Proximity - Ben-Sasson, Bentov, Horesh, Riabzev (ICALP 2018)](https://drops.dagstuhl.de/entities/document/10.4230/LIPIcs.ICALP.2018.14)
 
-**FRI** is an **Interactive Oracle Proof of Proximity ([IOPP](./zk-terminology#interactive-oracle-proofs-of-proximity))** for [Reed–Solomon codes](./zk-terminology#reed-solomon-codes). It achieves **strictly linear** prover [arithmetic complexity](./zk-terminology#arithmetic-complexity) and **logarithmic** verifier complexity, improving on prior [RS-IOPPs](./zk-terminology#reed-solomon-interactive-oracle-proofs-of-proximity)/[PCPPs](./zk-terminology#probabilistically-checkable-proofs-of-proximity) that required super-linear proving time. The name reflects its resemblance to the FFT and its strictly linear (not just quasi-linear) prover cost.
+**FRI** is an **Interactive Oracle Proof of Proximity ([IOPP](posts/zk/zk-terminology.md#interactive-oracle-proof-of-proximity-iopp))** for [Reed–Solomon codes](posts/zk/zk-terminology.md#reed-solomon-code). It achieves **strictly linear** prover [arithmetic complexity](posts/zk/zk-terminology.md#arithmetic-complexity) and **logarithmic** verifier complexity, improving on prior [RS-IOPPs](posts/zk/zk-terminology.md#reed-solomon-interactive-oracle-proof-of-proximity-rs-iopp)/[PCPPs](posts/zk/zk-terminology.md#probabilistically-checkable-proof-of-proximity-pcpp) that required super-linear proving time. The name reflects its resemblance to the [FFT](posts/zk/zk-terminology.md#fast-fourier-transform-fft) and its strictly linear (not just quasi-linear) prover cost.
 
 ## Motivation
 
-- Reed–Solomon (RS) codes are central to quasilinear [PCPs](./zk-terminology#probabilistically-checkable-proofs) and [IOPs](./zk-terminology#interactive-oracle-proofs) with polylogarithmic verifiers. The **concrete cost of proving** RS membership was a major obstacle to deploying such systems.
+- Reed–Solomon (RS) codes are central to quasilinear [PCPs](posts/zk/zk-terminology.md#probabilistically-checkable-proof-pcp) and [IOPs](posts/zk/zk-terminology.md#interactive-oracle-proof-iop) with polylogarithmic verifiers. The **concrete cost of proving** RS membership was a major obstacle to deploying such systems.
 - Prior RS-IOPPs and PCPPs required super-linear proving time even for polynomially many queries.
 
 ## Main results

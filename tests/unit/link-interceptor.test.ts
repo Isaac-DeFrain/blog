@@ -11,7 +11,7 @@ describe("LinkInterceptor", () => {
   let mockOnPostClick: PostClickCallback;
   let mockOnHomeClick: () => Promise<void>;
 
-    beforeEach(() => {
+  beforeEach(() => {
     document.body.innerHTML = "";
     interceptor = new LinkInterceptor();
     blogContent = document.createElement("div");

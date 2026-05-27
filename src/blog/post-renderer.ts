@@ -12,7 +12,11 @@ import { createDivElement, escapeHtml, unescapeHtml } from "../utils/html";
 import { formatPostDate } from "../utils/dates";
 import { resolveWithTimeout } from "../utils/async";
 import { getBasePath } from "../utils/paths";
+import { generateHeadingId } from "../utils/headings";
+import { rewriteInternalPostLink } from "../utils/terminology";
 import { CSS_CLASSES, TIMEOUTS, REGEX_PATTERNS, BUTTON_LABELS } from "./constants";
+import { initializeTerminologyPreview, setTerminologyPreviewContext } from "../render/terminology-preview";
+import type { TerminologyPreviewContext } from "../render/terminology-preview";
 import { initializeTypeScriptRunner } from "../code-executor/block-executor";
 import { TypeScriptTransformer } from "../code-executor/typescript-transformer";
 import type { marked } from "marked";
@@ -21,6 +25,15 @@ import type { marked } from "marked";
  * Renders blog post content to the DOM.
  */
 export class PostRenderer {
+  private currentPostId: string | null = null;
+
+  /**
+   * Sets the post ID used when rewriting relative internal links in markdown.
+   */
+  setCurrentPostId(postId: string | null): void {
+    this.currentPostId = postId;
+  }
+
   /**
    * Renders blog post content to the DOM.
    *
@@ -37,6 +50,7 @@ export class PostRenderer {
     markdown: string,
     hash?: string,
     date?: string,
+    terminologyPreview?: TerminologyPreviewContext,
   ): Promise<void> {
     if (!blogContent) {
       throw new RenderingError("Blog post content element is null");
@@ -54,7 +68,7 @@ export class PostRenderer {
     if (!contentElement) {
       throw new RenderingError("Blog content element not found after rendering");
     }
-    await this.renderContentFeatures(contentElement as HTMLElement, markdown);
+    await this.renderContentFeatures(contentElement as HTMLElement, markdown, terminologyPreview);
 
     // Check if there's a hash fragment to scroll to
     // Scroll to top of content if no hash
@@ -75,7 +89,11 @@ export class PostRenderer {
    * @param markdown - The markdown content to analyze
    * @returns Promise that resolves when all features are rendered
    */
-  private async renderContentFeatures(contentElement: HTMLElement, markdown: string): Promise<void> {
+  private async renderContentFeatures(
+    contentElement: HTMLElement,
+    markdown: string,
+    terminologyPreview?: TerminologyPreviewContext,
+  ): Promise<void> {
     const features = ContentFeatureDetector.detectFeatures(markdown);
     const renderPromises: Promise<void>[] = [];
 
@@ -93,6 +111,11 @@ export class PostRenderer {
     }
 
     await Promise.all(renderPromises);
+
+    if (terminologyPreview && ContentFeatureDetector.needsTerminologyLinks(markdown)) {
+      setTerminologyPreviewContext(terminologyPreview);
+      initializeTerminologyPreview(contentElement);
+    }
   }
 
   /**
@@ -143,7 +166,7 @@ export class PostRenderer {
             return processCodeBlock(lang, text, highlightConfig, renderer);
           },
           link({ href, title, text }) {
-            const resolvedHref = rewritePostsLinkToRoot(href, getBasePath());
+            const resolvedHref = rewriteInternalPostLink(href, getBasePath(), renderer.currentPostId);
             const finalHref = resolvedHref ?? href;
             const titleAttr = title ? ` title="${escapeHtml(title)}"` : "";
             return `<a href="${escapeHtml(finalHref)}"${titleAttr}>${text}</a>`;
@@ -187,34 +210,6 @@ export class PostRenderer {
   }
 }
 
-/**
- * Rewrites internal blog post links that reference the posts directory to root-relative URLs.
- * Handles @posts/, posts/, and /posts/ prefixes so links work with SPA routing.
- *
- * @param href - Raw link href from markdown
- * @param basePath - Application base path (e.g. "/blog/" or "/")
- * @returns Rewritten href, or null if not a posts link
- */
-function rewritePostsLinkToRoot(href: string, basePath: string): string | null {
-  if (!href || href.startsWith("http://") || href.startsWith("https://") || href.startsWith("#")) {
-    return null;
-  }
-
-  const [pathPart, hashPart] = href.split("#", 2);
-  if (!/^(?:@?posts\/|\/posts\/)/.test(pathPart)) return null;
-
-  const afterPrefix = pathPart
-    .replace(/^(?:@?posts\/|\/posts\/)/, "")
-    .replace(REGEX_PATTERNS.MARKDOWN_EXTENSION, "")
-    .replace(REGEX_PATTERNS.LEADING_TRAILING_SLASHES, "");
-  const postId = afterPrefix.trim();
-  if (!postId) return null;
-
-  const base = basePath.replace(/\/$/, "") || "";
-  const newHref = base ? `${base}/${postId}` : `/${postId}`;
-  return hashPart !== undefined ? `${newHref}#${hashPart}` : newHref;
-}
-
 function processHeading(md: typeof marked, text: string, depth: number): string {
   // Process inline code in heading text (marked.js doesn't process inline code
   // in headings when using a custom renderer, so we need to do it manually)
@@ -223,14 +218,7 @@ function processHeading(md: typeof marked, text: string, depth: number): string 
 
   // Strip HTML tags from processed text to get plain text for ID generation
   const plainText = processedText.replace(/<[^>]*>/g, "");
-
-  // Generate ID from heading text (similar to GitHub)
-  const id = plainText
-    .toLowerCase()
-    .replace(/[^\w\s-]/g, "") // Remove special characters
-    .replace(/\s+/g, "-") // Replace spaces with hyphens
-    .replace(/-+/g, "-") // Replace multiple hyphens with a single hyphen
-    .trim();
+  const id = generateHeadingId(plainText);
 
   const tag = `h${depth}`;
   return `<${tag} id="${id}">${processedText}</${tag}>\n`;
