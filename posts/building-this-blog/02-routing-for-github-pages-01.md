@@ -39,7 +39,7 @@ This made the initial implementation simple - but limited, and ultimately did no
 
 ## Consolidating to a SPA with client-side routing
 
-The blog was consolidated from its initial multi-page structure (with separate `blog.html` and `index.html` files) into a single-page application ([`4ddd7c2`](https://github.com/Isaac-DeFrain/blog/commit/4ddd7c2)). This consolidation happened before the GitHub Actions workflow was created, but we quickly discovered that GitHub Pages doesn't support non-hash server-side routing for multi-page applications. The SPA architecture was necessary for deployment.
+The blog was consolidated from its initial multi-page structure (with separate `blog.html` and `index.html` files) into a single-page application ([4ddd7c2](https://github.com/Isaac-DeFrain/blog/commit/4ddd7c2)). This consolidation happened before the GitHub Actions workflow was created, but we quickly discovered that GitHub Pages doesn't support non-hash server-side routing for multi-page applications. The SPA architecture was necessary for deployment.
 
 The consolidation involved:
 
@@ -54,7 +54,7 @@ However, it introduced new challenges.
 
 ### Routing for GitHub Pages
 
-When the initial GitHub Actions workflow was created ([`fc25fb6`](https://github.com/Isaac-DeFrain/blog/commit/fc25fb6)), it seemed so straightforward. All we needed to do:
+When the initial GitHub Actions workflow was created ([fc25fb6](https://github.com/Isaac-DeFrain/blog/commit/fc25fb6)), it seemed so straightforward. All we needed to do:
 
 - build the project using Vite's dev server to conduct UA testing
 - deploy our build artifacts directly to GitHub Pages
@@ -69,7 +69,7 @@ It turns out:
 
 > When GitHub Pages can't find a file, it serves `404.html`
 
-This is a well-known quirk with a well-known solution, the [`spa-github-pages` pattern](https://github.com/rafgraph/spa-github-pages).
+This is a well-known quirk with a well-known solution, the [spa-github-pages pattern](https://github.com/rafgraph/spa-github-pages).
 
 #### `spa-github-pages` Pattern
 
@@ -105,7 +105,7 @@ There are two main steps after GitHub Pages serves 404.html:
 
 - **Step 1: Redirect in 404.html**
 
-  The [_redirect script_](../404.html#L7-L30) in `404.html`:
+  The [redirect script](https://github.com/Isaac-DeFrain/blog/blob/main/404.html#L7-L30) in `404.html`:
 
   When GitHub Pages serves `404.html` for an unknown route, the `404.html` file contains a _redirect script_ that:
   - Takes the original pathname (e.g. `/blog/some-post`)
@@ -114,7 +114,7 @@ There are two main steps after GitHub Pages serves 404.html:
 
 - **Step 2: Restore in index.html**
 
-  When `index.html` loads, the [_restoration script_](../index.html#L64-L130) checks for the redirect pattern in the query string:
+  When `index.html` loads, the [restoration script](https://github.com/Isaac-DeFrain/blog/blob/main/index.html#L64-L130) checks for the redirect pattern in the query string:
   - If detected, it extracts the path from the query string
   - Uses `history.replaceState()` to restore the original pathname in the browser's address bar
   - The SPA routing system then reads the restored pathname and loads the appropriate content
@@ -135,7 +135,7 @@ We needed to make this base path available while fetching our blog posts. In ord
 - Inject a global base path variable into both `index.html` and `404.html`
 - Update all asset paths to include the base path when needed
 
-To this end, we created the [`inject-base-path`](../../vite.config.ts#218-225) Vite plugin. Here's a flowchart of how it works:
+To this end, we created the [inject-base-path](https://github.com/Isaac-DeFrain/blog/blob/main/vite.config.ts#L231-L242) Vite plugin. Here's a flowchart of how it works:
 
 ```mermaid
 flowchart TD
@@ -216,7 +216,7 @@ sequenceDiagram
     AppCode->>AppCode: Fetch requests succeed (correct paths)
 ```
 
-In [code](../../vite.config.ts#L218-225):
+In [code](https://github.com/Isaac-DeFrain/blog/blob/main/vite.config.ts#L231-L242):
 
 ```typescript
 transformIndexHtml: {

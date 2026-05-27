@@ -58,9 +58,9 @@ We now address the reasoning for each choice.
 
 ### Why Nix flakes
 
-Nix flakes handles our development and deployment environments. Instead of manually installing dev tools (or hoping they're already installed), [`flake.nix`](../../../flake.nix) declares exactly what's needed for the project.
+Nix flakes handles our development and deployment environments. Instead of manually installing dev tools (or hoping they're already installed), [flake.nix](https://github.com/Isaac-DeFrain/blog/blob/main/flake.nix) declares exactly what's needed for the project.
 
-For the blog, we only need [Node.js](https://nodejs.org/en/learn/getting-started/introduction-to-nodejs). The `nodejs_24` Nix package provides the Node.js runtime and [`npm` package manager](https://www.npmjs.com/). Node.js is required to run [Vite](https://vite.dev/), TypeScript, and all the `npm` scripts. After the flake gives us `npm`, we use it to install the remaining project dependencies from `package.json`.
+For the blog, we only need [Node.js](https://nodejs.org/en/learn/getting-started/introduction-to-nodejs). The `nodejs_24` Nix package provides the Node.js runtime and [npm package manager](https://www.npmjs.com/). Node.js is required to run [Vite](https://vite.dev/), TypeScript, and all the `npm` scripts. After the flake gives us `npm`, we use it to install the remaining project dependencies from `package.json`.
 
 #### Nix flakes offer
 
@@ -272,7 +272,7 @@ The blog includes mobile-specific UX enhancements to improve the reading experie
 
 **Implementation:**
 
-The `MobileHeaderHide` class in [`src/mobile-header-hide.ts`](../../../src/mobile-header-hide.ts) manages this behavior using:
+The `MobileHeaderHide` class in [src/mobile-header-hide.ts](https://github.com/Isaac-DeFrain/blog/blob/main/src/mobile-header-hide.ts) manages this behavior using:
 
 - Media queries to detect mobile viewport (max-width: 768px)
 - Scroll event tracking to determine when the sidebar is out of view
@@ -299,7 +299,7 @@ We use GitHub Actions to
 - build
 - deploy
 
-_every push_ to the [`main` branch](https://github.com/Isaac-DeFrain/blog/tree/main). Successful builds are immediately deployed into [production on GitHub Pages](https://isaac-defrain.github.io/blog/).
+_every push_ to the [main branch](https://github.com/Isaac-DeFrain/blog/tree/main). Successful builds are immediately deployed into production on GitHub Pages which is aliased by my custom subdomain <https://blog.isaacdefrain.com>.
 
 ## Deploying to GitHub Pages
 
@@ -360,7 +360,7 @@ Multiple build-time transformations were needed:
 
 _Solution_:
 
-[Custom Vite plugins](../../../vite.config.ts) handle all necessary transformations during the build process. The plugins run at different stages (`buildStart`, `transformIndexHtml`, `closeBundle`) to ensure proper ordering and availability of files. This approach keeps the source code clean while generating production-ready artifacts. The details of this process are covered in [part ./02-routing-for-github-pages-01.md.md) and [part 4](./04-testing.md) of this series.
+[Custom Vite plugins](https://github.com/Isaac-DeFrain/blog/blob/main/vite.config.ts) handle all necessary transformations during the build process. The plugins run at different stages (`buildStart`, `transformIndexHtml`, `closeBundle`) to ensure proper ordering and availability of files. This approach keeps the source code clean while generating production-ready artifacts. The details of this process are covered in [part 2](./02-routing-for-github-pages-01.md.md) and [part 4](./04-testing.md) of this series.
 
 #### Post/section linking for GitHub Pages
 
