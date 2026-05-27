@@ -71,6 +71,19 @@ export const CSS_CLASSES = {
   TS_ERROR: "ts-error",
   GRAPHVIZ_CONTAINER: "graphviz-container",
   GRAPHVIZ_ERROR: "graphviz-error",
+  DIAGRAM_CLICKABLE: "diagram-clickable",
+  DIAGRAM_MODAL: "diagram-modal",
+  DIAGRAM_MODAL_VISIBLE: "is-visible",
+  DIAGRAM_MODAL_OPEN: "diagram-modal-open",
+  DIAGRAM_MODAL_BACKDROP: "diagram-modal-backdrop",
+  DIAGRAM_MODAL_PANEL: "diagram-modal-panel",
+  DIAGRAM_MODAL_CONTENT: "diagram-modal-content",
+  DIAGRAM_MODAL_CLOSE: "diagram-modal-close",
+  DIAGRAM_MODAL_VIEWPORT: "diagram-modal-viewport",
+  DIAGRAM_MODAL_ZOOM_CONTENT: "diagram-modal-zoom-content",
+  DIAGRAM_MODAL_ZOOM_CONTROLS: "diagram-modal-zoom-controls",
+  DIAGRAM_MODAL_ZOOM_BUTTON: "diagram-modal-zoom-button",
+  DIAGRAM_MODAL_DRAGGING: "diagram-modal-dragging",
   DARK_MODE: "dark-mode",
   DATE: "date",
 } as const;
@@ -161,6 +174,18 @@ export const BUTTON_LABELS = {
   RUN: "Run",
   RUNNING: "Running...",
   EXECUTED: "Executed",
+} as const;
+
+/**
+ * Diagram interaction labels
+ */
+export const DIAGRAM_LABELS = {
+  OPEN_DIAGRAM: "Open diagram",
+  CLOSE: "Close diagram",
+  MODAL_TITLE: "Diagram",
+  ZOOM_IN: "Zoom in",
+  ZOOM_OUT: "Zoom out",
+  ZOOM_RESET: "Reset zoom",
 } as const;
 
 /**

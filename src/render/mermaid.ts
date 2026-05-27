@@ -5,6 +5,8 @@
  * This module uses mermaid.run() to automatically render all elements with class "mermaid".
  */
 
+import { enableDiagramClickToOpenOnElements } from "./diagram-popup";
+
 // Extend Window interface for Mermaid
 declare global {
   interface Window {
@@ -84,6 +86,7 @@ export async function renderMermaidDiagrams(elements: HTMLElement | HTMLElement[
     if (typeof mermaidInstance.run === "function") {
       // Pass the specific nodes to render to avoid re-rendering already rendered diagrams
       await mermaidInstance.run({ nodes: mermaidElements });
+      enableDiagramClickToOpenOnElements(mermaidElements);
     } else {
       console.warn("Mermaid.run() is not available");
     }

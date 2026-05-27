@@ -6,6 +6,7 @@
  */
 
 import { instance, type Viz } from "@viz-js/viz";
+import { enableDiagramClickToOpenOnElements } from "./diagram-popup";
 
 // Cache the Viz instance to avoid re-initializing it multiple times
 let vizInstance: Viz | null = null;
@@ -51,6 +52,7 @@ async function renderGraphvizDiagram(element: HTMLElement): Promise<void> {
     wrapper.className = "graphviz-container";
     wrapper.appendChild(svgElement);
     element.replaceWith(wrapper);
+    enableDiagramClickToOpenOnElements(wrapper);
   } catch (error) {
     console.error("Graphviz rendering error:", error);
     // Optionally, show an error message to the user

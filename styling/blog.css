@@ -6,4 +6,5 @@
 @import "./content.css";
 @import "./mermaid.css";
 @import "./graphviz.css";
+@import "./diagram-popup.css";
 @import "./typescript-runner.css";
