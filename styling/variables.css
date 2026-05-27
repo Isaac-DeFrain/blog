@@ -44,6 +44,7 @@
   --sidebar-width: clamp(250px, 20vw, 300px);
   --container-max-width: min(1400px, 95vw);
   --theme-button-size: clamp(35px, 3vw, 40px);
+  --social-icon-size: clamp(1.1rem, 1.4vw, 1.25rem);
   --sidebar-top-offset: clamp(80px, 8vw, 100px);
   --sidebar-max-height-offset: clamp(100px, 10vw, 120px);
   --scrollbar-width: clamp(6px, 0.6vw, 8px);

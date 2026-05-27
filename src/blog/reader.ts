@@ -82,6 +82,7 @@ export class BlogReader {
     this.linkInterceptor = new LinkInterceptor();
 
     this.setupHomeLink();
+    this.setupSocialLinks();
 
     // Set up link interception for internal blog post links
     if (this.blogContent) {
@@ -117,6 +118,18 @@ export class BlogReader {
         } else {
           this.showError(ERROR_MESSAGES.FAILED_LOAD_POST);
         }
+      }
+    });
+  }
+
+  /**
+   * Sets social icon image sources using the deployment base path.
+   */
+  private setupSocialLinks(): void {
+    document.querySelectorAll<HTMLImageElement>("[data-social-icon]").forEach((icon) => {
+      const filename = icon.dataset.socialIcon;
+      if (filename) {
+        icon.src = `${this.basePath}assets/icons/${filename}`;
       }
     });
   }
