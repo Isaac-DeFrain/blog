@@ -7,6 +7,7 @@ import { appendChildren, createElement } from "../utils/dom";
 
 const MIN_SCALE = 0.25;
 const MAX_SCALE = 4;
+const INITIAL_MAX_SCALE = 2;
 const ZOOM_STEP = 0.25;
 const WHEEL_ZOOM_FACTOR = 0.001;
 
@@ -153,7 +154,7 @@ function getContentDimensions(content: HTMLElement): { width: number; height: nu
 }
 
 /**
- * Returns the scale needed to fit content inside the viewport without upscaling.
+ * Returns the initial display scale: up to 2×, capped by the viewport fit scale.
  */
 function computeFitScale(viewport: HTMLElement, content: HTMLElement): number {
   const { width: viewportWidth, height: viewportHeight } = getElementPixelSize(viewport);
@@ -166,7 +167,7 @@ function computeFitScale(viewport: HTMLElement, content: HTMLElement): number {
   const scaleX = viewportWidth / contentWidth;
   const scaleY = viewportHeight / contentHeight;
 
-  return Math.min(scaleX, scaleY, 1);
+  return Math.min(scaleX, scaleY, INITIAL_MAX_SCALE);
 }
 
 /**
@@ -217,6 +218,8 @@ export function attachPanZoom(
   content: HTMLElement,
   controlsParent: HTMLElement,
 ): PanZoomController {
+  content.style.transformOrigin = "0 0";
+
   const state: ZoomState = {
     scale: 1,
     translateX: 0,
