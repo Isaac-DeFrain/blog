@@ -22,7 +22,12 @@ topics:
 ## Main results
 
 1. **Complexity**  
-   For block-length $N$: prover arithmetic complexity $< 6N$; verifier arithmetic complexity $\leq 21 \log N$; query complexity $2 \log N$; constant soundness - words $\delta$-far from the code are rejected with probability $\min\{\delta(1 - o(1)), \delta_0\}$ for a constant $\delta_0$ depending mainly on the code rate.
+   For block-length $N$:
+
+   - prover complexity $< 6N$
+   - verifier complexity $\leq 21 \log N$
+   - query complexity $2 \log N$
+   - constant soundness: words $\delta$-far from the code are rejected with probability $\min\{\delta(1 - o(1)), \delta_0\}$ for a constant $\delta_0$ depending mainly on the code rate.
 
 2. **Soundness vs prior work**  
    The combination of query complexity and soundness is better than the quasilinear PCPP of [BS08] even with the tighter analysis of [Ben-Sasson et al., STOC 2013], so FRI enables more concretely efficient ZK proof and argument systems.
