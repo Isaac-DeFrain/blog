@@ -132,6 +132,27 @@
   margin: var(--spacing-xl) 0;
 }
 
+.blog-content table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: var(--spacing-lg) 0;
+  font-size: var(--font-size-lg);
+  color: var(--text-secondary);
+}
+
+.blog-content th,
+.blog-content td {
+  border: var(--border-width-base) solid var(--border);
+  padding: var(--spacing-sm) var(--spacing-md);
+  text-align: left;
+}
+
+.blog-content th {
+  background: var(--code-bg);
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
 .blog-meta {
   margin-bottom: var(--spacing-xl);
   padding-bottom: var(--spacing-lg);
