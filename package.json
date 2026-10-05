@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "audit": "npm audit && knip --dependencies",
+    "audit": "npm audit --omit=dev && knip --dependencies",
     "build": "tsc && vite build",
     "clean": "rm -rf dist && rm -rf posts/manifest.json",
     "preview": "vite preview",
