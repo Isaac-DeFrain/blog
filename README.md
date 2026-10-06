@@ -83,6 +83,20 @@ Generate coverage badge SVG
 npm run generate-coverage-badge
 ```
 
+## Git hooks
+
+Install the pre-commit hook to run the same checks as the [Build and deploy](./.github/workflows/build-deploy.yml) workflow’s `build-test` job (lint, audit, build, coverage, and coverage badge generation). Deploy and CI artifact upload steps are skipped locally.
+
+```bash
+./scripts/install-git-hooks.sh
+```
+
+Run the checks manually without committing:
+
+```bash
+./scripts/build-deploy-local.sh
+```
+
 ## Home Page
 
 The site root loads `public/home.md` as a standalone page. It uses the same layout as blog posts but has no name, date, or topics metadata. Edit this file to customize the landing page content.
